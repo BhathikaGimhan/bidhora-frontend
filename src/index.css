@@ -1,0 +1,219 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Bidhora Brand Colors - Using Tailwind Green-500 */
+    --brand-primary: 134 61% 41%;  /* green-500 */
+    --brand-primary-dark: 134 61% 35%;  /* green-600 */
+    --brand-black: 0 0% 0%;  /* #000000 */
+    --brand-white: 0 0% 96%;  /* #f5f5f5 */
+    --brand-gray: 220 13% 18%;  /* #2d3748 */
+    --brand-gray-light: 220 13% 91%;  /* #e2e8f0 */
+    
+    /* Dark Theme (Default) */
+    --background: var(--brand-black);
+    --foreground: var(--brand-white);
+
+    --card: 240 4% 16%;  /* gray-900 */
+    --card-foreground: var(--brand-white);
+    --card-hover: 240 4% 21%;  /* gray-800 */
+
+    --popover: var(--card);
+    --popover-foreground: var(--card-foreground);
+
+    --primary: var(--brand-primary);
+    --primary-foreground: var(--brand-black);
+
+    --secondary: var(--card);
+    --secondary-foreground: var(--brand-white);
+
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: var(--brand-primary);
+    --accent-foreground: var(--brand-black);
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: var(--brand-white);
+
+    --border: 240 4% 38%;
+    --input: 240 6% 10%;
+    --ring: var(--brand-primary);
+
+    --radius: 0.75rem;
+
+    /* Header */
+    --header-bg: 0 0% 0% / 0.8;
+    --header-backdrop: blur(12px);
+
+    /* Glass effect */
+    --glass-bg: 0 0% 100% / 0.05;
+    --glass-border: 0 0% 100% / 0.1;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--brand-primary)), hsl(var(--brand-primary-dark)));
+    --gradient-dark: linear-gradient(180deg, hsl(var(--brand-black)), hsl(var(--card)));
+    
+    /* Shadows */
+    --shadow-glass: 0 8px 32px hsla(var(--brand-black) / 0.3);
+    --shadow-glow: 0 0 40px hsla(var(--brand-primary) / 0.3);
+    --shadow-card: 0 10px 30px hsla(var(--brand-black) / 0.3);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .light {
+    /* Light Theme Colors */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --card-hover: 0 0% 96%;
+    
+    --primary: var(--brand-primary);
+    --primary-foreground: 0 0% 98%;
+    
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: var(--brand-primary);
+    
+    /* Light mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--brand-primary)), hsl(var(--brand-primary-dark)));
+    --gradient-dark: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 96%));
+    
+    /* Light mode shadows */
+    --shadow-glass: 0 8px 32px hsla(0 0% 0% / 0.1);
+    --shadow-glow: 0 0 40px hsla(var(--brand-primary) / 0.2);
+    --shadow-card: 0 10px 30px hsla(0 0% 0% / 0.1);
+    
+    /* Header for light mode */
+    --header-bg: 0 0% 100% / 0.8;
+  }
+
+  /* Apply border defaults */
+  * {
+    @apply border-border;
+  }
+
+  body {
+    /* ⚡ Important: initial paint fallback to avoid white blink */
+    background-color: hsl(var(--background, 0 0% 0%));
+    color: hsl(var(--foreground, 0 0% 96%));
+    @apply transition-colors duration-300;
+  }
+
+  /* Apply custom scrollbar globally */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.3) hsl(var(--muted) / 0.1);
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.1);
+    border-radius: 5px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 5px;
+    transition: background 0.2s ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: hsl(var(--primary) / 0.7);
+  }
+
+  /* Admin panel specific - slightly thinner scrollbar */
+  .admin-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+@layer utilities {
+  /* Premium animations */
+  .animate-fade-in {
+    @apply animate-in fade-in-0 duration-700;
+  }
+  
+  .animate-slide-up {
+    @apply animate-in slide-in-from-bottom-4 duration-700;
+  }
+  
+  .animate-scale-in {
+    @apply animate-in zoom-in-95 duration-500;
+  }
+  
+  .animate-stagger {
+    animation-delay: calc(var(--stagger) * 150ms);
+  }
+  
+  .group:hover .group-hover-float {
+    @apply -translate-y-2 transition-transform duration-300;
+  }
+  
+  .premium-glow {
+    @apply shadow-glow hover:shadow-xl transition-shadow duration-500;
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-primary to-brand-primary-dark bg-clip-text text-transparent;
+  }
+  
+  /* Custom Scrollbar - Matches system design */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.3) hsl(var(--muted) / 0.1);
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.1);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:active {
+    background: hsl(var(--primary) / 0.7);
+  }
+}
