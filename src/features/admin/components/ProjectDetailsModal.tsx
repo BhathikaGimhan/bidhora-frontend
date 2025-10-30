@@ -58,39 +58,106 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
   const { toast } = useToast();
 
   const fetchClientDetails = useCallback(async () => {
-    if (!project?.clientId) return;
+    if (!project?.clientId) {
+      console.log('No clientId found in project:', project);
+      return;
+    }
 
+    console.log('Fetching client details for clientId:', project.clientId);
     setLoading(true);
     try {
       // Fetch client details from Firestore
       const { getFirestore } = await import('firebase/firestore');
-      const { doc, getDoc } = await import('firebase/firestore');
+      const { doc, getDoc, collection, query, where, getDocs } = await import('firebase/firestore');
       const db = getFirestore();
       
-      const clientDoc = await getDoc(doc(db, 'users', project.clientId));
+      let clientDoc;
+      let clientData = null;
       
-      if (clientDoc.exists()) {
-        const data = clientDoc.data();
+      // Check if clientId is an email (contains @)
+      if (project.clientId.includes('@')) {
+        console.log('ClientId is an email, querying by email:', project.clientId);
+        // Query users collection by email
+        const usersQuery = query(
+          collection(db, 'users'),
+          where('email', '==', project.clientId)
+        );
+        const querySnapshot = await getDocs(usersQuery);
+        
+        console.log('Query returned', querySnapshot.size, 'documents');
+        
+        if (!querySnapshot.empty) {
+          clientDoc = querySnapshot.docs[0];
+          clientData = clientDoc.data();
+          console.log('Found client by email:', clientData);
+        }
+      } else {
+        // Assume it's a user ID, fetch directly
+        console.log('ClientId is a UID, fetching directly');
+        clientDoc = await getDoc(doc(db, 'users', project.clientId));
+        if (clientDoc.exists()) {
+          clientData = clientDoc.data();
+          console.log('Found client by UID:', clientData);
+        }
+      }
+      
+      if (clientData) {
+        // Count actual projects for this client
+        // First check if postedProjects array exists
+        let projectCount = 0;
+        
+        if (clientData.postedProjects && Array.isArray(clientData.postedProjects)) {
+          projectCount = clientData.postedProjects.length;
+          console.log('Found', projectCount, 'projects in postedProjects array');
+        } else if (clientData.totalProjects) {
+          projectCount = clientData.totalProjects;
+          console.log('Using totalProjects from user document:', projectCount);
+        } else {
+          // Fallback: Query projects collection
+          try {
+            console.log('Counting projects from projects collection...');
+            const projectsRef = collection(db, 'projects');
+            let projectsQuery;
+            
+            if (clientDoc?.id) {
+              // If we have the UID, query by createdBy
+              projectsQuery = query(projectsRef, where('createdBy', '==', clientDoc.id));
+            } else if (project.clientId.includes('@')) {
+              // If we only have email, query by buyerEmail
+              projectsQuery = query(projectsRef, where('buyerEmail', '==', project.clientId));
+            }
+            
+            if (projectsQuery) {
+              const projectsSnapshot = await getDocs(projectsQuery);
+              projectCount = projectsSnapshot.size;
+              console.log('Found', projectCount, 'projects from query');
+            }
+          } catch (error) {
+            console.error('Error counting projects:', error);
+          }
+        }
+        
         setClientInfo({
-          id: clientDoc.id,
-          name: data.displayName || data.name || 'Unknown User',
-          email: data.email || '',
-          photoURL: data.photoURL || data.avatar,
-          phoneNumber: data.phoneNumber,
-          location: data.location,
-          bio: data.bio,
-          role: data.role || 'buyer',
-          createdAt: data.createdAt?.toDate().toISOString(),
-          totalProjects: data.totalProjects || 0,
-          rating: data.rating || 0,
-          verified: data.verified || false,
+          id: clientDoc?.id || project.clientId,
+          name: clientData.displayName || clientData.name || project.clientName || 'Unknown User',
+          email: clientData.email || project.clientId,
+          photoURL: clientData.photoURL || clientData.avatar,
+          phoneNumber: clientData.phoneNumber,
+          location: clientData.location,
+          bio: clientData.bio,
+          role: clientData.role || 'buyer',
+          createdAt: clientData.createdAt?.toDate?.().toISOString(),
+          totalProjects: projectCount,
+          rating: clientData.rating || 0,
+          verified: clientData.verified || false,
         });
       } else {
-        // If client details not found, use basic info
+        console.log('Client not found in database, using project data');
+        // If client details not found, use basic info from project
         setClientInfo({
           id: project.clientId,
           name: project.clientName || 'Unknown User',
-          email: '',
+          email: project.clientId.includes('@') ? project.clientId : '',
           role: 'buyer',
         });
       }
@@ -105,7 +172,7 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
       setClientInfo({
         id: project.clientId,
         name: project.clientName || 'Unknown User',
-        email: '',
+        email: project.clientId.includes('@') ? project.clientId : '',
         role: 'buyer',
       });
     } finally {
@@ -422,9 +489,7 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
           </div>
         </ScrollArea>
 
-        <div className="flex justify-end pt-4 border-t">
-          <Button onClick={onClose}>Close</Button>
-        </div>
+        
       </DialogContent>
     </Dialog>
   );
