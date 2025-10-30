@@ -198,11 +198,6 @@ export function ProjectsView() {
         ),
     },
     {
-      key: "bidsCount",
-      title: "Bids",
-      sortable: true,
-    },
-    {
       key: "deadline",
       title: "Deadline",
       sortable: true,
