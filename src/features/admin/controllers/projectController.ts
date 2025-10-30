@@ -22,7 +22,6 @@ const mockProjects: Project[] = [
     createdDate: "2024-09-01",
     category: "Web Development",
     skillsRequired: ["React", "Node.js", "MongoDB"],
-    bidsCount: 12,
     featured: true,
   },
   {
@@ -37,7 +36,6 @@ const mockProjects: Project[] = [
     createdDate: "2024-09-15",
     category: "Design",
     skillsRequired: ["Figma", "UI/UX", "Mobile Design"],
-    bidsCount: 8,
     featured: false,
   },
   {
@@ -52,7 +50,6 @@ const mockProjects: Project[] = [
     createdDate: "2024-08-15",
     category: "Writing",
     skillsRequired: ["Content Writing", "SEO", "Research"],
-    bidsCount: 15,
     featured: false,
   },
 ];
@@ -91,7 +88,6 @@ class ProjectController {
         createdDate: project.createdAt.toISOString().split("T")[0],
         category: project.category || "General",
         skillsRequired: project.skills || [],
-        bidsCount: project.bids || 0,
         featured: false, // Default to false since not in Firestore data
         isUrgent: project.isUrgent || false, // Include isUrgent field
       }));
@@ -233,7 +229,6 @@ class ProjectController {
         createdDate: project.createdAt.toISOString().split("T")[0],
         category: project.category || "General",
         skillsRequired: project.skills || [],
-        bidsCount: project.bids || 0,
         featured: false,
       }));
     } catch (error) {
@@ -270,7 +265,6 @@ class ProjectController {
         createdDate: project.createdAt.toISOString().split("T")[0],
         category: project.category || "General",
         skillsRequired: project.skills || [],
-        bidsCount: project.bids || 0,
         featured: false,
       }));
     } catch (error) {

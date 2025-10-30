@@ -26,7 +26,6 @@ export interface Project {
   createdDate: string;
   category: string;
   skillsRequired: string[];
-  bidsCount: number;
   featured: boolean;
   isUrgent?: boolean;
 }

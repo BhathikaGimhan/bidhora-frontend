@@ -235,14 +235,6 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                   </div>
 
                   <div className="flex items-start space-x-3">
-                    <FileText className="h-5 w-5 text-orange-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Bids Received</p>
-                      <p className="text-lg font-semibold">{project.bidsCount}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
                     <Clock className="h-5 w-5 text-gray-600 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Posted On</p>

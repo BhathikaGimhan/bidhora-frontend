@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   Users,
   FolderOpen,
-  MessageSquare,
   CreditCard,
   TrendingUp,
   Activity,
@@ -11,7 +10,6 @@ import { StatCard } from "@/features/admin/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { userController } from "@/features/admin/controllers/userController";
 import { projectController } from "@/features/admin/controllers/projectController";
-import { bidController } from "@/features/admin/controllers/bidController";
 import { transactionController } from "@/features/admin/controllers/transactionController";
 import { Project, ProjectStats } from "@/features/admin/models/ProjectModel";
 import LoadingSpinner from "@/components/ui/loading-spinner";
@@ -46,7 +44,6 @@ export function DashboardView() {
   }, []);
 
   const userStats = userController.getUserStats();
-  const bidStats = bidController.getBidStats();
   const transactionStats = transactionController.getTransactionStats();
   const recentUsers = userController.getAllUsers().slice(0, 5);
 
@@ -61,7 +58,7 @@ export function DashboardView() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Total Users"
           value={userStats.totalUsers}
@@ -75,13 +72,6 @@ export function DashboardView() {
           description={`${projectStats.pendingApproval} pending approval`}
           icon={FolderOpen}
           trend={{ value: 8, isPositive: true }}
-        />
-        <StatCard
-          title="Total Bids"
-          value={bidStats.totalBids}
-          description={`${bidStats.pendingBids} pending`}
-          icon={MessageSquare}
-          trend={{ value: 15, isPositive: true }}
         />
         <StatCard
           title="Revenue"
@@ -142,15 +132,6 @@ export function DashboardView() {
                 </span>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   6h ago
-                </span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
-                <span className="text-xs sm:text-sm flex-1 min-w-0 truncate">
-                  New bid submitted
-                </span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  8h ago
                 </span>
               </div>
             </div>
