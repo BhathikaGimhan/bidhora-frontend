@@ -71,7 +71,7 @@ class ProjectController {
         title: project.title,
         description: project.description,
         status: this.mapProjectStatus(project.status),
-        clientId: project.createdBy,
+        clientId: project.createdBy || project.buyerEmail || project.id, // Use buyerEmail as fallback
         clientName:
           project.poster?.displayName ||
           project.buyerEmail ||
@@ -212,7 +212,7 @@ class ProjectController {
         title: project.title,
         description: project.description,
         status: this.mapProjectStatus(project.status),
-        clientId: project.createdBy,
+        clientId: project.createdBy || project.buyerEmail || project.id, // Use buyerEmail as fallback
         clientName:
           project.poster?.displayName ||
           project.buyerEmail ||
@@ -248,7 +248,7 @@ class ProjectController {
         title: project.title,
         description: project.description,
         status: this.mapProjectStatus(project.status),
-        clientId: project.createdBy,
+        clientId: project.createdBy || project.buyerEmail || project.id, // Use buyerEmail as fallback
         clientName:
           project.poster?.displayName ||
           project.buyerEmail ||
