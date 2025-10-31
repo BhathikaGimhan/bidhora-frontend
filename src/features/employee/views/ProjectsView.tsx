@@ -37,6 +37,7 @@ export function ProjectsView() {
         const db = getFirestore();
         const projectsRef = collection(db, 'projects');
         
+        // Query all projects except completed ones (they're shown in Completed view)
         const q = query(
           projectsRef,
           where('assignedEmployeeId', '==', user.uid),
@@ -48,7 +49,9 @@ export function ProjectsView() {
         
         snapshot.forEach((doc) => {
           const data = doc.data();
-          projectsList.push({
+          // Filter out completed projects - they go to the Completed view
+          if (data.status !== 'completed') {
+            projectsList.push({
             id: doc.id,
             title: data.title || '',
             description: data.description || '',
@@ -77,6 +80,7 @@ export function ProjectsView() {
             downloadUrl: data.downloadUrl,
             documents: data.documents,
           });
+        }
         });
         
         setProjects(projectsList);
@@ -175,7 +179,6 @@ export function ProjectsView() {
             <SelectItem value="assigned">Assigned</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="completed_by_employee">Submitted</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="needs_revision">Needs Revision</SelectItem>
           </SelectContent>
         </Select>

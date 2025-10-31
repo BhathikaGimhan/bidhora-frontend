@@ -18,7 +18,6 @@ import { auth } from "@/firebaseConfig";
 const sidebarItems = [
   { title: "Dashboard", url: "/employee", icon: LayoutDashboard },
   { title: "My Projects", url: "/employee/projects", icon: FolderOpen },
-  { title: "Submit Work", url: "/employee/submit", icon: Upload },
   { title: "Completed", url: "/employee/completed", icon: CheckCircle },
   { title: "Notifications", url: "/employee/notifications", icon: Bell },
   { title: "Settings", url: "/employee/settings", icon: Settings },

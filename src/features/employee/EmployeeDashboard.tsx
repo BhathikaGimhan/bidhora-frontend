@@ -4,7 +4,8 @@ import { EmployeeSidebar } from "@/features/employee/components/Sidebar";
 import { EmployeeTopbar } from "@/features/employee/components/Topbar";
 import { DashboardView } from "@/features/employee/views/DashboardView";
 import { ProjectsView } from "@/features/employee/views/ProjectsView";
-import { SubmitWorkView } from "@/features/employee/views/SubmitWorkView";
+import { ProjectDetailsView } from "@/features/employee/views/ProjectDetailsView";
+import { CompletedView } from "@/features/employee/views/CompletedView";
 
 export default function EmployeePanel() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -57,9 +58,8 @@ export default function EmployeePanel() {
           <Routes>
             <Route path="/" element={<DashboardView />} />
             <Route path="/projects" element={<ProjectsView />} />
-            <Route path="/projects/:projectId" element={<SubmitWorkView />} />
-            <Route path="/submit" element={<SubmitWorkView />} />
-            <Route path="/completed" element={<ProjectsView />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailsView />} />
+            <Route path="/completed" element={<CompletedView />} />
             <Route path="/notifications" element={<div>Notifications View (Coming Soon)</div>} />
             <Route path="/settings" element={<div>Settings View (Coming Soon)</div>} />
             <Route path="*" element={<Navigate to="/employee" replace />} />
