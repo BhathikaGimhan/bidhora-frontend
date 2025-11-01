@@ -140,38 +140,21 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
       if (profile && profile.role === "buyer") {
         try {
           setProjectsLoading(true);
-          console.log("Fetching buyer projects from profile data for:", profile.uid);
+          console.log("Fetching buyer projects for:", profile.uid);
 
-          // Use profile data's postedProjects instead of fetching from projects collection
-          const profileProjects = profile.postedProjects || [];
-          console.log("BuyerProjects.tsx:65 Fetched buyer projects:", profileProjects);
+          // Use the getBuyerProjects service function to fetch from projects collection
+          const { projects: fetchedProjects } = await getBuyerProjects(profile.uid);
+          console.log("✅ Fetched buyer projects from service:", fetchedProjects);
 
-          // Convert profile projects to BuyerProject format
-          const buyerProjectsData: BuyerProject[] = profileProjects.map(project => ({
-            id: project.id,
-            title: project.title,
-            description: project.description,
-            budgetMin: project.budget,
-            budgetMax: null,
-            deadline: project.createdAt instanceof Date ? project.createdAt : project.createdAt.toDate(),
-            location: "",
-            skills: [],
-            isUrgent: false,
-            category: "",
-            imageUrl: null,
-            createdBy: profile.uid,
-            createdAt: project.createdAt instanceof Date ? project.createdAt : project.createdAt.toDate(),
-            bids: 0,
-            proposalsCount: 0,
-            status: project.status as "pending" | "ongoing" | "completed" | "closed",
-            assignedTo: undefined,
-          }));
-
-          setBuyerProjects(buyerProjectsData);
+          setBuyerProjects(fetchedProjects);
 
           // Log project statuses for debugging
-          const projectStatuses = buyerProjectsData.map(p => p.status);
-          console.log("BuyerProjects.tsx:66 Project statuses:", projectStatuses);
+          const projectStatuses = fetchedProjects.map(p => ({ 
+            id: p.id, 
+            title: p.title, 
+            status: p.status 
+          }));
+          console.log("📊 Project statuses:", projectStatuses);
 
         } catch (error) {
           console.error("Error fetching buyer projects:", error);
@@ -197,44 +180,13 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
       try {
         setProjectsLoading(true);
         setProjectsError(null);
-        console.log("Refreshing buyer projects from profile data for:", profile.uid);
+        console.log("Refreshing buyer projects for:", profile.uid);
 
-        // Re-fetch the profile to get updated project data
-        let profileData;
-        if (userId) {
-          profileData = await userProfileService.getUserProfileById(userId);
-        } else {
-          profileData = await userProfileService.getCurrentUserProfile();
-        }
+        // Use the getBuyerProjects service function to fetch fresh data
+        const { projects: fetchedProjects } = await getBuyerProjects(profile.uid);
+        console.log("✅ Refreshed buyer projects:", fetchedProjects);
 
-        setProfile(profileData.user);
-
-        // Use updated profile data's postedProjects
-        const profileProjects = profileData.user.postedProjects || [];
-        console.log("Refreshed buyer projects:", profileProjects);
-
-        // Convert profile projects to BuyerProject format
-        const buyerProjectsData: BuyerProject[] = profileProjects.map(project => ({
-          id: project.id,
-          title: project.title,
-          description: project.description,
-          budgetMin: project.budget,
-          budgetMax: null,
-          deadline: project.createdAt instanceof Date ? project.createdAt : project.createdAt.toDate(),
-          location: "",
-          skills: [],
-          isUrgent: false,
-          category: "",
-          imageUrl: null,
-          createdBy: profile.uid,
-          createdAt: project.createdAt instanceof Date ? project.createdAt : project.createdAt.toDate(),
-          bids: 0,
-          proposalsCount: 0,
-          status: project.status as "pending" | "ongoing" | "completed" | "closed",
-          assignedTo: undefined,
-        }));
-
-        setBuyerProjects(buyerProjectsData);
+        setBuyerProjects(fetchedProjects);
 
       } catch (error) {
         console.error("Error refreshing buyer projects:", error);
@@ -245,7 +197,7 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
         setProjectsLoading(false);
       }
     }
-  }, [profile, userId]);
+  }, [profile]);
 
   // Calculate project counts by status
     const projectCounts = buyerProjects.reduce(

@@ -20,7 +20,7 @@ import { ProjectCard } from "./ProjectCard";
 import { ProposalsList } from "./ProposalsList";
 import { OngoingProjectDetails } from "./OngoingProjectDetails";
 import { ReviewPrompt } from "../ReviewPrompt";
-import { Project, Proposal, User as UserType } from "@/Services/projectService";
+import { Project, Proposal, User as UserType, ProjectDocument } from "@/Services/projectService";
 import {
   getBuyerProjects,
   getProjectProposals,
@@ -46,8 +46,28 @@ interface BuyerProjectsProps {
 // Helper function to convert BuyerProject to Project for components
 const buyerProjectToProject = (buyerProject: BuyerProject): Omit<Project, 'status'> & { 
   proposalsCount?: number; 
-  status?: 'pending' | 'ongoing' | 'completed' | 'closed';
+  status: 
+    | "pending" 
+    | "admin_review" 
+    | "priced" 
+    | "customer_approved" 
+    | "ready_to_assign" 
+    | "assigned" 
+    | "completed_by_employee" 
+    | "completed" 
+    | "cancelled"
+    | "ongoing" // Legacy status
+    | "closed"; // Legacy status
   assignedTo?: string;
+  documents?: ProjectDocument[];
+  adminPrice?: number;
+  adminDuration?: number;
+  adminDurationUnit?: string;
+  assignedAt?: Date;
+  adminNotes?: string;
+  assignedEmployeeId?: string;
+  assignedEmployeeName?: string;
+  assignedEmployeeEmail?: string;
 } => {
   return {
     id: buyerProject.id,
@@ -61,17 +81,23 @@ const buyerProjectToProject = (buyerProject: BuyerProject): Omit<Project, 'statu
     isUrgent: buyerProject.isUrgent,
     category: buyerProject.category,
     imageUrl: buyerProject.imageUrl || null,
-    documents: [],
+    documents: buyerProject.documents || [], // Use actual documents from buyerProject
     createdBy: buyerProject.createdBy,
     createdAt: buyerProject.createdAt,
     bids: buyerProject.bids,
     buyerEmail: "",
     assignedTo: buyerProject.assignedTo,
-    assignedEmployeeId: buyerProject.assignedTo || undefined,
-    assignedEmployeeName: "",
-    assignedEmployeeEmail: "",
+    assignedEmployeeId: buyerProject.assignedEmployeeId || buyerProject.assignedTo,
+    assignedEmployeeName: buyerProject.assignedEmployeeName || "",
+    assignedEmployeeEmail: buyerProject.assignedEmployeeEmail || "",
     proposalsCount: buyerProject.proposalsCount,
     status: buyerProject.status,
+    // Add additional fields for OngoingProjectDetails
+    adminPrice: buyerProject.adminPrice,
+    adminDuration: buyerProject.adminDuration,
+    adminDurationUnit: buyerProject.adminDurationUnit as "days" | "weeks" | undefined,
+    assignedAt: buyerProject.assignedAt,
+    adminNotes: buyerProject.adminNotes,
   };
 };
 
@@ -394,13 +420,29 @@ export const BuyerProjects = ({
 
   const filterProjectsByStatus = (status: string) => {
     return projects.filter((project) => {
-      // Handle both 'pending' and any legacy 'open' projects by treating them as the same
+      const projectStatus = project.status as string;
+      
       if (status === "pending") {
+        // "Open" tab: pending, admin_review, priced (awaiting customer decision)
         return (
-          project.status === "pending" || (project.status as string) === "open"
+          projectStatus === "pending" ||
+          projectStatus === "admin_review" ||
+          projectStatus === "priced" ||
+          projectStatus === "open"
         );
+      } else if (status === "ongoing") {
+        // "Ongoing" tab: customer_approved, ready_to_assign, assigned, completed_by_employee
+        return (
+          projectStatus === "customer_approved" ||
+          projectStatus === "ready_to_assign" ||
+          projectStatus === "assigned" ||
+          projectStatus === "completed_by_employee"
+        );
+      } else if (status === "completed") {
+        // "Completed" tab: completed only
+        return projectStatus === "completed";
       }
-      return project.status === status;
+      return projectStatus === status;
     });
   };
 
