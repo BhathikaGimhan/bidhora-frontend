@@ -141,7 +141,18 @@ export interface BuyerProject {
   updatedAt?: Date;
   bids: number; // Required to align with Project interface
   proposalsCount: number;
-  status: "pending" | "ongoing" | "completed" | "closed";
+  status: 
+    | "pending" 
+    | "admin_review" 
+    | "priced" 
+    | "customer_approved" 
+    | "ready_to_assign" 
+    | "assigned" 
+    | "completed_by_employee" 
+    | "completed" 
+    | "cancelled"
+    | "ongoing" // Legacy status
+    | "closed"; // Legacy status
   assignedTo?: string;
   assignedServiceProvider?: {
     uid: string;
@@ -158,6 +169,14 @@ export interface BuyerProject {
   };
   assignedAt?: Date;
   progress?: number;
+  downloadUrl?: string; // URL for customer to download completed work
+  adminPrice?: number;
+  adminDuration?: number;
+  adminDurationUnit?: string;
+  adminNotes?: string;
+  assignedEmployeeId?: string;
+  assignedEmployeeName?: string;
+  assignedEmployeeEmail?: string;
 }
 
 export interface BuyerProposal {
@@ -504,19 +523,45 @@ export const getBuyerProjects = async (
   buyerId: string
 ): Promise<{ projects: BuyerProject[]; total: number }> => {
   try {
-    // Query projects from Firestore where createdBy matches buyerId
-    // Note: Removed orderBy to avoid requiring composite index
-    const projectsQuery = query(
+    console.log("🔍 Fetching buyer projects for buyerId:", buyerId);
+    
+    // Query projects from Firestore where buyerId matches (new field) OR createdBy matches (legacy field)
+    // We need to make two queries because Firestore doesn't support OR queries on different fields
+    const projectsQuery1 = query(
+      collection(db, "projects"),
+      where("buyerId", "==", buyerId)
+    );
+    
+    const projectsQuery2 = query(
       collection(db, "projects"),
       where("createdBy", "==", buyerId)
     );
 
-    const projectsSnapshot = await getDocs(projectsQuery);
+    const [projectsSnapshot1, projectsSnapshot2] = await Promise.all([
+      getDocs(projectsQuery1),
+      getDocs(projectsQuery2)
+    ]);
+    
+    // Combine results and remove duplicates
+    const allDocs = [...projectsSnapshot1.docs, ...projectsSnapshot2.docs];
+    const uniqueDocs = allDocs.filter((doc, index, self) => 
+      index === self.findIndex((d) => d.id === doc.id)
+    );
+    
+    console.log(`📦 Found ${uniqueDocs.length} projects (${projectsSnapshot1.docs.length} by buyerId, ${projectsSnapshot2.docs.length} by createdBy)`);
 
     // Convert Firestore documents to BuyerProject format and sort by createdAt desc
-    const projects = projectsSnapshot.docs
+    const projects = uniqueDocs
       .map((doc): BuyerProject => {
         const projectData = doc.data();
+        
+        // Log project status for debugging
+        console.log(`📊 Project "${projectData.title}" (${doc.id}):`, {
+          status: projectData.status,
+          buyerId: projectData.buyerId,
+          createdBy: projectData.createdBy
+        });
+        
         return {
           id: doc.id,
           title: projectData.title || "",
@@ -529,24 +574,32 @@ export const getBuyerProjects = async (
           isUrgent: projectData.isUrgent || false,
           category: projectData.category || "",
           imageUrl: projectData.imageUrl || null,
-          createdBy: projectData.createdBy,
+          createdBy: projectData.createdBy || projectData.buyerId, // Support both fields
           createdAt: projectData.createdAt?.toDate() || new Date(),
           updatedAt: projectData.updatedAt?.toDate(),
           bids: projectData.bids || 0,
           proposalsCount: projectData.bids || 0, // Use bids as proposalsCount
-          status:
-            (projectData.status as
-              | "pending"
-              | "ongoing"
-              | "completed"
-              | "closed") || "pending",
+          status: projectData.status || "pending", // Don't cast - allow all status values
           assignedTo: projectData.assignedTo,
           assignedAt: projectData.assignedAt?.toDate(),
           assignedServiceProvider: projectData.assignedServiceProvider,
           progress: projectData.progress || 0,
+          documents: projectData.documents || [], // Include documents
+          downloadUrl: projectData.downloadUrl, // Include download URL for completed work
+          adminPrice: projectData.adminPrice,
+          adminDuration: projectData.adminDuration,
+          adminDurationUnit: projectData.adminDurationUnit,
+          adminNotes: projectData.adminNotes,
+          assignedEmployeeId: projectData.assignedEmployeeId,
+          assignedEmployeeName: projectData.assignedEmployeeName,
+          assignedEmployeeEmail: projectData.assignedEmployeeEmail,
         };
       })
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by createdAt desc
+    
+    console.log(`✅ Loaded ${projects.length} buyer projects with statuses:`, 
+      projects.map(p => ({ id: p.id, title: p.title, status: p.status }))
+    );
 
     return {
       projects,

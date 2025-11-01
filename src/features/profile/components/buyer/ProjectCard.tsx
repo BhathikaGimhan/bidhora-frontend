@@ -6,8 +6,7 @@ import { Project } from '@/Services/projectService';
 
 interface ProjectCardProps {
   project: Project & { 
-    proposalsCount?: number; 
-    status?: string; // Allow any string status
+    status?: string | Project['status']; // Allow any string status or typed status
     assignedTo?: string;
   };
   onViewProject?: (projectId: string) => void;
@@ -21,14 +20,57 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'admin_review':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'priced':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'customer_approved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'ready_to_assign':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      case 'assigned':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'completed_by_employee':
+        return 'bg-teal-100 text-teal-800 border-teal-200';
       case 'ongoing':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'closed':
         return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending Review';
+      case 'admin_review':
+        return 'Under Review';
+      case 'priced':
+        return 'Price Set - Awaiting Approval';
+      case 'customer_approved':
+        return 'Approved - Processing Payment';
+      case 'ready_to_assign':
+        return 'Ready to Assign';
+      case 'assigned':
+        return 'In Progress';
+      case 'completed_by_employee':
+        return 'Submitted - Under Review';
+      case 'ongoing':
+        return 'Ongoing';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'closed':
+        return 'Closed';
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
@@ -61,9 +103,9 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
           </div>
           <Badge 
             variant="outline" 
-            className={`text-xs font-medium ${getStatusColor(project.status || 'pending')}`}
+            className={`text-xs font-medium whitespace-nowrap ${getStatusColor(project.status || 'pending')}`}
           >
-            {(project.status || 'pending').charAt(0).toUpperCase() + (project.status || 'pending').slice(1)}
+            {getStatusLabel(project.status || 'pending')}
           </Badge>
         </div>
       </CardHeader>
@@ -79,11 +121,6 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
           <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="w-4 h-4" />
             <span>{formatDate(project.deadline)}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="w-4 h-4" />
-            <span>{project.proposalsCount || 0} proposals</span>
           </div>
           
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -110,30 +147,13 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2 border-t">
-          {onViewProject && (project.status === 'approved' || project.status === 'assigned' || project.status === 'completed') && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onViewProject(project.id)}
-              className="flex items-center gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              View My Project
-            </Button>
-          )}
-          
-          {onDeleteProject && canDelete && (project.status === 'pending') && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => onDeleteProject(project.id)}
-              className="flex items-center gap-2"
-            >
-              🗑️ Delete Project
-            </Button>
-          )}
-          
-          {onViewDetails && (project.status === 'approved' || project.status === 'assigned') && (
+          {/* View Details for ongoing projects */}
+          {onViewDetails && (
+            (project.status as string) === 'assigned' || 
+            (project.status as string) === 'completed_by_employee' ||
+            (project.status as string) === 'customer_approved' ||
+            (project.status as string) === 'ready_to_assign'
+          ) && (
             <Button
               variant="default"
               size="sm"
@@ -142,6 +162,47 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
             >
               <Activity className="w-4 h-4" />
               View Progress
+            </Button>
+          )}
+
+          {/* View completed project */}
+          {onViewProject && project.status === 'completed' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onViewProject(project.id)}
+              className="flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              View Completed Project
+            </Button>
+          )}
+
+          {/* View priced project (awaiting customer decision) */}
+          {onViewProject && (project.status as string) === 'priced' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onViewProject(project.id)}
+              className="flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              View Price & Details
+            </Button>
+          )}
+          
+          {/* Delete only pending projects */}
+          {onDeleteProject && canDelete && (
+            project.status === 'pending' || 
+            (project.status as string) === 'admin_review'
+          ) && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onDeleteProject(project.id)}
+              className="flex items-center gap-2"
+            >
+              🗑️ Delete
             </Button>
           )}
         </div>

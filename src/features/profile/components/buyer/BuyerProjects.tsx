@@ -17,17 +17,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FolderOpen, AlertCircle, Plus, Activity, Archive, Trash2 } from "lucide-react";
 import { ProjectCard } from "./ProjectCard";
-import { ProposalsList } from "./ProposalsList";
 import { OngoingProjectDetails } from "./OngoingProjectDetails";
 import { ReviewPrompt } from "../ReviewPrompt";
-import { Project, Proposal, User as UserType } from "@/Services/projectService";
+import { Project, User as UserType, ProjectDocument } from "@/Services/projectService";
 import {
   getBuyerProjects,
-  getProjectProposals,
-  approveProposal,
-  rejectProposal,
   BuyerProject,
-  BuyerProposal,
 } from "@/Services/projectService";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 
@@ -45,9 +40,28 @@ interface BuyerProjectsProps {
 
 // Helper function to convert BuyerProject to Project for components
 const buyerProjectToProject = (buyerProject: BuyerProject): Omit<Project, 'status'> & { 
-  proposalsCount?: number; 
-  status?: 'pending' | 'ongoing' | 'completed' | 'closed';
+  status: 
+    | "pending" 
+    | "admin_review" 
+    | "priced" 
+    | "customer_approved" 
+    | "ready_to_assign" 
+    | "assigned" 
+    | "completed_by_employee" 
+    | "completed" 
+    | "cancelled"
+    | "ongoing" // Legacy status
+    | "closed"; // Legacy status
   assignedTo?: string;
+  documents?: ProjectDocument[];
+  adminPrice?: number;
+  adminDuration?: number;
+  adminDurationUnit?: string;
+  assignedAt?: Date;
+  adminNotes?: string;
+  assignedEmployeeId?: string;
+  assignedEmployeeName?: string;
+  assignedEmployeeEmail?: string;
 } => {
   return {
     id: buyerProject.id,
@@ -61,17 +75,22 @@ const buyerProjectToProject = (buyerProject: BuyerProject): Omit<Project, 'statu
     isUrgent: buyerProject.isUrgent,
     category: buyerProject.category,
     imageUrl: buyerProject.imageUrl || null,
-    documents: [],
+    documents: buyerProject.documents || [], // Use actual documents from buyerProject
     createdBy: buyerProject.createdBy,
     createdAt: buyerProject.createdAt,
     bids: buyerProject.bids,
     buyerEmail: "",
     assignedTo: buyerProject.assignedTo,
-    assignedEmployeeId: buyerProject.assignedTo || undefined,
-    assignedEmployeeName: "",
-    assignedEmployeeEmail: "",
-    proposalsCount: buyerProject.proposalsCount,
+    assignedEmployeeId: buyerProject.assignedEmployeeId || buyerProject.assignedTo,
+    assignedEmployeeName: buyerProject.assignedEmployeeName || "",
+    assignedEmployeeEmail: buyerProject.assignedEmployeeEmail || "",
     status: buyerProject.status,
+    // Add additional fields for OngoingProjectDetails
+    adminPrice: buyerProject.adminPrice,
+    adminDuration: buyerProject.adminDuration,
+    adminDurationUnit: buyerProject.adminDurationUnit as "days" | "weeks" | undefined,
+    assignedAt: buyerProject.assignedAt,
+    adminNotes: buyerProject.adminNotes,
   };
 };
 
@@ -90,28 +109,17 @@ export const BuyerProjects = ({
   const [projects, setProjects] = useState<BuyerProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<
-    "projects" | "proposals" | "details"
-  >("projects");
+  const [currentView, setCurrentView] = useState<"projects" | "details">("projects");
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<
     "open" | "ongoing" | "completed"
   >(defaultTab);
   const [selectedProjectData, setSelectedProjectData] =
     useState<BuyerProject | null>(null);
-  const [proposalsData, setProposalsData] = useState<{
-    proposals: BuyerProposal[];
-    loading: boolean;
-    error: string | null;
-  }>({
-    proposals: [],
-    loading: false,
-    error: null,
-  });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [reviewPromptProject, setReviewPromptProject] = useState<BuyerProject | null>(null);
   const [previousProjects, setPreviousProjects] = useState<BuyerProject[]>([]);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false); // Added missing state definition
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<BuyerProject | null>(null); // Added missing state definition
 
   const fetchBuyerProjects = useCallback(async () => {
@@ -203,51 +211,6 @@ export const BuyerProjects = ({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [fetchBuyerProjects]);
 
-  const fetchProposalsForProject = async (projectId: string) => {
-    try {
-      setProposalsData((prev) => ({ ...prev, loading: true, error: null }));
-
-      const { proposals } = await getProjectProposals(
-        buyerId,
-        projectId,
-        "all"
-      );
-
-      setProposalsData({
-        proposals,
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      setProposalsData({
-        proposals: [],
-        loading: false,
-        error:
-          error instanceof Error ? error.message : "Failed to load ProjectX",
-      });
-      console.error("Error fetching proposals:", error);
-    }
-  };
-
-  const handleViewProposals = (projectId: string) => {
-    setSelectedProject(projectId);
-    const project = projects.find((p) => p.id === projectId);
-    setSelectedProjectData(project);
-    // Track which tab the project belongs to
-    if (
-      project?.status === "pending" ||
-      (project?.status as string) === "open"
-    ) {
-      setCurrentTab("open");
-    } else if (project?.status === "ongoing") {
-      setCurrentTab("ongoing");
-    } else if (project?.status === "completed") {
-      setCurrentTab("completed");
-    }
-    fetchProposalsForProject(projectId);
-    setCurrentView("proposals");
-  };
-
   const handleViewDetails = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
     setSelectedProject(projectId);
@@ -320,70 +283,10 @@ export const BuyerProjects = ({
     }
   };
 
-  const handleApproveProposal = async (
-    proposalId: string,
-    sellerId: string
-  ) => {
-    try {
-      await approveProposal(buyerId, proposalId);
-
-      // Update the project status to ongoing and assign seller
-      setProjects((prev) =>
-        prev.map((project) =>
-          project.id === selectedProject
-            ? { ...project, status: "ongoing" as const, assignedTo: sellerId }
-            : project
-        )
-      );
-
-      // Update the proposals data to reflect the change
-      setProposalsData((prev) => ({
-        ...prev,
-        proposals: prev.proposals.map((proposal) =>
-          proposal.id === proposalId
-            ? { ...proposal, status: "accepted" as const } // Use 'accepted' for frontend
-            : proposal
-        ),
-      }));
-
-      alert(
-        "ProjectX approved successfully! The ProjectX seller has been assigned to your project."
-      );
-    } catch (error) {
-      console.error("Error approving proposal:", error);
-      alert("Failed to approve ProjectX. Please try again.");
-    }
-  };
-
-  const handleRejectProposal = async (proposalId: string) => {
-    try {
-      await rejectProposal(
-        buyerId,
-        proposalId,
-        "Not suitable for this project"
-      );
-
-      setProposalsData((prev) => ({
-        ...prev,
-        proposals: prev.proposals.map((proposal) =>
-          proposal.id === proposalId
-            ? { ...proposal, status: "rejected" as const }
-            : proposal
-        ),
-      }));
-
-      alert("ProjectX rejected successfully.");
-    } catch (error) {
-      console.error("Error rejecting proposal:", error);
-      alert("Failed to reject ProjectX. Please try again.");
-    }
-  };
-
   const handleBack = () => {
     setCurrentView("projects");
     setSelectedProject(null);
     setSelectedProjectData(null);
-    setProposalsData({ proposals: [], loading: false, error: null });
   };
 
   const handleViewSellerProfile = (sellerId: string) => {
@@ -394,13 +297,29 @@ export const BuyerProjects = ({
 
   const filterProjectsByStatus = (status: string) => {
     return projects.filter((project) => {
-      // Handle both 'pending' and any legacy 'open' projects by treating them as the same
+      const projectStatus = project.status as string;
+      
       if (status === "pending") {
+        // "Open" tab: pending, admin_review, priced (awaiting customer decision)
         return (
-          project.status === "pending" || (project.status as string) === "open"
+          projectStatus === "pending" ||
+          projectStatus === "admin_review" ||
+          projectStatus === "priced" ||
+          projectStatus === "open"
         );
+      } else if (status === "ongoing") {
+        // "Ongoing" tab: customer_approved, ready_to_assign, assigned, completed_by_employee
+        return (
+          projectStatus === "customer_approved" ||
+          projectStatus === "ready_to_assign" ||
+          projectStatus === "assigned" ||
+          projectStatus === "completed_by_employee"
+        );
+      } else if (status === "completed") {
+        // "Completed" tab: completed only
+        return projectStatus === "completed";
       }
-      return project.status === status;
+      return projectStatus === status;
     });
   };
 
@@ -412,24 +331,6 @@ export const BuyerProjects = ({
   );
   const ongoingProjects = filterProjectsByStatus("ongoing");
   const completedProjects = filterProjectsByStatus("completed");
-
-  if (currentView === "proposals" && selectedProject && selectedProjectData) {
-    return (
-      <>
-        <ProposalsList
-          projectId={selectedProject}
-          projectTitle={selectedProjectData.title}
-          proposals={proposalsData.proposals}
-          loading={proposalsData.loading}
-          error={proposalsData.error}
-          onBack={handleBack}
-          onApproveProposal={handleApproveProposal}
-          onRejectProposal={handleRejectProposal}
-          isOwner={true}
-        />
-      </>
-    );
-  }
 
   if (currentView === "details" && selectedProject && selectedProjectData) {
     return (
@@ -540,7 +441,7 @@ export const BuyerProjects = ({
                 {openProjects.map((project) => (
                   <ProjectCard
                     key={project.id}
-                    project={buyerProjectToProject(project) as Project & { proposalsCount?: number; status?: "ongoing" | "completed" | "pending" | "closed"; assignedTo?: string; }}
+                    project={buyerProjectToProject(project) as Project & { status?: "ongoing" | "completed" | "pending" | "closed"; assignedTo?: string; }}
                     onViewProject={isOwnProfile ? handleViewProject : undefined}
                     onDeleteProject={isOwnProfile ? handleDeleteProject : undefined}
                     canDelete={true}
@@ -560,7 +461,7 @@ export const BuyerProjects = ({
                   </h3>
                   <p className="text-muted-foreground">
                     {isOwnProfile
-                      ? "Projects that you've assigned to ProjectX sellers will appear here."
+                      ? "Projects that you've assigned to employees will appear here."
                       : "This buyer has no ongoing projects at the moment."}
                   </p>
                 </CardContent>
@@ -570,7 +471,7 @@ export const BuyerProjects = ({
                 {ongoingProjects.map((project) => (
                   <ProjectCard
                     key={project.id}
-                    project={buyerProjectToProject(project) as Project & { proposalsCount?: number; status?: "ongoing" | "completed" | "pending" | "closed"; assignedTo?: string; }}
+                    project={buyerProjectToProject(project) as Project & { status?: "ongoing" | "completed" | "pending" | "closed"; assignedTo?: string; }}
                     onViewProject={isOwnProfile ? handleViewProject : undefined}
                     onViewDetails={isOwnProfile ? handleViewDetails : undefined}
                     canDelete={false}
@@ -600,7 +501,7 @@ export const BuyerProjects = ({
                 {completedProjects.map((project) => (
                   <ProjectCard
                     key={project.id}
-                    project={buyerProjectToProject(project) as Project & { proposalsCount?: number; status?: "ongoing" | "completed" | "pending" | "closed"; assignedTo?: string; }}
+                    project={buyerProjectToProject(project) as Project & { status?: "ongoing" | "completed" | "pending" | "closed"; assignedTo?: string; }}
                     onViewProject={isOwnProfile ? handleViewProject : undefined}
                     canDelete={false}
                   />
