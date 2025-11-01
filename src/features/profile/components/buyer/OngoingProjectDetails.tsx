@@ -177,7 +177,7 @@ export const OngoingProjectDetails = ({
       'customer_approved': 'Approved - Awaiting Assignment',
       'ready_to_assign': 'Ready to Assign',
       'assigned': 'Assigned to Employee',
-      'completed_by_employee': 'Completed - Awaiting Final Payment',
+      'completed_by_employee': 'Completed - Awaiting Approval',
       'completed': 'Completed',
       'priced': 'Priced - Awaiting Approval',
       'admin_review': 'Under Admin Review',

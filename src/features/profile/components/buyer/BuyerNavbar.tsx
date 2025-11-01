@@ -20,7 +20,7 @@ export const BuyerNavbar = ({ activeTab, onTabChange }: BuyerNavbarProps) => {
       id: 'projects' as const,
       label: 'Projects',
       icon: FolderOpen,
-      description: 'Manage posted projects and proposals'
+      description: 'Manage posted projects'
     },
     
   ];

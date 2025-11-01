@@ -6,7 +6,6 @@ import { Project } from '@/Services/projectService';
 
 interface ProjectCardProps {
   project: Project & { 
-    proposalsCount?: number; 
     status?: string | Project['status']; // Allow any string status or typed status
     assignedTo?: string;
   };
@@ -122,11 +121,6 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
           <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="w-4 h-4" />
             <span>{formatDate(project.deadline)}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="w-4 h-4" />
-            <span>{project.proposalsCount || 0} proposals</span>
           </div>
           
           <div className="flex items-center gap-2 text-muted-foreground">

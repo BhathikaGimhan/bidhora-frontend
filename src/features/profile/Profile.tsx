@@ -371,9 +371,22 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
                     currentUserId={isOwnProfile ? profile.uid : undefined}
                   />
                   <div className="bg-card rounded-lg border p-6">
-                    <h3 className="text-lg font-semibold mb-4">
-                      Posted Projects
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">
+                        Posted Projects
+                      </h3>
+                      {buyerProjects.length > 5 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setBuyerActiveTab("projects");
+                          }}
+                        >
+                          View All Projects
+                        </Button>
+                      )}
+                    </div>
                     <div className="space-y-4">
                       {projectsLoading ? (
                         <div className="flex items-center justify-center py-4">
@@ -385,7 +398,7 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
                         </Alert>
                       ) : (
                         <>
-                          {buyerProjects.map((project) => (
+                          {buyerProjects.slice(0, 5).map((project) => (
                             <div
                               key={project.id}
                               className="border rounded-xl p-5 hover:shadow-md hover:bg-muted/30 transition-all duration-200"
@@ -421,9 +434,6 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
                                   💰 Budget: $
                                   {project.budget || project.budgetMin}
                                 </span>
-                                <span className="px-2 py-1 bg-muted rounded-md">
-                                  📑 ProjectX: {project.proposalsCount || 0}
-                                </span>
                               </div>
                             </div>
                           ))}
@@ -432,6 +442,21 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
                             <p className="text-muted-foreground">
                               No projects posted
                             </p>
+                          )}
+
+                          {buyerProjects.length > 5 && (
+                            <div className="text-center pt-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setBuyerActiveTab("projects");
+                                }}
+                                className="text-sm text-muted-foreground hover:text-foreground"
+                              >
+                                View {buyerProjects.length - 5} more projects →
+                              </Button>
+                            </div>
                           )}
                         </>
                       )}
