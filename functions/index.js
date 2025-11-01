@@ -469,6 +469,15 @@ exports.sendProjectPriceNotification = onRequest(
 exports.sendEmployeeAssignmentNotification = onRequest(
   { cors: true },
   async (req, res) => {
+    // Handle CORS preflight request
+    if (req.method === "OPTIONS") {
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.set("Access-Control-Allow-Headers", "Content-Type");
+      res.status(204).send("");
+      return;
+    }
+
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -657,6 +666,212 @@ exports.sendEmployeeAssignmentNotification = onRequest(
         success: false,
         message:
           "Failed to send assignment notification. Please try again later.",
+      });
+    }
+  }
+);
+
+// Final payment notification handler
+exports.sendFinalPaymentNotification = onRequest(
+  { cors: true },
+  async (req, res) => {
+    // Handle CORS preflight request
+    if (req.method === "OPTIONS") {
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.set("Access-Control-Allow-Headers", "Content-Type");
+      res.status(204).send("");
+      return;
+    }
+
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    try {
+      const {
+        to_email,
+        to_name,
+        project_title,
+        project_id,
+        total_price,
+        initial_payment,
+        final_payment,
+        payment_link,
+      } = req.body;
+
+      // Validate required fields
+      if (
+        !to_email ||
+        !to_name ||
+        !project_title ||
+        !project_id ||
+        !total_price ||
+        !initial_payment ||
+        !final_payment ||
+        !payment_link
+      ) {
+        res.status(400).json({
+          success: false,
+          message: "All fields are required",
+        });
+        return;
+      }
+
+      // Email HTML for final payment notification
+      const paymentEmailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Complete Your Project Payment - Bidhora</title>
+          <style>
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); margin: 0; padding: 20px; }
+            .container { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+            .header { background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%); color: white; padding: 50px 30px; text-align: center; position: relative; }
+            .logo { font-size: 36px; font-weight: 800; margin-bottom: 15px; letter-spacing: -0.5px; }
+            .celebration { font-size: 54px; margin-bottom: 12px; animation: bounce 2s infinite; }
+            @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+            .tagline { font-size: 19px; opacity: 0.95; font-weight: 400; letter-spacing: 0.3px; }
+            .content { padding: 45px 35px; }
+            .greeting { font-size: 26px; font-weight: 700; color: #059669; margin-bottom: 22px; text-align: center; }
+            .message { font-size: 17px; line-height: 1.8; color: #4b5563; margin-bottom: 32px; text-align: center; }
+            .highlight-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 3px solid #059669; border-radius: 14px; padding: 28px; margin: 32px 0; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15); }
+            .project-title { font-size: 22px; font-weight: 700; color: #0c4a6e; margin-bottom: 22px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; }
+            .payment-details { background: white; border-radius: 10px; padding: 22px; }
+            .detail-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 2px solid #e5e7eb; align-items: center; }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-label { font-weight: 600; color: #374151; font-size: 15px; }
+            .detail-value { color: #1f2937; font-weight: 600; font-size: 15px; }
+            .total-row { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 22px; border-radius: 10px; margin-top: 18px; border: 2px solid #f59e0b; }
+            .total-label { font-size: 19px; font-weight: 700; color: #92400e; }
+            .total-value { font-size: 28px; font-weight: 800; color: #059669; }
+            .cta-container { text-align: center; margin: 35px 0; }
+            .cta-text { font-size: 19px; font-weight: 700; color: #374151; margin-bottom: 18px; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 18px 48px; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 19px; box-shadow: 0 8px 16px rgba(5, 150, 105, 0.35); transition: all 0.3s ease; }
+            .cta-button:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(5, 150, 105, 0.45); }
+            .info-box { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 22px; margin: 25px 0; }
+            .info-title { font-weight: 700; color: #1e40af; margin-bottom: 12px; font-size: 16px; }
+            .info-text { color: #4b5563; font-size: 15px; line-height: 1.7; }
+            .security-badge { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 10px; padding: 18px; margin-top: 25px; text-align: center; }
+            .security-text { font-weight: 700; color: #92400e; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+            .footer { background: #f8fafc; padding: 35px; border-top: 2px solid #e5e7eb; text-align: center; }
+            .brand-signature { font-weight: 700; color: #059669; font-size: 20px; margin-bottom: 12px; }
+            .contact-info { display: flex; flex-direction: column; align-items: center; gap: 10px; color: #6b7280; font-size: 15px; margin-top: 15px; }
+            .contact-link { color: #059669; font-weight: 600; text-decoration: none; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">Bidhora</div>
+              <div class="celebration">🎊</div>
+              <div class="tagline">Your Project is Ready!</div>
+            </div>
+            
+            <div class="content">
+              <div class="greeting">🎉 Great News, ${to_name}!</div>
+              
+              <div class="message">
+                Your project <strong>"${project_title}"</strong> has been <strong>successfully completed</strong> and approved by our admin team! 
+                The work is ready for you to download and use immediately.
+              </div>
+              
+              <div class="highlight-box">
+                <div class="project-title">
+                  💼 ${project_title}
+                </div>
+                
+                <div class="payment-details">
+                  <div class="detail-row">
+                    <span class="detail-label">📊 Total Project Price:</span>
+                    <span class="detail-value">LKR ${total_price.toLocaleString()}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">✅ Initial Payment (10%):</span>
+                    <span class="detail-value" style="color: #059669;">LKR ${initial_payment.toLocaleString()} ✓</span>
+                  </div>
+                  <div class="total-row detail-row">
+                    <span class="total-label">💰 Final Payment (90%):</span>
+                    <span class="total-value">LKR ${final_payment.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cta-container">
+                <div class="cta-text">🎁 Complete Your Payment to Access Files</div>
+                <a href="${payment_link}" class="cta-button">
+                  💳 Pay Now & Download Files
+                </a>
+              </div>
+
+              <div class="info-box">
+                <div class="info-title">📋 What Happens Next?</div>
+                <div class="info-text">
+                  <strong>1.</strong> Click the "Pay Now" button above<br/>
+                  <strong>2.</strong> Complete the secure payment process<br/>
+                  <strong>3.</strong> Immediately access and download all project files<br/>
+                  <strong>4.</strong> Keep the files forever - they're yours!
+                </div>
+              </div>
+
+              <div class="security-badge">
+                <div class="security-text">
+                  <span>🔒 Secure Payment</span>
+                  <span>•</span>
+                  <span>📥 Instant Download</span>
+                  <span>•</span>
+                  <span>✅ Quality Guaranteed</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer">
+              <div class="brand-signature">The Bidhora Team</div>
+              <div style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">
+                We're committed to delivering quality work that exceeds your expectations
+              </div>
+              <div class="contact-info">
+                <div>📧 <a href="mailto:contact@bidhora.com" class="contact-link">contact@bidhora.com</a></div>
+                <div>📞 074 377 4787</div>
+                <div>🌐 <a href="https://www.bidhora.com" class="contact-link">www.bidhora.com</a></div>
+              </div>
+              <p style="color: #9ca3af; font-size: 13px; margin-top: 18px;">
+                📅 Sent on ${getSriLankaTime()}
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+      // Send email to buyer
+      await transporter.sendMail({
+        from: '"Bidhora Team" <contact@bidhora.com>',
+        to: to_email,
+        subject: `🎊 Your Project is Ready! Complete Payment to Download - ${project_title}`,
+        html: paymentEmailHtml,
+      });
+
+      logger.info("Final payment notification sent successfully", {
+        to_email,
+        to_name,
+        project_id,
+        project_title,
+        final_payment,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Final payment notification sent successfully!",
+      });
+    } catch (error) {
+      logger.error("Error sending final payment notification:", error);
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to send final payment notification. Please try again later.",
       });
     }
   }

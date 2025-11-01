@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Ban, Trash2, CheckCircle, AlertCircle, UserCog } from 'lucide-react';
+import { MoreHorizontal, Ban, Trash2, CheckCircle, AlertCircle, UserCog, RefreshCw } from 'lucide-react';
 import { User } from '@/features/admin/models/UserModel';
 import { useToast } from '@/hooks/use-toast';
 import { getAllUsers, banUser, unbanUser, deleteUser, updateUserRole } from '@/Services/authService';
@@ -38,6 +38,7 @@ export function UsersView() {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionType, setActionType] = useState<ActionType>(null);
@@ -79,7 +80,17 @@ export function UsersView() {
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    await fetchUsers();
+    toast({
+      title: 'Refreshed',
+      description: 'Users list updated successfully',
+    });
   };
 
   useEffect(() => {
@@ -386,8 +397,27 @@ export function UsersView() {
   return (
     <>
       <div className="space-y-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold">Users Management</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage user accounts, roles, and permissions
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
+        
         <DataTable
-          title="Users Management"
+          title=""
           data={filteredUsers}
           columns={columns}
           searchPlaceholder="Search users by name, email, or role..."

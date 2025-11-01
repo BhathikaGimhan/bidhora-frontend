@@ -24,9 +24,12 @@ import Dashboard from "./features/dashboard/Dashboard";
 import UserManagement from "./pages/UserManagement";
 import ProjectDetailView from "./features/browseProjects/components/ProjectDetailView";
 import AdminPanel from "./features/admin/AdminDashbord";
+import EmployeePanel from "./features/employee/EmployeeDashboard";
 import PaymentPage from "./pages/PaymentPage";
 import ProjectDepositPaymentPage from "./pages/ProjectDepositPaymentPage";
+import FinalPaymentPage from "./pages/FinalPaymentPage";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
+import { ProtectedEmployeeRoute } from "@/components/ProtectedEmployeeRoute";
 
 export const router = createBrowserRouter([
   {
@@ -101,6 +104,10 @@ export const router = createBrowserRouter([
         path: "payment/project/:projectId",
         element: <ProjectDepositPaymentPage />,
       },
+      {
+        path: "payment/final/:projectId",
+        element: <FinalPaymentPage />,
+      },
     ],
   },
   {
@@ -109,6 +116,14 @@ export const router = createBrowserRouter([
       <ProtectedAdminRoute>
         <AdminPanel />
       </ProtectedAdminRoute>
+    ),
+  },
+  {
+    path: "/employee/*",
+    element: (
+      <ProtectedEmployeeRoute>
+        <EmployeePanel />
+      </ProtectedEmployeeRoute>
     ),
   },
 ]);

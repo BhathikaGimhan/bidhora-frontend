@@ -12,6 +12,12 @@ import {
   AdminProfileSection,
   AdminDashboardSection,
 } from "./admin/components";
+import {
+  EmployeeNavbar,
+  EmployeeHeader,
+  EmployeeProfileSection,
+  EmployeeDashboardSection,
+} from "./employee/components";
 import { userProfileService } from "../../Services/userProfileService";
 import { getBuyerProjects, BuyerProject } from "../../Services/projectService";
 import { UserProfile } from "./types/profile";
@@ -35,6 +41,9 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
   const [adminActiveTab, setAdminActiveTab] = useState<"profile" | "dashboard">(
     "profile"
   );
+  const [employeeActiveTab, setEmployeeActiveTab] = useState<
+    "profile" | "dashboard"
+  >("profile");
   const [buyerProjects, setBuyerProjects] = useState<BuyerProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -310,10 +319,15 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Show ProfileHeader for buyers/sellers, AdminHeader for admins */}
+      {/* Show ProfileHeader for buyers/sellers, AdminHeader for admins, EmployeeHeader for employees */}
       {profile.role === "admin" ? (
         <>
           <AdminHeader profile={profile} isOwnProfile={isOwnProfile} />
+          <br />
+        </>
+      ) : profile.role === "employee" ? (
+        <>
+          <EmployeeHeader profile={profile} isOwnProfile={isOwnProfile} />
           <br />
         </>
       ) : (
@@ -354,6 +368,18 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
         </div>
       )}
 
+      {/* Employee Navigation - Show under profile header */}
+      {profile.role === "employee" && (
+        <div className="bg-background border-b">
+          <div className="container mx-auto px-4">
+            <EmployeeNavbar
+              activeTab={employeeActiveTab}
+              onTabChange={setEmployeeActiveTab}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         {profile.role === "admin" ? (
           // Admin Layout - Same structure as seller/buyer
@@ -363,6 +389,17 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
             )}
 
             {adminActiveTab === "dashboard" && <AdminDashboardSection />}
+          </div>
+        ) : profile.role === "employee" ? (
+          // Employee Layout - Same structure as admin
+          <div className="w-full">
+            {employeeActiveTab === "profile" && (
+              <EmployeeProfileSection profile={profile} />
+            )}
+
+            {employeeActiveTab === "dashboard" && (
+              <EmployeeDashboardSection profile={profile} />
+            )}
           </div>
         ) : profile.role === "buyer" ? (
           // Buyer Layout - Show content based on active tab
@@ -582,7 +619,7 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
             )}
           </div>
         ) : (
-          // No seller role handling - only buyer and admin roles supported
+          // No seller role handling - only buyer, admin, and employee roles supported
           <div className="w-full">
             <div className="text-center py-8">
               <p className="text-muted-foreground">Invalid user role</p>

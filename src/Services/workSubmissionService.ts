@@ -12,6 +12,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { geniePaymentService } from "./geniePaymentService";
 
 export interface WorkSubmissionData {
   proposalId: string;
@@ -224,22 +225,37 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
       );
     }
 
-    const submissionsQuery = query(
-      collection(db, "workSubmissions"),
-      orderBy("submittedAt", "desc")
-    );
+    // Get both workSubmissions and employee submissions from projects
+    const [workSubmissionsSnapshot, projectsSnapshot] = await Promise.all([
+      getDocs(
+        query(
+          collection(db, "workSubmissions"),
+          orderBy("submittedAt", "desc")
+        )
+      ),
+      getDocs(
+        query(
+          collection(db, "projects"),
+          where("status", "in", [
+            "completed_by_employee",
+            "needs_revision",
+            "completed",
+          ])
+        )
+      ),
+    ]);
 
-    const submissionsSnapshot = await getDocs(submissionsQuery);
-    const submissions = submissionsSnapshot.docs.map((doc) => {
+    // Process regular work submissions
+    const regularSubmissions = workSubmissionsSnapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         id: doc.id,
         proposalId: data.proposalId,
         projectId: data.projectId,
-        submitterId: data.submitterId || data.sellerId, // backwards compatibility
+        submitterId: data.submitterId || data.sellerId,
         projectTitle: data.projectTitle,
-        submitterName: data.submitterName || data.sellerName, // backwards compatibility
-        submitterPhotoURL: data.submitterPhotoURL || data.sellerPhotoURL, // backwards compatibility
+        submitterName: data.submitterName || data.sellerName,
+        submitterPhotoURL: data.submitterPhotoURL || data.sellerPhotoURL,
         buyerName: data.buyerName,
         buyerPhotoURL: data.buyerPhotoURL,
         description: data.description,
@@ -252,7 +268,45 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
       };
     });
 
-    return submissions;
+    // Process employee submissions from projects
+    const employeeSubmissions = projectsSnapshot.docs
+      .filter((doc) => {
+        const data = doc.data();
+        return data.assignedEmployeeId && data.documents && data.documents.length > 0;
+      })
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          id: `employee_${doc.id}`,
+          proposalId: "", // No proposal for employee assignments
+          projectId: doc.id,
+          submitterId: data.assignedEmployeeId,
+          projectTitle: data.title,
+          submitterName: data.assignedEmployeeName || "Unknown Employee",
+          submitterPhotoURL: null,
+          buyerName: data.buyerName || "Unknown Buyer",
+          buyerPhotoURL: data.buyerPhotoURL || null,
+          description: data.employeeNotes || "No description provided",
+          files: data.documents || [],
+          status:
+            data.adminReviewStatus === "approved"
+              ? "approved"
+              : data.adminReviewStatus === "needs_revision"
+              ? "rejected"
+              : "pending_review",
+          submittedAt: data.submittedToAdminAt?.toDate() || new Date(),
+          reviewedAt: data.adminReviewedAt?.toDate(),
+          reviewedBy: data.adminReviewedBy,
+          reviewNotes: data.adminReviewNotes,
+        };
+      });
+
+    // Combine and sort by submission date
+    const allSubmissions = [...regularSubmissions, ...employeeSubmissions].sort(
+      (a, b) => b.submittedAt.getTime() - a.submittedAt.getTime()
+    );
+
+    return allSubmissions;
   } catch (error: unknown) {
     console.error("Error fetching all work submissions:", error);
     const errorMessage =
@@ -281,12 +335,44 @@ export const updateWorkSubmissionStatus = async (
       throw new Error("Unauthorized: Only admins can update submission status");
     }
 
-    await updateDoc(doc(db, "workSubmissions", submissionId), {
-      status,
-      reviewedAt: Timestamp.now(),
-      reviewedBy: user.uid,
-      reviewNotes: reviewNotes || null,
-    });
+    // Check if this is an employee submission (prefixed with "employee_")
+    if (submissionId.startsWith("employee_")) {
+      const projectId = submissionId.replace("employee_", "");
+      const projectDoc = await getDoc(doc(db, "projects", projectId));
+      
+      if (!projectDoc.exists()) {
+        throw new Error("Project not found");
+      }
+
+      const projectData = projectDoc.data();
+
+      await updateDoc(doc(db, "projects", projectId), {
+        adminReviewStatus: status === "approved" ? "approved" : "needs_revision",
+        adminReviewedAt: Timestamp.now(),
+        adminReviewedBy: user.uid,
+        adminReviewNotes: reviewNotes || null,
+        status: status === "approved" ? "completed" : "needs_revision",
+      });
+
+      // If approved, trigger final payment email to buyer
+      if (status === "approved") {
+        try {
+          await geniePaymentService.initiateFinalPayment(projectId);
+          console.log("Final payment notification sent to buyer");
+        } catch (emailError) {
+          console.error("Error sending final payment email:", emailError);
+          // Don't fail the approval if email fails
+        }
+      }
+    } else {
+      // Regular work submission
+      await updateDoc(doc(db, "workSubmissions", submissionId), {
+        status,
+        reviewedAt: Timestamp.now(),
+        reviewedBy: user.uid,
+        reviewNotes: reviewNotes || null,
+      });
+    }
   } catch (error: unknown) {
     console.error("Error updating work submission status:", error);
     const errorMessage =

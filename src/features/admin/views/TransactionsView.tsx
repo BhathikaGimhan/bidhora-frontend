@@ -8,14 +8,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, CheckCircle, X } from 'lucide-react';
+import { MoreHorizontal, Eye, CheckCircle, X, RefreshCw } from 'lucide-react';
 import { transactionController } from '@/features/admin/controllers/transactionController';
 import { Transaction } from '@/features/admin/models/TransactionModel';
 import { useToast } from '@/hooks/use-toast';
 
 export function TransactionsView() {
   const [transactions, setTransactions] = useState(transactionController.getAllTransactions());
+  const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    // Clear cache and reload
+    transactionController['isLoaded'] = false;
+    setTransactions(transactionController.getAllTransactions());
+    setRefreshing(false);
+    toast({
+      title: 'Refreshed',
+      description: 'Transactions list updated successfully',
+    });
+  };
 
   const handleSearch = (query: string) => {
     if (query.trim() === '') {
@@ -170,8 +183,27 @@ export function TransactionsView() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-3xl font-bold">Transactions Management</h1>
+          <p className="text-muted-foreground mt-1">
+            View and manage all platform transactions
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
+      
       <DataTable
-        title="Transactions Management"
+        title=""
         data={transactions}
         columns={columns}
         searchPlaceholder="Search transactions by user, type, or description..."

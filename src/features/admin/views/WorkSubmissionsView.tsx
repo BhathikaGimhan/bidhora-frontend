@@ -34,6 +34,7 @@ import {
   Clock,
   Loader2,
   ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { auth } from "@/firebaseConfig";
@@ -47,6 +48,7 @@ import LoadingSpinner from "@/components/ui/loading-spinner";
 export default function WorkSubmissionsView() {
   const [submissions, setSubmissions] = useState<WorkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedSubmission, setSelectedSubmission] =
     useState<WorkSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,7 +92,17 @@ export default function WorkSubmissionsView() {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    await fetchWorkSubmissions();
+    toast({
+      title: "Refreshed",
+      description: "Work submissions list updated successfully",
+    });
   };
 
   const handleViewSubmission = (submission: WorkSubmission) => {
@@ -139,7 +151,7 @@ export default function WorkSubmissionsView() {
         return (
           <Badge
             variant="outline"
-            className="bg-yellow-50 text-yellow-700 border-yellow-300"
+            className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300"
           >
             <Clock className="w-3 h-3 mr-1" />
             Pending Review
@@ -149,7 +161,7 @@ export default function WorkSubmissionsView() {
         return (
           <Badge
             variant="outline"
-            className="bg-green-50 text-green-700 border-green-300"
+            className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300"
           >
             <CheckCircle className="w-3 h-3 mr-1" />
             Approved
@@ -159,7 +171,7 @@ export default function WorkSubmissionsView() {
         return (
           <Badge
             variant="outline"
-            className="bg-red-50 text-red-700 border-red-300"
+            className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300"
           >
             <XCircle className="w-3 h-3 mr-1" />
             Rejected
@@ -168,6 +180,27 @@ export default function WorkSubmissionsView() {
       default:
         return <Badge>{status}</Badge>;
     }
+  };
+
+  const getSubmissionTypeBadge = (submissionId: string) => {
+    if (submissionId.startsWith("employee_")) {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300"
+        >
+          Employee
+        </Badge>
+      );
+    }
+    return (
+      <Badge
+        variant="outline"
+        className="bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300"
+      >
+        Freelancer
+      </Badge>
+    );
   };
 
   const formatFileSize = (bytes: number) => {
@@ -199,11 +232,23 @@ export default function WorkSubmissionsView() {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Work Submissions</h1>
-        <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-          Review and approve completed work submitted by employees
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Work Submissions</h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+            Review and approve completed work submitted by employees
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       <Card>
@@ -247,7 +292,10 @@ export default function WorkSubmissionsView() {
                             </p>
                           </div>
                         </div>
-                        {getStatusBadge(submission.status)}
+                        <div className="flex flex-col gap-1 items-end">
+                          {getStatusBadge(submission.status)}
+                          {getSubmissionTypeBadge(submission.id)}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -303,6 +351,7 @@ export default function WorkSubmissionsView() {
                 <TableRow>
                   <TableHead>Project</TableHead>
                   <TableHead>Submitted By</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Buyer</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Files</TableHead>
@@ -314,7 +363,7 @@ export default function WorkSubmissionsView() {
                 {submissions.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No work submissions found
@@ -339,6 +388,7 @@ export default function WorkSubmissionsView() {
                           <span>{submission.submitterName || "Unknown"}</span>
                         </div>
                       </TableCell>
+                      <TableCell>{getSubmissionTypeBadge(submission.id)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
@@ -402,6 +452,12 @@ export default function WorkSubmissionsView() {
                   <p className="font-medium text-sm sm:text-base truncate">
                     {selectedSubmission.projectTitle || "N/A"}
                   </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Submission Type</p>
+                  <div className="mt-1">
+                    {getSubmissionTypeBadge(selectedSubmission.id)}
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>

@@ -86,7 +86,8 @@ export default function ProjectDepositPaymentPage() {
       const projectData = projectDoc.data() as Project;
       
       // Support both createdBy and buyerId fields
-      const projectOwnerId = projectData.createdBy || (projectData as any).buyerId;
+      // Prioritize buyerId since that's what PostProject.tsx uses consistently
+      const projectOwnerId = (projectData as any).buyerId || projectData.createdBy;
       
       console.log("✅ Project found:", {
         projectId,

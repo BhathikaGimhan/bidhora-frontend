@@ -29,6 +29,11 @@ export interface UserProfile extends BaseUser {
   averageRating?: number;
   completedProjects?: Project[];
   postedProjects?: Project[];
+  // Employee/Freelancer work statistics
+  activeProjects?: number;
+  totalEarnings?: number;
+  totalHours?: number;
+  successRate?: number;
 }
 
 export interface Project {

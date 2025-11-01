@@ -183,15 +183,45 @@ const Header = () => {
                     <User className="w-4 h-4 mr-2" />
                     Profile
                   </DropdownMenuItem>
-                  {userRole === "admin" && (
-                    <DropdownMenuItem
-                      onClick={() => navigate("/admin")}
-                      className="cursor-pointer"
-                    >
-                      <User className="w-4 h-4 mr-2" />
-                      Dashboard
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem
+                    onClick={() => navigate("/admin")}
+                    className="cursor-pointer"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : userRole === "employee" ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="p-0 rounded-full">
+                    {profilePicture ? (
+                      <img
+                        src={profilePicture}
+                        alt="Profile"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-blue-500"
+                      />
+                    ) : (
+                      <User className="w-10 h-10 rounded-full p-2 bg-blue-100 dark:bg-blue-900 text-blue-600" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => navigate(`/profile/${user.uid}`)}
+                    className="cursor-pointer"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigate("/employee/dashboard")}
+                    className="cursor-pointer"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -265,6 +295,30 @@ const Header = () => {
                       </Button>
                     </Link>
                     <Link to="/admin" onClick={toggleMobileMenu}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-32 text-sm"
+                      >
+                        Dashboard
+                      </Button>
+                    </Link>
+                  </>
+                ) : userRole === "employee" ? (
+                  <>
+                    <Link
+                      to={`/profile/${user.uid}`}
+                      onClick={toggleMobileMenu}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-32 text-sm"
+                      >
+                        Profile
+                      </Button>
+                    </Link>
+                    <Link to="/employee/dashboard" onClick={toggleMobileMenu}>
                       <Button
                         variant="outline"
                         size="sm"

@@ -176,7 +176,7 @@ export default function AssignEmployeePage() {
       );
 
       // Send email notification to employee
-      await emailService.sendEmployeeAssignmentNotification({
+      const emailResult = await emailService.sendEmployeeAssignmentNotification({
         employeeEmail: employee.email,
         employeeName: employee.displayName,
         projectTitle: project.title,
@@ -186,10 +186,19 @@ export default function AssignEmployeePage() {
         buyerEmail: project.buyerEmail || "",
       });
 
-      toast({
-        title: "✅ Employee Assigned",
-        description: `${employee.displayName} has been assigned to the project`,
-      });
+      if (!emailResult.success) {
+        console.error("Email notification failed:", emailResult.message);
+        toast({
+          title: "⚠️ Partial Success",
+          description: `Employee assigned but email notification failed: ${emailResult.message}`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "✅ Employee Assigned",
+          description: `${employee.displayName} has been assigned and notified via email`,
+        });
+      }
 
       // Refresh the projects list
       await fetchData();

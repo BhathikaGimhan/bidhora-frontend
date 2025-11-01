@@ -5,14 +5,17 @@ import {
   CreditCard,
   TrendingUp,
   Activity,
+  FileCheck,
 } from "lucide-react";
 import { StatCard } from "@/features/admin/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { userController } from "@/features/admin/controllers/userController";
 import { projectController } from "@/features/admin/controllers/projectController";
 import { transactionController } from "@/features/admin/controllers/transactionController";
+import { getAllWorkSubmissions } from "@/Services/workSubmissionService";
 import { Project, ProjectStats } from "@/features/admin/models/ProjectModel";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import { useNavigate } from "react-router-dom";
 
 export function DashboardView() {
   const [projectStats, setProjectStats] = useState<ProjectStats>({
@@ -22,17 +25,23 @@ export function DashboardView() {
     completedProjects: 0,
   });
   const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
+  const [pendingSubmissions, setPendingSubmissions] = useState(0);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [stats, projects] = await Promise.all([
+        const [stats, projects, submissions] = await Promise.all([
           projectController.getProjectStats(),
           projectController.getProjectsByStatus("pending"),
+          getAllWorkSubmissions(),
         ]);
         setProjectStats(stats);
         setPendingProjects(projects.slice(0, 3));
+        setPendingSubmissions(
+          submissions.filter((s) => s.status === "pending_review").length
+        );
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
@@ -58,7 +67,7 @@ export function DashboardView() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
           value={userStats.totalUsers}
@@ -80,6 +89,22 @@ export function DashboardView() {
           icon={CreditCard}
           trend={{ value: 23, isPositive: true }}
         />
+        <div
+          className="cursor-pointer"
+          onClick={() => navigate("/admin/work-submissions")}
+        >
+          <StatCard
+            title="Work Submissions"
+            value={pendingSubmissions}
+            description="Awaiting review"
+            icon={FileCheck}
+            trend={
+              pendingSubmissions > 0
+                ? { value: pendingSubmissions, isPositive: false }
+                : undefined
+            }
+          />
+        </div>
       </div>
 
       {/* Charts Row */}

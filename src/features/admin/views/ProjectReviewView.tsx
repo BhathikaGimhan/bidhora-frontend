@@ -35,6 +35,7 @@ import LoadingSpinner from "@/components/ui/loading-spinner";
 import { ProjectDetailsModal } from "@/features/admin/components/ProjectDetailsModal";
 import { getAllUsers } from "@/Services/authService";
 import { assignEmployeeToProject } from "@/Services/projectService";
+import { emailService } from "@/Services/emailService";
 
 export function ProjectReviewView() {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -262,10 +263,30 @@ export function ProjectReviewView() {
         selectedEmployee.email
       );
       
-      toast({
-        title: "Success",
-        description: "Employee assigned successfully. Notification email sent.",
+      // Send email notification to employee
+      const emailResult = await emailService.sendEmployeeAssignmentNotification({
+        employeeEmail: selectedEmployee.email,
+        employeeName: selectedEmployee.name,
+        projectTitle: selectedProject.title,
+        projectDescription: selectedProject.description || "",
+        projectPrice: (selectedProject as any).adminPrice || 0,
+        projectId: selectedProject.id,
+        buyerEmail: (selectedProject as any).buyerEmail || "",
       });
+
+      if (!emailResult.success) {
+        console.error("Email notification failed:", emailResult.message);
+        toast({
+          title: "⚠️ Partial Success",
+          description: `Employee assigned but email notification failed: ${emailResult.message}`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Employee assigned successfully and notified via email.",
+        });
+      }
       
       handleCloseAssignModal();
       await fetchProjects();

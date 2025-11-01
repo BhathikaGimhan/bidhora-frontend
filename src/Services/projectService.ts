@@ -1356,10 +1356,32 @@ export const assignEmployeeToProject = async (
 
     const projectData = projectDoc.data();
 
-    // Verify payment has been made
-    if (projectData.initialPaymentStatus !== "paid") {
+    console.log("🔍 Checking project assignment eligibility:", {
+      projectId,
+      status: projectData.status,
+      initialPaymentStatus: projectData.initialPaymentStatus,
+      initialPaymentAmount: projectData.initialPaymentAmount,
+      hasPaymentId: !!projectData.initialPaymentId,
+    });
+
+    // Verify payment has been made - check multiple conditions
+    // Project should be in "ready_to_assign" status OR have paid payment status
+    const isPaymentCompleted = 
+      projectData.initialPaymentStatus === "paid" || 
+      projectData.status === "ready_to_assign" ||
+      (projectData.initialPaymentId && projectData.initialPaymentAmount);
+
+    if (!isPaymentCompleted) {
+      console.error("❌ Payment verification failed:", {
+        initialPaymentStatus: projectData.initialPaymentStatus,
+        status: projectData.status,
+        hasPaymentId: !!projectData.initialPaymentId,
+        initialPaymentAmount: projectData.initialPaymentAmount,
+      });
       throw new Error("Project deposit payment must be completed before assignment");
     }
+
+    console.log("✅ Payment verification passed, proceeding with assignment");
 
     // Update project with employee assignment
     await updateDoc(projectRef, {
