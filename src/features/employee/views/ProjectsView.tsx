@@ -11,90 +11,109 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Calendar, DollarSign } from 'lucide-react';
+import { Search, Calendar, DollarSign, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
 import { collection, query, where, getDocs, getFirestore, orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export function ProjectsView() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<AssignedProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<AssignedProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          navigate('/login');
-          return;
-        }
-
-        const db = getFirestore();
-        const projectsRef = collection(db, 'projects');
-        
-        // Query all projects except completed ones (they're shown in Completed view)
-        const q = query(
-          projectsRef,
-          where('assignedEmployeeId', '==', user.uid),
-          orderBy('assignedAt', 'desc')
-        );
-        
-        const snapshot = await getDocs(q);
-        const projectsList: AssignedProject[] = [];
-        
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          // Filter out completed projects - they go to the Completed view
-          if (data.status !== 'completed') {
-            projectsList.push({
-            id: doc.id,
-            title: data.title || '',
-            description: data.description || '',
-            status: data.status || 'assigned',
-            clientId: data.createdBy || '',
-            clientName: data.buyerEmail || '',
-            budget: {
-              min: data.budgetMin || 0,
-              max: data.budgetMax || 0,
-            },
-            adminPrice: data.adminPrice,
-            adminDuration: data.adminDuration,
-            adminDurationUnit: data.adminDurationUnit,
-            deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
-            createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
-            assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
-            category: data.category || '',
-            skillsRequired: data.skills || [],
-            assignedEmployeeId: data.assignedEmployeeId || '',
-            assignedEmployeeName: data.assignedEmployeeName || '',
-            assignedEmployeeEmail: data.assignedEmployeeEmail || '',
-            adminNotes: data.adminNotes,
-            submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
-            adminReviewStatus: data.adminReviewStatus,
-            adminReviewNotes: data.adminReviewNotes,
-            downloadUrl: data.downloadUrl,
-            documents: data.documents,
-          });
-        }
-        });
-        
-        setProjects(projectsList);
-        setFilteredProjects(projectsList);
-        
-      } catch (error) {
-        console.error('Error loading projects:', error);
-      } finally {
-        setLoading(false);
+  const loadProjects = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        navigate('/login');
+        return;
       }
-    };
 
+      const db = getFirestore();
+      const projectsRef = collection(db, 'projects');
+      
+      // Query all projects except completed ones (they're shown in Completed view)
+      const q = query(
+        projectsRef,
+        where('assignedEmployeeId', '==', user.uid),
+        orderBy('assignedAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const projectsList: AssignedProject[] = [];
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        // Filter out completed projects - they go to the Completed view
+        if (data.status !== 'completed') {
+          projectsList.push({
+          id: doc.id,
+          title: data.title || '',
+          description: data.description || '',
+          status: data.status || 'assigned',
+          clientId: data.createdBy || '',
+          clientName: data.buyerEmail || '',
+          budget: {
+            min: data.budgetMin || 0,
+            max: data.budgetMax || 0,
+          },
+          adminPrice: data.adminPrice,
+          adminDuration: data.adminDuration,
+          adminDurationUnit: data.adminDurationUnit,
+          deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
+          createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
+          assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
+          category: data.category || '',
+          skillsRequired: data.skills || [],
+          assignedEmployeeId: data.assignedEmployeeId || '',
+          assignedEmployeeName: data.assignedEmployeeName || '',
+          assignedEmployeeEmail: data.assignedEmployeeEmail || '',
+          adminNotes: data.adminNotes,
+          submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
+          adminReviewStatus: data.adminReviewStatus,
+          adminReviewNotes: data.adminReviewNotes,
+          downloadUrl: data.downloadUrl,
+          documents: data.documents,
+        });
+      }
+      });
+      
+      setProjects(projectsList);
+      setFilteredProjects(projectsList);
+      
+    } catch (error) {
+      console.error('Error loading projects:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load projects. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     loadProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    await loadProjects();
+    toast({
+      title: 'Refreshed',
+      description: 'Projects list updated successfully',
+    });
+  };
 
   useEffect(() => {
     let filtered = projects;
@@ -150,6 +169,19 @@ export function ProjectsView() {
     }
   };
 
+  const getEffectiveDeadline = (project: AssignedProject) => {
+    // Use admin deadline if available, otherwise fall back to buyer deadline
+    if (project.adminDuration && project.adminDurationUnit && project.assignedDate) {
+      const durationInDays = project.adminDurationUnit === 'weeks' 
+        ? project.adminDuration * 7 
+        : project.adminDuration;
+      const adminDeadline = new Date(project.assignedDate);
+      adminDeadline.setDate(adminDeadline.getDate() + durationInDays);
+      return adminDeadline.toISOString().split('T')[0];
+    }
+    return project.deadline;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -160,6 +192,20 @@ export function ProjectsView() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <h2 className="text-2xl font-bold">My Projects</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
+      
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -220,7 +266,7 @@ export function ProjectsView() {
                   <div className="flex items-center text-sm">
                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span className="text-muted-foreground">
-                      Due: {new Date(project.deadline).toLocaleDateString()}
+                      Due: {new Date(getEffectiveDeadline(project)).toLocaleDateString()}
                     </span>
                   </div>
                   {project.adminPrice && (

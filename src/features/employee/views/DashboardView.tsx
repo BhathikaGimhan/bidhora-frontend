@@ -7,6 +7,7 @@ import {
   AlertCircle,
   TrendingUp,
   Activity,
+  RefreshCw,
 } from 'lucide-react';
 import { StatCard } from '@/features/employee/components/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,9 +17,11 @@ import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject, EmployeeStats } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
 import { collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export function DashboardView() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [stats, setStats] = useState<EmployeeStats>({
     totalAssigned: 0,
     inProgress: 0,
@@ -27,95 +30,112 @@ export function DashboardView() {
   });
   const [recentProjects, setRecentProjects] = useState<AssignedProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadDashboardData = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+
+      const db = getFirestore();
+      const projectsRef = collection(db, 'projects');
+      
+      // Query projects assigned to this employee
+      const q = query(
+        projectsRef,
+        where('assignedEmployeeId', '==', user.uid)
+      );
+      
+      const snapshot = await getDocs(q);
+      const projects: AssignedProject[] = [];
+      
+      let inProgress = 0;
+      let completed = 0;
+      let needsRevision = 0;
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const project: AssignedProject = {
+          id: doc.id,
+          title: data.title || '',
+          description: data.description || '',
+          status: data.status || 'assigned',
+          clientId: data.createdBy || '',
+          clientName: data.buyerEmail || '',
+          budget: {
+            min: data.budgetMin || 0,
+            max: data.budgetMax || 0,
+          },
+          adminPrice: data.adminPrice,
+          adminDuration: data.adminDuration,
+          adminDurationUnit: data.adminDurationUnit,
+          deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
+          createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
+          assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
+          category: data.category || '',
+          skillsRequired: data.skills || [],
+          assignedEmployeeId: data.assignedEmployeeId || '',
+          assignedEmployeeName: data.assignedEmployeeName || '',
+          assignedEmployeeEmail: data.assignedEmployeeEmail || '',
+          adminNotes: data.adminNotes,
+          submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
+          adminReviewStatus: data.adminReviewStatus,
+          adminReviewNotes: data.adminReviewNotes,
+          downloadUrl: data.downloadUrl,
+          documents: data.documents,
+        };
+        
+        projects.push(project);
+        
+        // Count by status
+        if (project.status === 'in_progress' || project.status === 'assigned') {
+          inProgress++;
+        } else if (project.status === 'completed' || project.status === 'completed_by_employee') {
+          completed++;
+        } else if (project.status === 'needs_revision') {
+          needsRevision++;
+        }
+      });
+      
+      setStats({
+        totalAssigned: projects.length,
+        inProgress,
+        completed,
+        needsRevision,
+      });
+      
+      // Get recent 5 projects
+      setRecentProjects(projects.slice(0, 5));
+      
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load dashboard data. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          navigate('/login');
-          return;
-        }
-
-        const db = getFirestore();
-        const projectsRef = collection(db, 'projects');
-        
-        // Query projects assigned to this employee
-        const q = query(
-          projectsRef,
-          where('assignedEmployeeId', '==', user.uid)
-        );
-        
-        const snapshot = await getDocs(q);
-        const projects: AssignedProject[] = [];
-        
-        let inProgress = 0;
-        let completed = 0;
-        let needsRevision = 0;
-        
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          const project: AssignedProject = {
-            id: doc.id,
-            title: data.title || '',
-            description: data.description || '',
-            status: data.status || 'assigned',
-            clientId: data.createdBy || '',
-            clientName: data.buyerEmail || '',
-            budget: {
-              min: data.budgetMin || 0,
-              max: data.budgetMax || 0,
-            },
-            adminPrice: data.adminPrice,
-            adminDuration: data.adminDuration,
-            adminDurationUnit: data.adminDurationUnit,
-            deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
-            createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
-            assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
-            category: data.category || '',
-            skillsRequired: data.skills || [],
-            assignedEmployeeId: data.assignedEmployeeId || '',
-            assignedEmployeeName: data.assignedEmployeeName || '',
-            assignedEmployeeEmail: data.assignedEmployeeEmail || '',
-            adminNotes: data.adminNotes,
-            submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
-            adminReviewStatus: data.adminReviewStatus,
-            adminReviewNotes: data.adminReviewNotes,
-            downloadUrl: data.downloadUrl,
-            documents: data.documents,
-          };
-          
-          projects.push(project);
-          
-          // Count by status
-          if (project.status === 'in_progress' || project.status === 'assigned') {
-            inProgress++;
-          } else if (project.status === 'completed' || project.status === 'completed_by_employee') {
-            completed++;
-          } else if (project.status === 'needs_revision') {
-            needsRevision++;
-          }
-        });
-        
-        setStats({
-          totalAssigned: projects.length,
-          inProgress,
-          completed,
-          needsRevision,
-        });
-        
-        // Get recent 5 projects
-        setRecentProjects(projects.slice(0, 5));
-        
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboardData();
+    toast({
+      title: 'Refreshed',
+      description: 'Dashboard data updated successfully',
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -151,6 +171,19 @@ export function DashboardView() {
     }
   };
 
+  const getEffectiveDeadline = (project: AssignedProject) => {
+    // Use admin deadline if available, otherwise fall back to buyer deadline
+    if (project.adminDuration && project.adminDurationUnit && project.assignedDate) {
+      const durationInDays = project.adminDurationUnit === 'weeks' 
+        ? project.adminDuration * 7 
+        : project.adminDuration;
+      const adminDeadline = new Date(project.assignedDate);
+      adminDeadline.setDate(adminDeadline.getDate() + durationInDays);
+      return adminDeadline.toISOString().split('T')[0];
+    }
+    return project.deadline;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -161,6 +194,26 @@ export function DashboardView() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Header with Refresh Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Your work overview and statistics
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -283,7 +336,7 @@ export function DashboardView() {
                         {getStatusLabel(project.status)}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        Due: {new Date(project.deadline).toLocaleDateString()}
+                        Due: {new Date(getEffectiveDeadline(project)).toLocaleDateString()}
                       </span>
                     </div>
                   </div>

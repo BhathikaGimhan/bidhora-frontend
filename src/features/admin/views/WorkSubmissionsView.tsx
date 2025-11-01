@@ -34,6 +34,7 @@ import {
   Clock,
   Loader2,
   ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { auth } from "@/firebaseConfig";
@@ -47,6 +48,7 @@ import LoadingSpinner from "@/components/ui/loading-spinner";
 export default function WorkSubmissionsView() {
   const [submissions, setSubmissions] = useState<WorkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedSubmission, setSelectedSubmission] =
     useState<WorkSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,7 +92,17 @@ export default function WorkSubmissionsView() {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    await fetchWorkSubmissions();
+    toast({
+      title: "Refreshed",
+      description: "Work submissions list updated successfully",
+    });
   };
 
   const handleViewSubmission = (submission: WorkSubmission) => {
@@ -220,11 +232,23 @@ export default function WorkSubmissionsView() {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Work Submissions</h1>
-        <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-          Review and approve completed work submitted by employees
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Work Submissions</h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+            Review and approve completed work submitted by employees
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       <Card>

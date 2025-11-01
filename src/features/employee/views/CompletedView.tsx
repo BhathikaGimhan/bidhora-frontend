@@ -4,87 +4,106 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Calendar, DollarSign, Award } from 'lucide-react';
+import { Search, Calendar, DollarSign, Award, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
 import { collection, query, where, getDocs, getFirestore, orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export function CompletedView() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<AssignedProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<AssignedProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    const loadCompletedProjects = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          navigate('/login');
-          return;
-        }
-
-        const db = getFirestore();
-        const projectsRef = collection(db, 'projects');
-        
-        // Query only for completed projects that are admin-approved
-        const q = query(
-          projectsRef,
-          where('assignedEmployeeId', '==', user.uid),
-          where('status', '==', 'completed'),
-          orderBy('assignedAt', 'desc')
-        );
-        
-        const snapshot = await getDocs(q);
-        const projectsList: AssignedProject[] = [];
-        
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          projectsList.push({
-            id: doc.id,
-            title: data.title || '',
-            description: data.description || '',
-            status: data.status || 'completed',
-            clientId: data.createdBy || '',
-            clientName: data.buyerEmail || '',
-            budget: {
-              min: data.budgetMin || 0,
-              max: data.budgetMax || 0,
-            },
-            adminPrice: data.adminPrice,
-            adminDuration: data.adminDuration,
-            adminDurationUnit: data.adminDurationUnit,
-            deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
-            createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
-            assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
-            category: data.category || '',
-            skillsRequired: data.skills || [],
-            assignedEmployeeId: data.assignedEmployeeId || '',
-            assignedEmployeeName: data.assignedEmployeeName || '',
-            assignedEmployeeEmail: data.assignedEmployeeEmail || '',
-            adminNotes: data.adminNotes,
-            submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
-            adminReviewStatus: data.adminReviewStatus,
-            adminReviewNotes: data.adminReviewNotes,
-            downloadUrl: data.downloadUrl,
-            documents: data.documents,
-          });
-        });
-        
-        setProjects(projectsList);
-        setFilteredProjects(projectsList);
-        
-      } catch (error) {
-        console.error('Error loading completed projects:', error);
-      } finally {
-        setLoading(false);
+  const loadCompletedProjects = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        navigate('/login');
+        return;
       }
-    };
 
+      const db = getFirestore();
+      const projectsRef = collection(db, 'projects');
+      
+      // Query only for completed projects that are admin-approved
+      const q = query(
+        projectsRef,
+        where('assignedEmployeeId', '==', user.uid),
+        where('status', '==', 'completed'),
+        orderBy('assignedAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const projectsList: AssignedProject[] = [];
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        projectsList.push({
+          id: doc.id,
+          title: data.title || '',
+          description: data.description || '',
+          status: data.status || 'completed',
+          clientId: data.createdBy || '',
+          clientName: data.buyerEmail || '',
+          budget: {
+            min: data.budgetMin || 0,
+            max: data.budgetMax || 0,
+          },
+          adminPrice: data.adminPrice,
+          adminDuration: data.adminDuration,
+          adminDurationUnit: data.adminDurationUnit,
+          deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
+          createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
+          assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
+          category: data.category || '',
+          skillsRequired: data.skills || [],
+          assignedEmployeeId: data.assignedEmployeeId || '',
+          assignedEmployeeName: data.assignedEmployeeName || '',
+          assignedEmployeeEmail: data.assignedEmployeeEmail || '',
+          adminNotes: data.adminNotes,
+          submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
+          adminReviewStatus: data.adminReviewStatus,
+          adminReviewNotes: data.adminReviewNotes,
+          downloadUrl: data.downloadUrl,
+          documents: data.documents,
+        });
+      });
+      
+      setProjects(projectsList);
+      setFilteredProjects(projectsList);
+      
+    } catch (error) {
+      console.error('Error loading completed projects:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load completed projects. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     loadCompletedProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    await loadCompletedProjects();
+    toast({
+      title: 'Refreshed',
+      description: 'Completed projects list updated successfully',
+    });
+  };
 
   useEffect(() => {
     if (searchQuery) {
@@ -116,6 +135,16 @@ export function CompletedView() {
             Admin-approved completed projects ({filteredProjects.length})
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       <div className="relative">

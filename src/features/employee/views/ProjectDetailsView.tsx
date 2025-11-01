@@ -147,7 +147,18 @@ export function ProjectDetailsView() {
     
     const now = new Date();
     const start = new Date(project.assignedDate);
-    const end = new Date(project.deadline);
+    
+    // Use admin deadline if available, otherwise fall back to buyer deadline
+    let end: Date;
+    if (project.adminDuration && project.adminDurationUnit && project.assignedDate) {
+      const durationInDays = project.adminDurationUnit === 'weeks' 
+        ? project.adminDuration * 7 
+        : project.adminDuration;
+      end = new Date(project.assignedDate);
+      end.setDate(end.getDate() + durationInDays);
+    } else {
+      end = new Date(project.deadline);
+    }
     
     const totalTime = end.getTime() - start.getTime();
     const elapsed = now.getTime() - start.getTime();
@@ -160,11 +171,39 @@ export function ProjectDetailsView() {
     if (!project) return 0;
     
     const now = new Date();
-    const deadline = new Date(project.deadline);
+    
+    // Use admin deadline if available, otherwise fall back to buyer deadline
+    let deadline: Date;
+    if (project.adminDuration && project.adminDurationUnit && project.assignedDate) {
+      const durationInDays = project.adminDurationUnit === 'weeks' 
+        ? project.adminDuration * 7 
+        : project.adminDuration;
+      deadline = new Date(project.assignedDate);
+      deadline.setDate(deadline.getDate() + durationInDays);
+    } else {
+      deadline = new Date(project.deadline);
+    }
+    
     const diffTime = deadline.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     return diffDays;
+  };
+
+  const getEffectiveDeadline = () => {
+    if (!project) return '';
+    
+    // Use admin deadline if available, otherwise fall back to buyer deadline
+    if (project.adminDuration && project.adminDurationUnit && project.assignedDate) {
+      const durationInDays = project.adminDurationUnit === 'weeks' 
+        ? project.adminDuration * 7 
+        : project.adminDuration;
+      const adminDeadline = new Date(project.assignedDate);
+      adminDeadline.setDate(adminDeadline.getDate() + durationInDays);
+      return adminDeadline.toISOString().split('T')[0];
+    }
+    
+    return project.deadline;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -326,7 +365,7 @@ export function ProjectDetailsView() {
             <Progress value={progress} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>Started: {new Date(project.assignedDate).toLocaleDateString()}</span>
-              <span>Deadline: {new Date(project.deadline).toLocaleDateString()}</span>
+              <span>Deadline: {new Date(getEffectiveDeadline()).toLocaleDateString()}</span>
             </div>
           </div>
 
