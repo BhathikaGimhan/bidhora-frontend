@@ -254,7 +254,8 @@ const PostProject = () => {
         category: formData.category,
         imageUrl,
         documents: documents,
-        buyerId: user.uid,
+        createdBy: user.uid, // Standard field for owner identification
+        buyerId: user.uid,   // Legacy/alternative field for backwards compatibility
         buyerName: user.displayName || user.email?.split("@")[0] || "Anonymous",
         buyerEmail: user.email,
         status: "pending", // pending, admin_review, priced, customer_approved, approved, assigned, completed_by_employee, completed, cancelled

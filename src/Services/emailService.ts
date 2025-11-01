@@ -30,6 +30,17 @@ export interface EmployeeAssignmentNotificationData {
   buyerEmail: string;
 }
 
+export interface FinalPaymentNotificationData {
+  to_email: string;
+  to_name: string;
+  project_title: string;
+  project_id: string;
+  total_price: number;
+  initial_payment: number;
+  final_payment: number;
+  payment_link: string;
+}
+
 export interface EmailResponse {
   success: boolean;
   message: string;
@@ -161,6 +172,49 @@ class EmailService {
         error instanceof Error
           ? error.message
           : "Failed to send assignment notification. Please try again later.";
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+  }
+
+  async sendFinalPaymentNotification(
+    notificationData: FinalPaymentNotificationData
+  ): Promise<EmailResponse> {
+    try {
+      const response = await axios.post(
+        `${this.apiBaseUrl}/sendFinalPaymentNotification`,
+        {
+          to_email: notificationData.to_email,
+          to_name: notificationData.to_name,
+          project_title: notificationData.project_title,
+          project_id: notificationData.project_id,
+          total_price: notificationData.total_price,
+          initial_payment: notificationData.initial_payment,
+          final_payment: notificationData.final_payment,
+          payment_link: notificationData.payment_link,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return {
+        success: true,
+        message:
+          response.data.message ||
+          "Final payment notification sent successfully!",
+      };
+    } catch (error) {
+      console.error("Final payment notification error:", error);
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to send final payment notification. Please try again later.";
       return {
         success: false,
         message: errorMessage,

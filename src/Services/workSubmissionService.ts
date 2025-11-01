@@ -12,6 +12,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { geniePaymentService } from "./geniePaymentService";
 
 export interface WorkSubmissionData {
   proposalId: string;
@@ -337,6 +338,14 @@ export const updateWorkSubmissionStatus = async (
     // Check if this is an employee submission (prefixed with "employee_")
     if (submissionId.startsWith("employee_")) {
       const projectId = submissionId.replace("employee_", "");
+      const projectDoc = await getDoc(doc(db, "projects", projectId));
+      
+      if (!projectDoc.exists()) {
+        throw new Error("Project not found");
+      }
+
+      const projectData = projectDoc.data();
+
       await updateDoc(doc(db, "projects", projectId), {
         adminReviewStatus: status === "approved" ? "approved" : "needs_revision",
         adminReviewedAt: Timestamp.now(),
@@ -344,6 +353,17 @@ export const updateWorkSubmissionStatus = async (
         adminReviewNotes: reviewNotes || null,
         status: status === "approved" ? "completed" : "needs_revision",
       });
+
+      // If approved, trigger final payment email to buyer
+      if (status === "approved") {
+        try {
+          await geniePaymentService.initiateFinalPayment(projectId);
+          console.log("Final payment notification sent to buyer");
+        } catch (emailError) {
+          console.error("Error sending final payment email:", emailError);
+          // Don't fail the approval if email fails
+        }
+      }
     } else {
       // Regular work submission
       await updateDoc(doc(db, "workSubmissions", submissionId), {

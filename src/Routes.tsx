@@ -27,6 +27,7 @@ import AdminPanel from "./features/admin/AdminDashbord";
 import EmployeePanel from "./features/employee/EmployeeDashboard";
 import PaymentPage from "./pages/PaymentPage";
 import ProjectDepositPaymentPage from "./pages/ProjectDepositPaymentPage";
+import FinalPaymentPage from "./pages/FinalPaymentPage";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import { ProtectedEmployeeRoute } from "@/components/ProtectedEmployeeRoute";
 
@@ -102,6 +103,10 @@ export const router = createBrowserRouter([
       {
         path: "payment/project/:projectId",
         element: <ProjectDepositPaymentPage />,
+      },
+      {
+        path: "payment/final/:projectId",
+        element: <FinalPaymentPage />,
       },
     ],
   },
