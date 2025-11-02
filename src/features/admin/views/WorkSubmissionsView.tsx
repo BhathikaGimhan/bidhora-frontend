@@ -35,6 +35,7 @@ import {
   Loader2,
   ExternalLink,
   RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { auth } from "@/firebaseConfig";
@@ -251,6 +252,60 @@ export default function WorkSubmissionsView() {
         </Button>
       </div>
 
+      {/* Urgent Submissions Alert Banner - Only show for pending reviews */}
+      {submissions.some(s => s.isUrgent && s.status === 'pending_review') && (
+        <div className="relative overflow-hidden rounded-lg border-2 border-red-200 dark:border-red-800 bg-gradient-to-r from-red-50 via-red-100 to-red-50 dark:from-red-950/20 dark:via-red-900/30 dark:to-red-950/20 p-4">
+          {/* Animated blur effects */}
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-red-300/30 dark:bg-red-600/20 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-red-400/30 dark:bg-red-500/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
+          
+          <div className="relative flex items-start gap-3">
+            {/* Pulsing icon */}
+            <div className="flex-shrink-0 p-2 bg-red-500 dark:bg-red-600 text-white rounded-lg shadow-lg backdrop-blur-sm">
+              <AlertCircle className="w-5 h-5 animate-pulse" />
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-red-900 dark:text-red-100">
+                  ⚠️ Urgent Work Submissions Require Review
+                </h3>
+                <Badge className="bg-red-600 hover:bg-red-700 text-white animate-bounce">
+                  {submissions.filter(s => s.isUrgent && s.status === 'pending_review').length} URGENT
+                </Badge>
+              </div>
+              <p className="text-sm text-red-700 dark:text-red-300 mb-2">
+                These submissions are from urgent projects and need immediate attention
+              </p>
+              
+              {/* Show first 3 urgent pending submissions */}
+              <div className="flex flex-wrap gap-2">
+                {submissions
+                  .filter(s => s.isUrgent && s.status === 'pending_review')
+                  .slice(0, 3)
+                  .map(submission => (
+                    <Badge 
+                      key={submission.id}
+                      variant="outline" 
+                      className="text-xs bg-white/50 dark:bg-red-950/50 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300"
+                    >
+                      {submission.projectTitle}
+                    </Badge>
+                  ))}
+                {submissions.filter(s => s.isUrgent && s.status === 'pending_review').length > 3 && (
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs bg-white/50 dark:bg-red-950/50 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300"
+                  >
+                    +{submissions.filter(s => s.isUrgent && s.status === 'pending_review').length - 3} more
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-lg sm:text-xl">
@@ -271,13 +326,39 @@ export default function WorkSubmissionsView() {
             ) : (
               <div className="space-y-3 p-4">
                 {submissions.map((submission) => (
-                  <Card key={submission.id} className="overflow-hidden">
+                  <Card 
+                    key={submission.id} 
+                    className={`overflow-hidden relative ${
+                      submission.isUrgent && submission.status === 'pending_review'
+                        ? 'border-2 border-red-500 shadow-lg shadow-red-200/50 dark:shadow-red-900/30 bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background' 
+                        : ''
+                    }`}
+                  >
+                    {/* Corner accent for urgent pending reviews */}
+                    {submission.isUrgent && submission.status === 'pending_review' && (
+                      <>
+                        <div className="absolute top-0 right-0 w-0 h-0 border-t-[40px] border-t-red-500 border-l-[40px] border-l-transparent" />
+                        <div className="absolute top-2 right-2">
+                          <Badge className="bg-red-600 hover:bg-red-700 text-white text-[10px] px-1.5 py-0 h-5 animate-pulse">
+                            🚨 URGENT
+                          </Badge>
+                        </div>
+                      </>
+                    )}
+                    
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm truncate">
-                            {submission.projectTitle || "N/A"}
-                          </h3>
+                          <div className="flex items-center gap-1.5">
+                            {submission.isUrgent && submission.status === 'pending_review' && (
+                              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 animate-pulse" />
+                            )}
+                            <h3 className={`font-semibold text-sm truncate ${
+                              submission.isUrgent && submission.status === 'pending_review' ? 'text-red-700 dark:text-red-400' : ''
+                            }`}>
+                              {submission.projectTitle || "N/A"}
+                            </h3>
+                          </div>
                           <div className="flex items-center gap-2 mt-1">
                             <Avatar className="h-5 w-5">
                               <AvatarImage src={submission.submitterPhotoURL} />
@@ -371,9 +452,34 @@ export default function WorkSubmissionsView() {
                   </TableRow>
                 ) : (
                   submissions.map((submission) => (
-                    <TableRow key={submission.id}>
+                    <TableRow 
+                      key={submission.id}
+                      className={
+                        submission.isUrgent && submission.status === 'pending_review'
+                          ? 'bg-gradient-to-r from-red-50 via-red-50/50 to-transparent dark:from-red-950/20 dark:via-red-900/10 dark:to-transparent border-l-4 border-l-red-500' 
+                          : ''
+                      }
+                    >
                       <TableCell className="font-medium">
-                        {submission.projectTitle || "N/A"}
+                        <div className="flex items-center gap-2">
+                          {submission.isUrgent && submission.status === 'pending_review' && (
+                            <div className="relative">
+                              <AlertCircle className="w-5 h-5 text-red-500 animate-pulse" />
+                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                              </span>
+                            </div>
+                          )}
+                          <span className={submission.isUrgent && submission.status === 'pending_review' ? 'text-red-700 dark:text-red-400 font-semibold' : ''}>
+                            {submission.projectTitle || "N/A"}
+                          </span>
+                          {submission.isUrgent && submission.status === 'pending_review' && (
+                            <Badge className="bg-red-600 hover:bg-red-700 text-white text-xs animate-pulse">
+                              🚨 URGENT
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -435,8 +541,16 @@ export default function WorkSubmissionsView() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">
+            <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
+              {selectedSubmission?.isUrgent && selectedSubmission?.status === 'pending_review' && (
+                <AlertCircle className="w-5 h-5 text-red-500 animate-pulse" />
+              )}
               Work Submission Details
+              {selectedSubmission?.isUrgent && selectedSubmission?.status === 'pending_review' && (
+                <Badge className="bg-red-600 hover:bg-red-700 text-white animate-pulse">
+                  🚨 URGENT
+                </Badge>
+              )}
             </DialogTitle>
             <DialogDescription className="text-sm">
               Review the completed work and approve or reject the submission
@@ -445,11 +559,39 @@ export default function WorkSubmissionsView() {
 
           {selectedSubmission && (
             <div className="space-y-4 sm:space-y-6">
+              {/* Urgent Alert Banner - Only show for pending reviews */}
+              {selectedSubmission.isUrgent && selectedSubmission.status === 'pending_review' && (
+                <div className="relative overflow-hidden rounded-lg border-2 border-red-500 bg-gradient-to-r from-red-600 via-red-700 to-red-600 p-4 text-white shadow-xl">
+                  {/* Animated blur effects */}
+                  <div className="absolute top-0 left-1/4 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute bottom-0 right-1/4 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                  
+                  <div className="relative flex items-center gap-3">
+                    <div className="flex-shrink-0 p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                      <AlertCircle className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg">⚠️ URGENT PROJECT SUBMISSION</h3>
+                      <p className="text-sm text-red-100">
+                        This submission requires immediate review and approval
+                      </p>
+                    </div>
+                    <Badge className="bg-yellow-500 hover:bg-yellow-600 text-yellow-950 font-bold animate-bounce">
+                      IMMEDIATE ACTION REQUIRED
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
               {/* Summary Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 ${
+                selectedSubmission.isUrgent && selectedSubmission.status === 'pending_review' ? 'p-4 rounded-lg border-2 border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20' : ''
+              }`}>
                 <div>
                   <p className="text-sm text-muted-foreground">Project</p>
-                  <p className="font-medium text-sm sm:text-base truncate">
+                  <p className={`font-medium text-sm sm:text-base truncate ${
+                    selectedSubmission.isUrgent && selectedSubmission.status === 'pending_review' ? 'text-red-700 dark:text-red-400 font-semibold' : ''
+                  }`}>
                     {selectedSubmission.projectTitle || "N/A"}
                   </p>
                 </div>

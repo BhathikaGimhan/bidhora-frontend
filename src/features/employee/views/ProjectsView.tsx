@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Calendar, DollarSign, RefreshCw } from 'lucide-react';
+import { Search, Calendar, DollarSign, RefreshCw, AlertCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
@@ -81,8 +81,16 @@ export function ProjectsView() {
           adminReviewNotes: data.adminReviewNotes,
           downloadUrl: data.downloadUrl,
           documents: data.documents,
+          isUrgent: data.isUrgent || false,
         });
       }
+      });
+      
+      // Sort projects: urgent projects first, then by assigned date
+      projectsList.sort((a, b) => {
+        if (a.isUrgent && !b.isUrgent) return -1;
+        if (!a.isUrgent && b.isUrgent) return 1;
+        return new Date(b.assignedDate).getTime() - new Date(a.assignedDate).getTime();
       });
       
       setProjects(projectsList);
@@ -205,6 +213,41 @@ export function ProjectsView() {
           {refreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
+
+      {/* Urgent Projects Alert Banner */}
+      {filteredProjects.some(p => p.isUrgent) && (
+        <div className="relative overflow-hidden p-6 bg-gradient-to-r from-red-50 via-red-100 to-red-50 dark:from-red-950/30 dark:via-red-900/40 dark:to-red-950/30 border-2 border-red-500 dark:border-red-600 rounded-xl shadow-lg">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-red-200 dark:bg-red-800/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-200 dark:bg-red-800/20 rounded-full blur-3xl -ml-16 -mb-16"></div>
+          <div className="relative flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="p-3 bg-red-500 dark:bg-red-600 rounded-xl shadow-lg animate-pulse">
+                <AlertCircle className="h-7 w-7 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-red-900 dark:text-red-100 mb-2 flex items-center gap-2">
+                🚨 URGENT PROJECTS - IMMEDIATE ACTION REQUIRED
+              </h3>
+              <p className="text-red-800 dark:text-red-200 font-medium mb-3">
+                You have {filteredProjects.filter(p => p.isUrgent).length} urgent project{filteredProjects.filter(p => p.isUrgent).length > 1 ? 's' : ''} that require priority handling!
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {filteredProjects.filter(p => p.isUrgent).slice(0, 3).map(project => (
+                  <div key={project.id} className="px-3 py-1 bg-white dark:bg-red-950 border border-red-300 dark:border-red-700 rounded-lg text-sm font-medium text-red-700 dark:text-red-300">
+                    {project.title}
+                  </div>
+                ))}
+                {filteredProjects.filter(p => p.isUrgent).length > 3 && (
+                  <div className="px-3 py-1 bg-red-600 dark:bg-red-700 rounded-lg text-sm font-bold text-white">
+                    +{filteredProjects.filter(p => p.isUrgent).length - 3} more
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -245,18 +288,41 @@ export function ProjectsView() {
           {filteredProjects.map((project) => (
             <Card
               key={project.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer"
+              className={`hover:shadow-lg transition-all duration-300 cursor-pointer relative overflow-hidden ${
+                project.isUrgent 
+                  ? 'border-red-500 border-3 shadow-red-200 dark:shadow-red-900/50 shadow-xl bg-gradient-to-br from-red-50/50 to-white dark:from-red-950/20 dark:to-background hover:shadow-2xl hover:shadow-red-300 dark:hover:shadow-red-900' 
+                  : ''
+              }`}
               onClick={() => navigate(`/employee/projects/${project.id}`)}
             >
+              {project.isUrgent && (
+                <>
+                  {/* Animated corner accent */}
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 dark:bg-red-500/20 rounded-bl-full"></div>
+                  {/* Pulsing indicator */}
+                  <div className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+                  <div className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full"></div>
+                </>
+              )}
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg line-clamp-2">
+                  <CardTitle className={`text-lg line-clamp-2 flex items-center gap-2 ${project.isUrgent ? 'text-red-700 dark:text-red-400' : ''}`}>
+                    {project.isUrgent && (
+                      <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 animate-pulse" />
+                    )}
                     {project.title}
                   </CardTitle>
                   <Badge variant={getStatusColor(project.status)}>
                     {getStatusLabel(project.status)}
                   </Badge>
                 </div>
+                {project.isUrgent && (
+                  <div className="mt-2 animate-pulse">
+                    <Badge variant="destructive" className="font-bold shadow-lg bg-red-600 hover:bg-red-700 text-white">
+                      🚨 URGENT - HIGH PRIORITY
+                    </Badge>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-3 mb-4">

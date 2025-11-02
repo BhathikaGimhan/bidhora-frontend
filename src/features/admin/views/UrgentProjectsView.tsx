@@ -4,6 +4,7 @@ import { projectController } from "@/features/admin/controllers/projectControlle
 import { DataTable } from "@/features/admin/components/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,10 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MoreHorizontal, RefreshCw, AlertCircle } from "lucide-react";
+import { MoreHorizontal, RefreshCw, AlertCircle, UserCheck, Eye, DollarSign, CheckCircle, FolderOpen, Clock, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectDetailsModal } from "@/features/admin/components/ProjectDetailsModal";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import { getAllUsers } from "@/Services/authService";
+import { assignEmployeeToProject } from "@/Services/projectService";
+import { emailService } from "@/Services/emailService";
 
 export function UrgentProjectsView() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -40,14 +44,42 @@ export function UrgentProjectsView() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [adminPrice, setAdminPrice] = useState("");
   const [adminDuration, setAdminDuration] = useState("");
   const [adminDurationUnit, setAdminDurationUnit] = useState<"days" | "weeks">("days");
   const [adminNotes, setAdminNotes] = useState("");
+  const [employees, setEmployees] = useState<Array<{
+    uid: string;
+    name: string;
+    email: string;
+    role: string;
+  }>>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [assigningEmployee, setAssigningEmployee] = useState(false);
   const { toast } = useToast();
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await getAllUsers();
+      const employeeUsers = response.users.filter(
+        (user) => user.role === "employee"
+      );
+      setEmployees(employeeUsers);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch employees",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     fetchUrgentProjects();
+    fetchEmployees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUrgentProjects = async () => {
@@ -95,6 +127,7 @@ export function UrgentProjectsView() {
     try {
       setRefreshing(true);
       // Force cache clear
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (projectController as any)["isLoaded"] = false;
       await fetchUrgentProjects();
       toast({
@@ -197,6 +230,92 @@ export function UrgentProjectsView() {
     }
   };
 
+  const handleOpenAssignModal = (project: Project) => {
+    setSelectedProject(project);
+    setSelectedEmployeeId("");
+    setIsAssignModalOpen(true);
+  };
+
+  const handleCloseAssignModal = () => {
+    setIsAssignModalOpen(false);
+    setSelectedProject(null);
+    setSelectedEmployeeId("");
+  };
+
+  const handleAssignEmployee = async () => {
+    if (!selectedProject || !selectedEmployeeId) {
+      toast({
+        title: "Error",
+        description: "Please select an employee",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedEmployee = employees.find(
+      (emp) => emp.uid === selectedEmployeeId
+    );
+    
+    if (!selectedEmployee) {
+      toast({
+        title: "Error",
+        description: "Employee not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setAssigningEmployee(true);
+      await assignEmployeeToProject(
+        selectedProject.id, 
+        selectedEmployeeId,
+        selectedEmployee.name,
+        selectedEmployee.email
+      );
+      
+      // Send email notification to employee with URGENT flag
+      const emailResult = await emailService.sendEmployeeAssignmentNotification({
+        employeeEmail: selectedEmployee.email,
+        employeeName: selectedEmployee.name,
+        projectTitle: `🚨 URGENT: ${selectedProject.title}`,
+        projectDescription: selectedProject.description || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        projectPrice: (selectedProject as any).adminPrice || 0,
+        projectId: selectedProject.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        buyerEmail: (selectedProject as any).buyerEmail || "",
+        isUrgent: true,
+      });
+
+      if (!emailResult.success) {
+        console.error("Email notification failed:", emailResult.message);
+        toast({
+          title: "⚠️ Partial Success",
+          description: `Employee assigned but email notification failed: ${emailResult.message}`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Employee assigned to urgent project and notified via email.",
+        });
+      }
+      
+      handleCloseAssignModal();
+      await fetchUrgentProjects();
+    } catch (error) {
+      console.error("Error assigning employee:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to assign employee",
+        variant: "destructive",
+      });
+    } finally {
+      setAssigningEmployee(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -266,6 +385,12 @@ export function UrgentProjectsView() {
       render: (value: number) => (value ? `$${value.toLocaleString()}` : "-"),
     },
     {
+      key: "assignedEmployeeName",
+      title: "Assigned Employee",
+      sortable: true,
+      render: (value: string) => value || <span className="text-muted-foreground">Not assigned</span>,
+    },
+    {
       key: "status",
       title: "Status",
       sortable: true,
@@ -312,6 +437,12 @@ export function UrgentProjectsView() {
             Set Price
           </DropdownMenuItem>
         )}
+        {(project.status === "ready_to_assign" || project.status === "customer_approved") && (
+          <DropdownMenuItem onClick={() => handleOpenAssignModal(project)}>
+            <UserCheck className="mr-2 h-4 w-4" />
+            Assign Employee
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -323,6 +454,26 @@ export function UrgentProjectsView() {
       </div>
     );
   }
+
+  // Filter projects by status for tabs
+  const pendingProjects = projects.filter(
+    (p) => p.status === "pending" || p.status === "admin_review"
+  );
+  const pricedProjects = projects.filter(
+    (p) => p.status === "priced"
+  );
+  const readyToAssignProjects = projects.filter(
+    (p) => p.status === "ready_to_assign" || p.status === "customer_approved"
+  );
+  const assignedProjects = projects.filter(
+    (p) => p.status === "assigned"
+  );
+  const inProgressProjects = projects.filter(
+    (p) => p.status === "completed_by_employee"
+  );
+  const completedProjects = projects.filter(
+    (p) => p.status === "completed"
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -364,14 +515,131 @@ export function UrgentProjectsView() {
         </Button>
       </div>
 
-      {/* Urgent Projects Table */}
-      <DataTable
-        title=""
-        data={projects}
-        columns={columns}
-        searchPlaceholder="Search urgent projects..."
-        actions={actions}
-      />
+      {/* Tabbed View for Different Statuses */}
+      <Tabs defaultValue="pending" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="pending" className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            Pending Review
+            {pendingProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {pendingProjects.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="priced" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Priced
+            {pricedProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {pricedProjects.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="ready_to_assign" className="flex items-center gap-2">
+            <FolderOpen className="h-4 w-4" />
+            Ready to Assign
+            {readyToAssignProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {readyToAssignProjects.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="assigned" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Assigned
+            {assignedProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {assignedProjects.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="in_progress" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            In Progress
+            {inProgressProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {inProgressProjects.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            Completed
+            {completedProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {completedProjects.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Pending Review Tab */}
+        <TabsContent value="pending" className="space-y-4">
+          <DataTable
+            title="Pending Review"
+            data={pendingProjects}
+            columns={columns}
+            searchPlaceholder="Search pending urgent projects..."
+            actions={actions}
+          />
+        </TabsContent>
+
+        {/* Priced Tab */}
+        <TabsContent value="priced" className="space-y-4">
+          <DataTable
+            title="Priced - Awaiting Customer Payment"
+            data={pricedProjects}
+            columns={columns}
+            searchPlaceholder="Search priced urgent projects..."
+            actions={actions}
+          />
+        </TabsContent>
+
+        {/* Ready to Assign Tab */}
+        <TabsContent value="ready_to_assign" className="space-y-4">
+          <DataTable
+            title="Ready to Assign Employee"
+            data={readyToAssignProjects}
+            columns={columns}
+            searchPlaceholder="Search projects ready to assign..."
+            actions={actions}
+          />
+        </TabsContent>
+
+        {/* Assigned Tab */}
+        <TabsContent value="assigned" className="space-y-4">
+          <DataTable
+            title="Assigned to Employee"
+            data={assignedProjects}
+            columns={columns}
+            searchPlaceholder="Search assigned urgent projects..."
+            actions={actions}
+          />
+        </TabsContent>
+
+        {/* In Progress Tab */}
+        <TabsContent value="in_progress" className="space-y-4">
+          <DataTable
+            title="In Progress - Submitted by Employee"
+            data={inProgressProjects}
+            columns={columns}
+            searchPlaceholder="Search in-progress urgent projects..."
+            actions={actions}
+          />
+        </TabsContent>
+
+        {/* Completed Tab */}
+        <TabsContent value="completed" className="space-y-4">
+          <DataTable
+            title="Completed Urgent Projects"
+            data={completedProjects}
+            columns={columns}
+            searchPlaceholder="Search completed urgent projects..."
+            actions={actions}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Project Details Modal */}
       <ProjectDetailsModal
@@ -452,6 +720,74 @@ export function UrgentProjectsView() {
             </Button>
             <Button onClick={handleSubmitPricing} disabled={!adminPrice.trim()}>
               Set Price
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Employee Modal */}
+      <Dialog open={isAssignModalOpen} onOpenChange={handleCloseAssignModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Assign Employee to Urgent Project
+            </DialogTitle>
+            <DialogDescription>
+              This is a high-priority urgent project. Select an employee to assign to{" "}
+              <span className="font-semibold">{selectedProject?.title}</span>.
+              The employee will be notified via email immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="employee" className="text-right">
+                Employee
+              </Label>
+              <Select
+                value={selectedEmployeeId}
+                onValueChange={setSelectedEmployeeId}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select an employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.length === 0 ? (
+                    <SelectItem value="no-employees" disabled>
+                      No employees available
+                    </SelectItem>
+                  ) : (
+                    employees.map((employee) => (
+                      <SelectItem key={employee.uid} value={employee.uid}>
+                        {employee.name} ({employee.email})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedProject && (
+              <div className="col-span-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  <strong>⚠️ Priority Notice:</strong> This urgent project requires immediate attention. 
+                  The assigned employee will receive an email marked as URGENT.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCloseAssignModal}
+              disabled={assigningEmployee}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignEmployee}
+              disabled={!selectedEmployeeId || assigningEmployee}
+            >
+              {assigningEmployee ? "Assigning..." : "Assign Employee"}
             </Button>
           </DialogFooter>
         </DialogContent>
