@@ -9,6 +9,9 @@ import {
   Award,
   TrendingUp,
   Heart,
+  Check,
+  ChevronsUpDown,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,9 +24,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ReviewService } from "../../Services/reviewService";
 import { Review } from "../../types/profile";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import { cn } from "@/lib/utils";
+import { auth } from "@/firebaseConfig";
+import { useToast } from "@/hooks/use-toast";
 
 const ReviewCenter = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -31,6 +50,8 @@ const ReviewCenter = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchAllReviews();
@@ -41,7 +62,11 @@ const ReviewCenter = () => {
       setLoading(true);
       setError(null);
 
+      console.log('🔍 Fetching all reviews...');
       const allReviews = await ReviewService.getAllReviews();
+      console.log('📦 Reviews fetched:', allReviews);
+      console.log('📊 Total reviews count:', allReviews.length);
+      
       setReviews(allReviews);
     } catch (err) {
       console.error("Error fetching reviews:", err);
@@ -51,39 +76,139 @@ const ReviewCenter = () => {
     }
   };
 
+  const handleMarkHelpful = async (reviewId: string) => {
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to mark reviews as helpful",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await ReviewService.markReviewHelpful(reviewId, currentUser.uid);
+      
+      // Update local state to reflect the change
+      setReviews(prevReviews =>
+        prevReviews.map(review => {
+          if (review.id === reviewId) {
+            const isAlreadyHelpful = review.helpfulVotes.includes(currentUser.uid);
+            const newHelpfulVotes = isAlreadyHelpful
+              ? review.helpfulVotes.filter(id => id !== currentUser.uid)
+              : [...review.helpfulVotes, currentUser.uid];
+            
+            return {
+              ...review,
+              helpfulVotes: newHelpfulVotes
+            };
+          }
+          return review;
+        })
+      );
+
+      toast({
+        title: "Success",
+        description: "Your feedback has been recorded",
+      });
+    } catch (err) {
+      console.error("Error marking review as helpful:", err);
+      toast({
+        title: "Error",
+        description: "Failed to mark review as helpful",
+        variant: "destructive",
+      });
+    }
+  };
+
   const categories = [
     "all",
-    "Academic",
-    "Business Documents",
-    "Legal",
-    "Medical",
-    "Creative Writing",
-    "Data Entry",
+    // Writing & Translation
+    "Articles & Blog Posts",
+    "Copywriting",
+    "Translation",
+    "Proofreading",
+    "Resume Writing",
+    "Business Names & Slogans",
+    // Academic Services
+    "Report Writing",
+    "Assignments",
+    "Presentations",
+    "Research Papers",
+    "Thesis & Dissertation Assistance",
+    // Finance & Accounting
+    "Bookkeeping",
+    "Business Valuation",
+    "Financial Forecasting",
+    // Consulting & Career
+    "Business Consulting",
+    "Resume Review",
+    "Career Coaching",
+    // Business
+    "Business Plans",
+    "Market Research",
+    "Virtual Assistance",
+    "Branding Services",
+    // Digital Marketing
+    "SEO",
+    "Social Media Marketing",
+    "Email Marketing",
+    "Marketing Strategy",
+    // Programming & Tech
+    "Website & App Development",
+    "Game Development",
+    "Chatbot & Automation",
+    "Software Development",
+    "AI Tools Setup",
+    // Graphics & Design
+    "Logo Design",
+    "Illustrations",
+    "Web Design",
+    "Product & Packaging Design",
+    "3D Models",
+    // Music & Audio
+    "Voice Overs",
+    "Mixing & Mastering",
+    "Podcast Editing",
+    "Music Production",
+    // AI Services
+    "AI Image Generation",
+    "AI Voiceover",
+    "AI Video",
+    // Lifestyle
+    "Life Coaching",
+    "Fitness & Diet Plans",
+    "Online Lessons",
+    // Video & Animation
+    "Video Editing",
+    "Explainer Videos",
+    "3D Animation",
+    "Logo Animation",
+    "Product & Ad Videos",
+    // Writing & Research Support
+    "Ghostwriting",
+    "Proofreading & Editing",
+    "Citation & Referencing Help",
+    "Literature Review Assistance",
+    "Study Notes & Summaries",
+    // Marketing & Branding Support
+    "Brand Identity Consulting",
+    "Campaign Strategy Support",
+    "Press Release Writing",
+    "Market Analysis Reports",
+    "Social Media Content Planning",
   ];
 
   const filteredReviews =
     selectedCategory === "all"
       ? reviews
       : reviews.filter((review) => {
-          // For now, we'll filter by project title keywords since we don't have categories in our Review type
-          // This can be improved later by adding categories to the Review model
+          // Filter by exact category match in project title or category field
           const title = review.projectTitle.toLowerCase();
-          switch (selectedCategory) {
-            case "Academic":
-              return title.includes("thesis") || title.includes("research") || title.includes("academic");
-            case "Business Documents":
-              return title.includes("business") || title.includes("report") || title.includes("contract");
-            case "Legal":
-              return title.includes("legal") || title.includes("contract") || title.includes("law");
-            case "Medical":
-              return title.includes("medical") || title.includes("health") || title.includes("report");
-            case "Creative Writing":
-              return title.includes("manuscript") || title.includes("writing") || title.includes("creative");
-            case "Data Entry":
-              return title.includes("data") || title.includes("entry") || title.includes("excel");
-            default:
-              return true;
-          }
+          const category = selectedCategory.toLowerCase();
+          return title.includes(category);
         });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
@@ -128,19 +253,29 @@ const ReviewCenter = () => {
   const getTotalReviews = () => reviews.length;
 
   const getCategoryColor = (category: string) => {
-    const colors = {
-      Academic: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-      "Business Documents":
-        "bg-green-500/10 text-green-600 border-green-500/20",
-      Legal: "bg-purple-500/10 text-purple-600 border-purple-500/20",
-      Medical: "bg-red-500/10 text-red-600 border-red-500/20",
-      "Creative Writing": "bg-pink-500/10 text-pink-600 border-pink-500/20",
-      "Data Entry": "bg-orange-500/10 text-orange-600 border-orange-500/20",
-    };
-    return (
-      colors[category as keyof typeof colors] ||
-      "bg-gray-500/10 text-gray-600 border-gray-500/20"
-    );
+    // Generate colors based on category type
+    if (category.includes("Writing") || category.includes("Translation") || category.includes("Copywriting")) {
+      return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+    } else if (category.includes("Academic") || category.includes("Research") || category.includes("Thesis")) {
+      return "bg-purple-500/10 text-purple-600 border-purple-500/20";
+    } else if (category.includes("Finance") || category.includes("Business") || category.includes("Accounting")) {
+      return "bg-green-500/10 text-green-600 border-green-500/20";
+    } else if (category.includes("Marketing") || category.includes("SEO") || category.includes("Social Media")) {
+      return "bg-pink-500/10 text-pink-600 border-pink-500/20";
+    } else if (category.includes("Programming") || category.includes("Development") || category.includes("Software")) {
+      return "bg-indigo-500/10 text-indigo-600 border-indigo-500/20";
+    } else if (category.includes("Design") || category.includes("Graphics") || category.includes("Logo")) {
+      return "bg-rose-500/10 text-rose-600 border-rose-500/20";
+    } else if (category.includes("Audio") || category.includes("Music") || category.includes("Voice")) {
+      return "bg-orange-500/10 text-orange-600 border-orange-500/20";
+    } else if (category.includes("AI") || category.includes("Automation")) {
+      return "bg-cyan-500/10 text-cyan-600 border-cyan-500/20";
+    } else if (category.includes("Video") || category.includes("Animation")) {
+      return "bg-red-500/10 text-red-600 border-red-500/20";
+    } else if (category.includes("Consulting") || category.includes("Coaching") || category.includes("Lifestyle")) {
+      return "bg-teal-500/10 text-teal-600 border-teal-500/20";
+    }
+    return "bg-gray-500/10 text-gray-600 border-gray-500/20";
   };
 
   return (
@@ -165,8 +300,7 @@ const ReviewCenter = () => {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto animate-slide-up">
-                Discover what our clients say about our professional typing
-                services
+                Discover what our clients say about our professional services across all categories
               </p>
             </div>
 
@@ -239,25 +373,67 @@ const ReviewCenter = () => {
                   Filter Reviews:
                 </span>
               </div>
-              <Select
-                value={selectedCategory}
-                onValueChange={setSelectedCategory}
-              >
-                <SelectTrigger className="w-56 bg-card/50 backdrop-blur-sm border-white/20 hover:border-brand-primary/50 transition-colors duration-300">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent className="bg-card/95 backdrop-blur-sm border-white/20">
-                  {categories.map((category) => (
-                    <SelectItem
-                      key={category}
-                      value={category}
-                      className="hover:bg-brand-primary/10"
-                    >
-                      {category === "all" ? "All Categories" : category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={categoryOpen}
+                    className="w-72 justify-between bg-card/50 backdrop-blur-sm border-white/20 hover:border-brand-primary/50 transition-colors duration-300"
+                  >
+                    {selectedCategory === "all"
+                      ? "All Categories"
+                      : categories.find((cat) => cat === selectedCategory) || "Select category..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-0 bg-card/95 backdrop-blur-sm border-white/20" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search categories..." className="h-9" />
+                    <CommandList>
+                      <CommandEmpty>No category found.</CommandEmpty>
+                      <CommandGroup className="max-h-[300px] overflow-auto">
+                        <CommandItem
+                          key="all"
+                          value="all"
+                          onSelect={() => {
+                            setSelectedCategory("all");
+                            setCategoryOpen(false);
+                          }}
+                          className="hover:bg-brand-primary/10"
+                        >
+                          All Categories
+                          <Check
+                            className={cn(
+                              "ml-auto h-4 w-4",
+                              selectedCategory === "all" ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                        </CommandItem>
+                        {categories.filter(cat => cat !== "all").map((category) => (
+                          <CommandItem
+                            key={category}
+                            value={category}
+                            onSelect={(currentValue) => {
+                              setSelectedCategory(currentValue === selectedCategory ? "all" : currentValue);
+                              setCategoryOpen(false);
+                            }}
+                            className="hover:bg-brand-primary/10"
+                          >
+                            {category}
+                            <Check
+                              className={cn(
+                                "ml-auto h-4 w-4",
+                                selectedCategory === category ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex items-center gap-4">
@@ -387,16 +563,17 @@ const ReviewCenter = () => {
                     <span className="text-lg font-bold text-brand-primary">
                       {review.rating}/5
                     </span>
-                    <div className="h-6 w-px bg-border"></div>
-                    <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      <span>
-                        Project: {" "}
-                        <span className="font-medium text-foreground">
-                          {review.projectTitle}
-                        </span>
-                      </span>
-                    </div>
+                    {review.isVerified && (
+                      <>
+                        <div className="h-6 w-px bg-border"></div>
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 border backdrop-blur-sm"
+                        >
+                          Verified Client
+                        </Badge>
+                      </>
+                    )}
                   </div>
                 </CardHeader>
 
@@ -417,16 +594,27 @@ const ReviewCenter = () => {
                       </div>
                       <div className="flex items-center space-x-2">
                         <MessageSquare className="w-4 h-4 text-muted-foreground/60" />
-                        <span>Project #{review.projectId}</span>
+                        <span>Verified Review</span>
                       </div>
                     </div>
 
                     <Button
                       variant="outline"
                       size="sm"
-                      className="bg-card/50 backdrop-blur-sm border-white/20 hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all duration-300 hover:scale-105"
+                      onClick={() => handleMarkHelpful(review.id)}
+                      className={`bg-card/50 backdrop-blur-sm border-white/20 hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all duration-300 hover:scale-105 ${
+                        auth.currentUser && review.helpfulVotes.includes(auth.currentUser.uid)
+                          ? 'bg-emerald-500/10 border-emerald-500/50'
+                          : ''
+                      }`}
                     >
-                      <ThumbsUp className="w-4 h-4 mr-2" />
+                      <ThumbsUp 
+                        className={`w-4 h-4 mr-2 ${
+                          auth.currentUser && review.helpfulVotes.includes(auth.currentUser.uid)
+                            ? 'fill-emerald-600 text-emerald-600'
+                            : ''
+                        }`}
+                      />
                       Helpful
                     </Button>
                   </div>

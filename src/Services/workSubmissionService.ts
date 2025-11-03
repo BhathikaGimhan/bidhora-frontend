@@ -553,6 +553,17 @@ export const updatePaymentStatus = async (
         updatedAt: Timestamp.now(),
       });
     }
+
+    // Update project status to "completed" when final payment is made
+    await updateDoc(doc(db, "projects", submissionData!.projectId), {
+      status: "completed",
+      finalPaymentStatus: "paid",
+      finalPaymentId: paymentId,
+      finalPaymentAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+
+    console.log("✅ Project status updated to 'completed' after final payment");
   } catch (error: unknown) {
     console.error("Error updating payment status:", error);
     const errorMessage =

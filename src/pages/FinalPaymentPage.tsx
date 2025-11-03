@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -26,9 +28,12 @@ import {
   Lock,
   ArrowLeft,
   Calendar,
+  Star,
+  MessageSquare,
 } from 'lucide-react';
 import { geniePaymentService } from '@/Services/geniePaymentService';
 import { auth } from '@/firebaseConfig';
+import { submitProjectReview } from '@/Services/projectService';
 
 // Testing mode flag
 const USE_MOCK_PAYMENT = true; // Set to false for real payment
@@ -42,6 +47,10 @@ export default function FinalPaymentPage() {
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [reviewFeedback, setReviewFeedback] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     const loadPaymentDetails = async () => {
@@ -342,6 +351,54 @@ export default function FinalPaymentPage() {
     });
   };
 
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0) {
+      toast({
+        title: 'Rating Required',
+        description: 'Please select a star rating before submitting.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!reviewFeedback.trim()) {
+      toast({
+        title: 'Feedback Required',
+        description: 'Please provide your feedback before submitting.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsSubmittingReview(true);
+      await submitProjectReview(projectId!, reviewRating, reviewFeedback.trim());
+      
+      toast({
+        title: 'Review Submitted',
+        description: 'Thank you for your feedback! Your review has been submitted successfully.',
+      });
+      
+      // Reload payment details to show the newly submitted review
+      const updatedDetails = await geniePaymentService.getProjectPaymentDetails(projectId!);
+      setPaymentDetails(updatedDetails);
+      
+      // Reset form
+      setReviewRating(0);
+      setReviewFeedback('');
+      setHoveredRating(0);
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast({
+        title: 'Submission Failed',
+        description: error instanceof Error ? error.message : 'Failed to submit review. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -474,6 +531,141 @@ export default function FinalPaymentPage() {
                         </Button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Review Section - Inline Form */}
+            {!paymentDetails.customerRating ? (
+              <>
+                <Separator />
+                <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-lg p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <MessageSquare className="h-6 w-6 text-emerald-600 mt-1 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-emerald-900">
+                          How was your experience?
+                        </h3>
+                        <p className="text-sm text-emerald-700 mt-1">
+                          Share your feedback to help us improve and assist other buyers
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Star Rating */}
+                    <div className="space-y-2">
+                      <Label className="text-emerald-900 font-medium">Your Rating *</Label>
+                      <div className="flex items-center gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewRating(star)}
+                            onMouseEnter={() => setHoveredRating(star)}
+                            onMouseLeave={() => setHoveredRating(0)}
+                            className="transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 rounded"
+                            disabled={isSubmittingReview}
+                          >
+                            <Star
+                              className={`w-8 h-8 ${
+                                star <= (hoveredRating || reviewRating)
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-300'
+                              } transition-colors`}
+                            />
+                          </button>
+                        ))}
+                        {reviewRating > 0 && (
+                          <span className="ml-2 text-sm font-medium text-emerald-900">
+                            {reviewRating} {reviewRating === 1 ? 'Star' : 'Stars'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Feedback */}
+                    <div className="space-y-2">
+                      <Label htmlFor="feedback" className="text-emerald-900 font-medium">
+                        Your Feedback *
+                      </Label>
+                      <Textarea
+                        id="feedback"
+                        placeholder="Tell us about your experience with this project..."
+                        value={reviewFeedback}
+                        onChange={(e) => setReviewFeedback(e.target.value)}
+                        rows={4}
+                        disabled={isSubmittingReview}
+                        className="resize-none bg-white text-gray-900 placeholder:text-gray-500 border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
+                      />
+                      <p className="text-xs text-emerald-600">
+                        Your feedback helps us improve our service and assists other users.
+                      </p>
+                    </div>
+
+                    {/* Submit Button */}
+                    <Button
+                      onClick={handleSubmitReview}
+                      disabled={isSubmittingReview || reviewRating === 0 || !reviewFeedback.trim()}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {isSubmittingReview ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Star className="mr-2 h-4 w-4" />
+                          Submit Review
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <Separator />
+                <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-6">
+                  <div className="flex items-start gap-4">
+                    <CheckCircle2 className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1 space-y-3">
+                      <div>
+                        <h3 className="font-semibold text-lg text-green-900">
+                          Your Review
+                        </h3>
+                        <div className="flex items-center gap-2 mt-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-5 w-5 ${
+                                star <= paymentDetails.customerRating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                          <span className="text-sm text-green-700 font-medium ml-1">
+                            {paymentDetails.customerRating}.0 stars
+                          </span>
+                        </div>
+                      </div>
+                      {paymentDetails.customerReview && (
+                        <div className="bg-white/50 rounded-lg p-3">
+                          <p className="text-sm text-green-900">
+                            "{paymentDetails.customerReview}"
+                          </p>
+                        </div>
+                      )}
+                      {paymentDetails.customerReviewedAt && (
+                        <p className="text-xs text-green-600">
+                          Reviewed on{" "}
+                          {paymentDetails.customerReviewedAt.toDate().toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </>

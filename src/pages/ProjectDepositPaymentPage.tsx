@@ -156,10 +156,8 @@ export default function ProjectDepositPaymentPage() {
         console.log("✅ User authenticated, fetching project info");
         fetchProjectInfo();
       } else {
-        console.log("❌ No user authenticated, redirecting to login");
-        // Redirect to auth page with return URL
-        const returnUrl = encodeURIComponent(window.location.pathname);
-        navigate(`/auth?redirect=${returnUrl}`);
+        console.log("❌ No user authenticated");
+        setError("Please sign in to access this payment page");
         setLoading(false);
       }
     });
@@ -329,24 +327,48 @@ export default function ProjectDepositPaymentPage() {
   }
 
   if (error) {
+    const isAuthError = error.includes("sign in") || error.includes("Authentication");
+    
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <div className="flex items-center space-x-2 text-destructive">
               <AlertCircle className="h-6 w-6" />
-              <CardTitle>Error</CardTitle>
+              <CardTitle>{isAuthError ? "Authentication Required" : "Error"}</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-            <div className="mt-6">
-              <Button variant="outline" onClick={() => navigate("/")}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Go to Home
-              </Button>
+            <div className="mt-6 flex gap-3">
+              {isAuthError ? (
+                <>
+                  <Button 
+                    onClick={() => {
+                      const returnUrl = encodeURIComponent(window.location.pathname);
+                      navigate(`/auth?redirect=${returnUrl}`);
+                    }}
+                    className="flex-1"
+                  >
+                    Sign In
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate("/")}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Go Home
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onClick={() => navigate("/")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Go to Home
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

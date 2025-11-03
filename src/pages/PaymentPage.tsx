@@ -243,29 +243,60 @@ export default function PaymentPage() {
   }
 
   if (error) {
+    const isAuthError = error.includes("sign in") || error.includes("Authentication");
+    
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="flex items-center justify-center min-h-[60vh]">
           <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle className="text-center">
+                {isAuthError ? "Authentication Required" : "Error"}
+              </CardTitle>
+            </CardHeader>
             <CardContent className="pt-6">
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
               <div className="mt-6 flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => navigate("/")}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Go Home
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => window.location.reload()}
-                >
-                  Try Again
-                </Button>
+                {isAuthError ? (
+                  <>
+                    <Button
+                      className="flex-1"
+                      onClick={() => {
+                        const returnUrl = encodeURIComponent(window.location.pathname);
+                        navigate(`/auth?redirect=${returnUrl}`);
+                      }}
+                    >
+                      Sign In
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => navigate("/")}
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Go Home
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => navigate("/")}
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Go Home
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={() => window.location.reload()}
+                    >
+                      Try Again
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

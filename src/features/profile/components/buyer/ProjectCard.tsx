@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Users, DollarSign, Eye, Activity } from 'lucide-react';
+import { Calendar, Clock, Users, DollarSign, Eye, Activity, Star } from 'lucide-react';
 import { Project } from '@/Services/projectService';
 
 interface ProjectCardProps {
@@ -141,6 +141,36 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
               <Badge variant="secondary" className="text-xs">
                 +{project.skills.length - 4} more
               </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Customer Review - Show for completed projects */}
+        {project.status === 'completed' && project.customerRating && (
+          <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+              <span className="text-sm font-medium">Your Review</span>
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`w-4 h-4 ${
+                    star <= (project.customerRating || 0)
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'text-gray-300'
+                  }`}
+                />
+              ))}
+              <span className="text-xs text-muted-foreground ml-1">
+                {project.customerRating}.0 stars
+              </span>
+            </div>
+            {project.customerReview && (
+              <p className="text-xs text-muted-foreground line-clamp-2 italic">
+                "{project.customerReview}"
+              </p>
             )}
           </div>
         )}

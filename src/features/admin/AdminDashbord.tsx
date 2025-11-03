@@ -10,6 +10,7 @@ import { NotificationsView } from "@/features/admin/views/NotificationsView";
 import { SettingsView } from "@/features/admin/views/SettingsView";
 import WorkSubmissionsView from "@/features/admin/views/WorkSubmissionsView";
 import FAQView from "@/features/admin/views/FAQView";
+import { ReviewsView } from "@/features/admin/views/ReviewsView";
 
 export default function AdminPanel() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -65,6 +66,7 @@ export default function AdminPanel() {
             <Route path="/work-submissions" element={<WorkSubmissionsView />} />
             <Route path="/projects" element={<UrgentProjectsView />} />
             <Route path="/project-review" element={<ProjectReviewView />} />
+            <Route path="/reviews" element={<ReviewsView />} />
             <Route path="/notifications" element={<NotificationsView />} />
             <Route path="/faq" element={<FAQView />} />
             <Route path="/settings" element={<SettingsView />} />

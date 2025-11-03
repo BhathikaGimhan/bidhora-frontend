@@ -247,4 +247,94 @@ export class ReviewService {
       throw error;
     }
   }
+
+  // Migrate existing reviews from projects collection to reviews collection
+  static async migrateProjectReviews(): Promise<{ success: number; skipped: number; errors: number }> {
+    try {
+      console.log('🔄 Starting migration of project reviews...');
+      
+      // Get all projects that have customer reviews
+      const projectsQuery = query(
+        collection(db, "projects"),
+        where("customerRating", "!=", null)
+      );
+
+      const projectsSnapshot = await getDocs(projectsQuery);
+      console.log(`📦 Found ${projectsSnapshot.size} projects with reviews`);
+
+      let success = 0;
+      let skipped = 0;
+      let errors = 0;
+
+      for (const projectDoc of projectsSnapshot.docs) {
+        try {
+          const projectData = projectDoc.data();
+          const projectId = projectDoc.id;
+
+          // Check if review already exists in reviews collection
+          const existingReviewQuery = query(
+            collection(db, "reviews"),
+            where("projectId", "==", projectId)
+          );
+          const existingReviewSnapshot = await getDocs(existingReviewQuery);
+
+          if (!existingReviewSnapshot.empty) {
+            console.log(`⏭️  Review for project ${projectId} already exists, skipping`);
+            skipped++;
+            continue;
+          }
+
+          // Get reviewer info
+          let reviewerName = "Anonymous";
+          let reviewerPhotoURL = "";
+          
+          if (projectData.createdBy) {
+            try {
+              const userDoc = await getDoc(doc(db, "users", projectData.createdBy));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                reviewerName = userData.displayName || userData.email?.split('@')[0] || "Anonymous";
+                reviewerPhotoURL = userData.photoURL || "";
+              }
+            } catch (err) {
+              console.warn(`Could not fetch user data for ${projectData.createdBy}`);
+            }
+          }
+
+          // Create review document
+          const reviewData = {
+            projectId: projectId,
+            projectTitle: projectData.title || "Project",
+            reviewerId: projectData.createdBy || "unknown",
+            reviewerName: reviewerName,
+            reviewerPhotoURL: reviewerPhotoURL,
+            revieweeId: projectData.assignedTo || projectData.serviceProviderId || "system",
+            rating: projectData.customerRating,
+            comment: projectData.customerReview || "",
+            helpfulVotes: [],
+            reactions: {
+              likes: [],
+              dislikes: [],
+            },
+            isVerified: true,
+            createdAt: projectData.customerReviewedAt || Timestamp.now(),
+          };
+
+          await addDoc(collection(db, "reviews"), reviewData);
+          console.log(`✅ Migrated review for project ${projectId}`);
+          success++;
+        } catch (err) {
+          console.error(`❌ Error migrating review for project ${projectDoc.id}:`, err);
+          errors++;
+        }
+      }
+
+      const result = { success, skipped, errors };
+      console.log('🎉 Migration complete:', result);
+      return result;
+    } catch (error) {
+      console.error("Error migrating project reviews:", error);
+      throw error;
+    }
+  }
 }
