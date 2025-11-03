@@ -8,16 +8,25 @@ import {
   TrendingUp,
   Activity,
   RefreshCw,
+  Calendar,
+  Target,
 } from 'lucide-react';
 import { StatCard } from '@/features/employee/components/StatCard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject, EmployeeStats } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
-import { collection, query, where, getFirestore, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getFirestore, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
 
 export function DashboardView() {
   const navigate = useNavigate();
@@ -31,6 +40,10 @@ export function DashboardView() {
   const [recentProjects, setRecentProjects] = useState<AssignedProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [performanceData, setPerformanceData] = useState<Array<{ month: string; completed: number; assigned: number }>>([]);
+  const [recentActivity, setRecentActivity] = useState<Array<{ id: string; type: string; message: string; timestamp: Date; color: string }>>([]);
+  const [totalEarnings, setTotalEarnings] = useState(0);
+  const [avgCompletionTime, setAvgCompletionTime] = useState(0);
 
   const loadDashboardData = async () => {
     try {
@@ -57,6 +70,10 @@ export function DashboardView() {
           let inProgress = 0;
           let completed = 0;
           let needsRevision = 0;
+          let earnings = 0;
+          let totalCompletionDays = 0;
+          let completedCount = 0;
+          const activityLog: Array<{ id: string; type: string; message: string; timestamp: Date; color: string }> = [];
           
           snapshot.forEach((doc) => {
             const data = doc.data();
@@ -97,10 +114,68 @@ export function DashboardView() {
               inProgress++;
             } else if (project.status === 'completed' || project.status === 'completed_by_employee') {
               completed++;
+              completedCount++;
+              
+              // Calculate earnings
+              if (project.adminPrice) {
+                earnings += project.adminPrice;
+              }
+              
+              // Calculate completion time
+              if (project.assignedDate && project.submittedToAdminAt) {
+                const assignedTime = new Date(project.assignedDate).getTime();
+                const submittedTime = new Date(project.submittedToAdminAt).getTime();
+                const days = Math.floor((submittedTime - assignedTime) / (1000 * 60 * 60 * 24));
+                totalCompletionDays += days;
+              }
             } else if (project.status === 'needs_revision') {
               needsRevision++;
             }
+            
+            // Generate activity log
+            if (project.assignedDate) {
+              const assignedDate = new Date(project.assignedDate);
+              if (Date.now() - assignedDate.getTime() < 7 * 24 * 60 * 60 * 1000) { // Last 7 days
+                activityLog.push({
+                  id: `${project.id}-assigned`,
+                  type: 'assigned',
+                  message: `New project assigned: ${project.title}`,
+                  timestamp: assignedDate,
+                  color: 'green'
+                });
+              }
+            }
+            
+            if (project.submittedToAdminAt) {
+              const submittedDate = new Date(project.submittedToAdminAt);
+              if (Date.now() - submittedDate.getTime() < 7 * 24 * 60 * 60 * 1000) { // Last 7 days
+                activityLog.push({
+                  id: `${project.id}-submitted`,
+                  type: 'submitted',
+                  message: `Work submitted: ${project.title}`,
+                  timestamp: submittedDate,
+                  color: 'blue'
+                });
+              }
+            }
+            
+            if (project.status === 'completed') {
+              const createdDate = new Date(project.createdDate);
+              if (Date.now() - createdDate.getTime() < 7 * 24 * 60 * 60 * 1000) { // Last 7 days
+                activityLog.push({
+                  id: `${project.id}-completed`,
+                  type: 'completed',
+                  message: `Project approved: ${project.title}`,
+                  timestamp: createdDate,
+                  color: 'yellow'
+                });
+              }
+            }
           });
+          
+          // Sort activity log by timestamp (most recent first)
+          activityLog.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          setRecentActivity(activityLog.slice(0, 5));
           
           setStats({
             totalAssigned: projects.length,
@@ -109,8 +184,51 @@ export function DashboardView() {
             needsRevision,
           });
           
-          // Get recent 5 projects
-          setRecentProjects(projects.slice(0, 5));
+          setTotalEarnings(earnings);
+          setAvgCompletionTime(completedCount > 0 ? Math.round(totalCompletionDays / completedCount) : 0);
+          
+          // Calculate performance data by month (last 6 months)
+          const performanceMap = new Map<string, { completed: number; assigned: number }>();
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          
+          // Initialize last 6 months
+          for (let i = 5; i >= 0; i--) {
+            const date = new Date();
+            date.setMonth(date.getMonth() - i);
+            const key = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            performanceMap.set(key, { completed: 0, assigned: 0 });
+          }
+          
+          // Count projects by month
+          projects.forEach(project => {
+            if (project.assignedDate) {
+              const assignedDate = new Date(project.assignedDate);
+              const key = `${monthNames[assignedDate.getMonth()]} ${assignedDate.getFullYear()}`;
+              const data = performanceMap.get(key);
+              if (data) {
+                data.assigned += 1;
+                if (project.status === 'completed' || project.status === 'completed_by_employee') {
+                  data.completed += 1;
+                }
+              }
+            }
+          });
+          
+          const chartData = Array.from(performanceMap.entries()).map(([month, data]) => ({
+            month,
+            completed: data.completed,
+            assigned: data.assigned
+          }));
+          
+          setPerformanceData(chartData);
+          
+          // Get recent 5 projects (sorted by assigned date)
+          const sortedProjects = [...projects].sort((a, b) => {
+            const dateA = new Date(a.assignedDate).getTime();
+            const dateB = new Date(b.assignedDate).getTime();
+            return dateB - dateA;
+          });
+          setRecentProjects(sortedProjects.slice(0, 5));
           setLoading(false);
           setRefreshing(false);
         },
@@ -206,6 +324,22 @@ export function DashboardView() {
     }
   };
 
+  const getTimeAgo = (timestamp: Date) => {
+    const now = Date.now();
+    const diff = now - timestamp.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    
+    return timestamp.toLocaleDateString();
+  };
+
   const getEffectiveDeadline = (project: AssignedProject) => {
     // Use admin deadline if available, otherwise fall back to buyer deadline
     if (project.adminDuration && project.adminDurationUnit && project.assignedDate) {
@@ -250,7 +384,7 @@ export function DashboardView() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Assigned"
           value={stats.totalAssigned}
@@ -275,6 +409,8 @@ export function DashboardView() {
           description="Requires changes"
           icon={AlertCircle}
         />
+        
+        
       </div>
 
       {/* Charts Row */}
@@ -285,11 +421,59 @@ export function DashboardView() {
               <TrendingUp className="h-5 w-5" />
               <span>Performance Overview</span>
             </CardTitle>
+            <CardDescription>
+              Projects assigned vs completed over the last 6 months
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-48 sm:h-64 flex items-center justify-center text-muted-foreground">
-              Performance Chart Placeholder
-            </div>
+            {performanceData.length > 0 ? (
+              <ChartContainer
+                config={{
+                  assigned: {
+                    label: 'Assigned',
+                    color: 'hsl(var(--chart-1))',
+                  },
+                  completed: {
+                    label: 'Completed',
+                    color: 'hsl(var(--chart-2))',
+                  },
+                }}
+                className="h-48 sm:h-64 w-full"
+              >
+                <BarChart data={performanceData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="month" 
+                    className="text-xs"
+                    tick={{ fill: 'hsl(var(--foreground))' }}
+                  />
+                  <YAxis 
+                    className="text-xs"
+                    tick={{ fill: 'hsl(var(--foreground))' }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar 
+                    dataKey="assigned" 
+                    fill="hsl(var(--chart-1))" 
+                    radius={[4, 4, 0, 0]}
+                    opacity={0.8}
+                  />
+                  <Bar 
+                    dataKey="completed" 
+                    fill="hsl(var(--chart-2))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <div className="h-48 sm:h-64 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                  <p>No performance data yet</p>
+                  <p className="text-sm">Complete projects to see your performance</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -299,37 +483,41 @@ export function DashboardView() {
               <Activity className="h-5 w-5" />
               <span>Recent Activity</span>
             </CardTitle>
+            <CardDescription>
+              Latest updates from the last 7 days
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                <span className="text-xs sm:text-sm flex-1 min-w-0 truncate">
-                  New project assigned
-                </span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  2h ago
-                </span>
+            {recentActivity.length > 0 ? (
+              <div className="space-y-3 sm:space-y-4">
+                {recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3">
+                    <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${
+                      activity.color === 'green' ? 'bg-green-500' :
+                      activity.color === 'blue' ? 'bg-blue-500' :
+                      activity.color === 'yellow' ? 'bg-yellow-500' :
+                      'bg-gray-500'
+                    }`}></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm truncate">
+                        {activity.message}
+                      </p>
+                      <span className="text-xs text-muted-foreground">
+                        {getTimeAgo(activity.timestamp)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                <span className="text-xs sm:text-sm flex-1 min-w-0 truncate">
-                  Work submitted for review
-                </span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  4h ago
-                </span>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <Activity className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                  <p>No recent activity</p>
+                  <p className="text-sm">Your activity will appear here</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0"></div>
-                <span className="text-xs sm:text-sm flex-1 min-w-0 truncate">
-                  Project approved by admin
-                </span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  1d ago
-                </span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

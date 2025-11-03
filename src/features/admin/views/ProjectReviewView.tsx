@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MoreHorizontal, Eye, DollarSign, CheckCircle, X, UserCheck, FolderOpen, Clock, CheckCircle2, RefreshCw } from "lucide-react";
+import { MoreHorizontal, Eye, DollarSign, CheckCircle, X, UserCheck, FolderOpen, Clock, CheckCircle2, RefreshCw, Loader2 } from "lucide-react";
 import { Project } from "@/features/admin/models/ProjectModel";
 import { useToast } from "@/hooks/use-toast";
 import { projectController } from "@/features/admin/controllers/projectController";
@@ -59,6 +59,7 @@ export function ProjectReviewView() {
   }>>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [assigningEmployee, setAssigningEmployee] = useState(false);
+  const [submittingPrice, setSubmittingPrice] = useState(false);
   const { toast } = useToast();
 
   const fetchProjects = async () => {
@@ -188,6 +189,7 @@ export function ProjectReviewView() {
     }
 
     try {
+      setSubmittingPrice(true);
       const result = await projectController.adminReviewProject(
         selectedProject.id,
         price,
@@ -206,18 +208,20 @@ export function ProjectReviewView() {
       } else {
         toast({
           title: "Error",
-          description: result.message,
+          description: result.message || "Failed to set price. Please ensure the project is in pending or admin review status.",
           variant: "destructive",
         });
       }
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to review project";
+        error instanceof Error ? error.message : "Failed to review project. Please ensure the project is in the correct status.";
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setSubmittingPrice(false);
     }
   };
 
@@ -676,8 +680,18 @@ export function ProjectReviewView() {
             <Button variant="outline" onClick={handleClosePricingModal}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitPricing} disabled={!adminPrice.trim()}>
-              Set Price
+            <Button 
+              onClick={handleSubmitPricing} 
+              disabled={submittingPrice || !adminPrice.trim()}
+            >
+              {submittingPrice ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Setting Price...
+                </>
+              ) : (
+                "Set Price"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
