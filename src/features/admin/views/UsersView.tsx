@@ -277,9 +277,9 @@ export function UsersView() {
     },
     {
       key: 'totalEarnings',
-      title: 'Earnings',
+      title: 'Earnings (LKR)',
       sortable: true,
-      render: (value: number) => `$${value.toLocaleString()}`,
+      render: (value: number) => `LKR ${value.toLocaleString()}`,
     },
     {
       key: 'rating',

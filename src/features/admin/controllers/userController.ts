@@ -1,85 +1,81 @@
 import { User, UserStats } from "@/features/admin/models/UserModel";
-
-// Mock data
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    email: "contact@bidhora.com",
-    role: "freelancer",
-    status: "active",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    joinedDate: "2024-01-15",
-    lastActive: "2024-09-17",
-    totalProjects: 23,
-    totalEarnings: 12500,
-    rating: 4.8,
-    verified: true,
-  },
-  {
-    id: "2",
-    name: "Michael Chen",
-    email: "contact@bidhora.com",
-    role: "client",
-    status: "active",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    joinedDate: "2024-02-20",
-    lastActive: "2024-09-16",
-    totalProjects: 8,
-    totalEarnings: 0,
-    rating: 4.5,
-    verified: true,
-  },
-  {
-    id: "3",
-    name: "Alex Rivera",
-    email: "contact@bidhora.com",
-    role: "freelancer",
-    status: "inactive",
-    avatar: "https://i.pravatar.cc/150?img=3",
-    joinedDate: "2024-03-10",
-    lastActive: "2024-09-10",
-    totalProjects: 15,
-    totalEarnings: 8750,
-    rating: 4.2,
-    verified: false,
-  },
-  {
-    id: "4",
-    name: "Emma Wilson",
-    email: "contact@bidhora.com",
-    role: "admin",
-    status: "active",
-    avatar: "https://i.pravatar.cc/150?img=4",
-    joinedDate: "2023-12-01",
-    lastActive: "2024-09-17",
-    totalProjects: 0,
-    totalEarnings: 0,
-    rating: 5.0,
-    verified: true,
-  },
-];
+import { db } from "@/firebaseConfig";
+import { collection, getDocs, query, orderBy, limit, Timestamp } from "firebase/firestore";
 
 class UserController {
-  private users: User[] = mockUsers;
+  private users: User[] = [];
+  private lastFetch: number = 0;
+  private CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
-  getAllUsers(): User[] {
-    return this.users;
+  async fetchUsers(): Promise<User[]> {
+    const now = Date.now();
+    
+    // Return cached data if still fresh
+    if (this.users.length > 0 && now - this.lastFetch < this.CACHE_DURATION) {
+      return this.users;
+    }
+
+    try {
+      const usersRef = collection(db, "users");
+      const usersSnapshot = await getDocs(usersRef);
+      
+      this.users = usersSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.displayName || data.name || "Unknown User",
+          email: data.email || "N/A",
+          role: data.role || "client",
+          status: data.status || "active",
+          avatar: data.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName || "User")}&background=10b981&color=fff`,
+          joinedDate: data.createdAt ? new Date(data.createdAt.toDate()).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          lastActive: data.lastLoginAt ? new Date(data.lastLoginAt.toDate()).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          totalProjects: data.totalProjects || 0,
+          totalEarnings: data.totalEarnings || 0,
+          rating: data.rating || 0,
+          verified: data.emailVerified || false,
+        };
+      });
+
+      this.lastFetch = now;
+      return this.users;
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      return [];
+    }
   }
 
-  getUserById(id: string): User | undefined {
-    return this.users.find((user) => user.id === id);
+  async getAllUsers(): Promise<User[]> {
+    return await this.fetchUsers();
   }
 
-  getUserStats(): UserStats {
+  async getUserById(id: string): Promise<User | undefined> {
+    const users = await this.fetchUsers();
+    return users.find((user) => user.id === id);
+  }
+
+  async getUserStats(): Promise<UserStats> {
+    const users = await this.fetchUsers();
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
     return {
-      totalUsers: this.users.length,
-      activeUsers: this.users.filter((u) => u.status === "active").length,
-      newUsersThisMonth: this.users.filter(
-        (u) => new Date(u.joinedDate).getMonth() === new Date().getMonth()
-      ).length,
-      bannedUsers: this.users.filter((u) => u.status === "banned").length,
+      totalUsers: users.length,
+      activeUsers: users.filter((u) => u.status === "active").length,
+      newUsersThisMonth: users.filter((u) => {
+        const joinedDate = new Date(u.joinedDate);
+        return joinedDate.getMonth() === currentMonth && joinedDate.getFullYear() === currentYear;
+      }).length,
+      bannedUsers: users.filter((u) => u.status === "banned").length,
     };
+  }
+
+  async getRecentUsers(count: number = 5): Promise<User[]> {
+    const users = await this.fetchUsers();
+    return users
+      .sort((a, b) => new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime())
+      .slice(0, count);
   }
 
   updateUserStatus(id: string, status: User["status"]): boolean {

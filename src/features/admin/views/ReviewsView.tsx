@@ -182,10 +182,10 @@ export function ReviewsView() {
     },
     {
       key: 'adminPrice',
-      title: 'Project Value',
+      title: 'Project Value (LKR)',
       render: (_value: any, row: ProjectReview) => (
         <span className="font-medium">
-          {row.adminPrice ? `$${row.adminPrice.toLocaleString()}` : 'N/A'}
+          {row.adminPrice ? `LKR ${row.adminPrice.toLocaleString()}` : 'N/A'}
         </span>
       ),
     },

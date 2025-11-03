@@ -83,10 +83,10 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
   };
 
   const formatBudget = (min: number, max: number | null) => {
-    if (max === null) {
-      return `$${min.toLocaleString()}+`;
+    if (!max) {
+      return `LKR ${min.toLocaleString()}+`;
     }
-    return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+    return `LKR ${min.toLocaleString()} - LKR ${max.toLocaleString()}`;
   };
 
   return (

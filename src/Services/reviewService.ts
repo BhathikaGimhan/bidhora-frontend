@@ -12,6 +12,7 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
+  limit as firestoreLimit,
 } from "firebase/firestore";
 import { auth, db } from "@/firebaseConfig";
 import { Review } from "../types/profile";
@@ -334,6 +335,85 @@ export class ReviewService {
       return result;
     } catch (error) {
       console.error("Error migrating project reviews:", error);
+      throw error;
+    }
+  }
+
+  // Check if a project has a review in the reviews collection
+  static async checkProjectHasReview(projectId: string): Promise<boolean> {
+    try {
+      const q = query(
+        collection(db, "reviews"),
+        where("projectId", "==", projectId)
+      );
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error("Error checking for review:", error);
+      return false;
+    }
+  }
+
+  // Get reviews created by a specific user (as reviewer)
+  static async getReviewsByReviewer(reviewerId: string, limitCount?: number): Promise<Review[]> {
+    try {
+      let q;
+      if (limitCount) {
+        q = query(
+          collection(db, "reviews"),
+          where("reviewerId", "==", reviewerId),
+          orderBy("createdAt", "desc"),
+          firestoreLimit(limitCount)
+        );
+      } else {
+        q = query(
+          collection(db, "reviews"),
+          where("reviewerId", "==", reviewerId),
+          orderBy("createdAt", "desc")
+        );
+      }
+
+      const querySnapshot = await getDocs(q);
+      const reviews: Review[] = [];
+
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data() as {
+          projectId: string;
+          projectTitle?: string;
+          reviewerId: string;
+          reviewerName: string;
+          reviewerPhotoURL?: string;
+          revieweeId: string;
+          rating: number;
+          comment: string;
+          helpfulVotes?: string[];
+          reactions?: Record<string, string[]>;
+          isVerified: boolean;
+          createdAt: Timestamp | Date;
+          updatedAt?: Timestamp | Date;
+        };
+        
+        reviews.push({
+          id: docSnap.id,
+          projectId: data.projectId,
+          projectTitle: data.projectTitle,
+          reviewerId: data.reviewerId,
+          reviewerName: data.reviewerName,
+          reviewerPhotoURL: data.reviewerPhotoURL,
+          revieweeId: data.revieweeId,
+          rating: data.rating,
+          comment: data.comment,
+          helpfulVotes: data.helpfulVotes || [],
+          reactions: data.reactions || {},
+          isVerified: data.isVerified,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+        } as Review);
+      });
+
+      return reviews;
+    } catch (error) {
+      console.error("Error fetching reviews by reviewer:", error);
       throw error;
     }
   }

@@ -374,7 +374,9 @@ export function ProjectsView() {
                     <div className="flex items-center text-sm">
                       <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span className="text-muted-foreground">
-                        ${project.adminPrice.toLocaleString()}
+                                              <p className="text-sm text-emerald-600 font-semibold">
+                        LKR {project.adminPrice.toLocaleString()}
+                      </p>
                       </span>
                     </div>
                   )}

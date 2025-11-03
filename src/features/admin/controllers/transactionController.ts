@@ -1,75 +1,94 @@
 import { Transaction, TransactionStats } from '@/features/admin/models/TransactionModel';
-
-// Mock data
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    userId: '2',
-    userName: 'Michael Chen',
-    type: 'credit_purchase',
-    amount: 100,
-    status: 'completed',
-    description: 'Credit purchase - 1000 coins',
-    createdDate: '2024-09-15',
-    paymentMethod: 'Credit Card',
-    adminApprovalRequired: false
-  },
-  {
-    id: '2',
-    userId: '1',
-    userName: 'Sarah Johnson',
-    type: 'project_payment',
-    amount: 2200,
-    status: 'pending',
-    description: 'Payment for E-commerce Website Development',
-    createdDate: '2024-09-16',
-    paymentMethod: 'Bank Transfer',
-    adminApprovalRequired: true
-  },
-  {
-    id: '3',
-    userId: '3',
-    userName: 'Alex Rivera',
-    type: 'withdrawal',
-    amount: 1500,
-    status: 'completed',
-    description: 'Withdrawal to bank account',
-    createdDate: '2024-09-10',
-    paymentMethod: 'Bank Transfer',
-    adminApprovalRequired: true
-  },
-  {
-    id: '4',
-    userId: '7',
-    userName: 'Premium Client',
-    type: 'credit_purchase',
-    amount: 10000,
-    status: 'pending',
-    description: 'Credit purchase - 10000 coins (Admin Approval Required)',
-    createdDate: '2024-09-17',
-    paymentMethod: 'Wire Transfer',
-    adminApprovalRequired: true
-  }
-];
+import { db } from "@/firebaseConfig";
+import { collection, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
 
 class TransactionController {
-  private transactions: Transaction[] = mockTransactions;
+  private transactions: Transaction[] = [];
+  private lastFetch: number = 0;
+  private CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
-  getAllTransactions(): Transaction[] {
-    return this.transactions;
+  async fetchTransactions(): Promise<Transaction[]> {
+    const now = Date.now();
+    
+    // Return cached data if still fresh
+    if (this.transactions.length > 0 && now - this.lastFetch < this.CACHE_DURATION) {
+      return this.transactions;
+    }
+
+    try {
+      // Fetch from projects collection (payments)
+      const projectsRef = collection(db, "projects");
+      const projectsSnapshot = await getDocs(projectsRef);
+      
+      const transactions: Transaction[] = [];
+      
+      projectsSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        
+        // Add initial payment transaction if exists
+        if (data.initialPaymentAmount && data.initialPaymentAmount > 0) {
+          transactions.push({
+            id: `${doc.id}-initial`,
+            userId: data.clientId || "unknown",
+            userName: data.clientName || "Unknown Client",
+            type: 'project_payment',
+            amount: data.initialPaymentAmount,
+            status: data.initialPaymentStatus === "paid" ? 'completed' : 'pending',
+            description: `Initial payment for ${data.title}`,
+            createdDate: data.initialPaymentDate ? new Date(data.initialPaymentDate.toDate()).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            paymentMethod: data.initialPaymentMethod || 'Genie Payment',
+            adminApprovalRequired: false
+          });
+        }
+
+        // Add final payment transaction if exists
+        if (data.finalPaymentAmount && data.finalPaymentAmount > 0) {
+          transactions.push({
+            id: `${doc.id}-final`,
+            userId: data.clientId || "unknown",
+            userName: data.clientName || "Unknown Client",
+            type: 'project_payment',
+            amount: data.finalPaymentAmount,
+            status: data.finalPaymentStatus === "paid" ? 'completed' : 'pending',
+            description: `Final payment for ${data.title}`,
+            createdDate: data.finalPaymentDate ? new Date(data.finalPaymentDate.toDate()).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            paymentMethod: data.finalPaymentMethod || 'Genie Payment',
+            adminApprovalRequired: false
+          });
+        }
+      });
+
+      // Sort by date (most recent first)
+      this.transactions = transactions.sort((a, b) => 
+        new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
+      );
+
+      this.lastFetch = now;
+      return this.transactions;
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      return [];
+    }
   }
 
-  getTransactionById(id: string): Transaction | undefined {
-    return this.transactions.find(transaction => transaction.id === id);
+  async getAllTransactions(): Promise<Transaction[]> {
+    return await this.fetchTransactions();
   }
 
-  getTransactionStats(): TransactionStats {
-    const completed = this.transactions.filter(t => t.status === 'completed');
+  async getTransactionById(id: string): Promise<Transaction | undefined> {
+    const transactions = await this.fetchTransactions();
+    return transactions.find(transaction => transaction.id === id);
+  }
+
+  async getTransactionStats(): Promise<TransactionStats> {
+    const transactions = await this.fetchTransactions();
+    const completed = transactions.filter(t => t.status === 'completed');
+    
     return {
       totalRevenue: completed.reduce((sum, t) => sum + t.amount, 0),
-      pendingTransactions: this.transactions.filter(t => t.status === 'pending').length,
+      pendingTransactions: transactions.filter(t => t.status === 'pending').length,
       completedTransactions: completed.length,
-      failedTransactions: this.transactions.filter(t => t.status === 'failed').length
+      failedTransactions: transactions.filter(t => t.status === 'failed').length
     };
   }
 

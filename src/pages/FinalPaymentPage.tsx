@@ -474,7 +474,7 @@ export default function FinalPaymentPage() {
                 <div>
                   <p className="font-medium">Final Payment</p>
                   <p className="text-lg font-semibold text-emerald-600">
-                    ${paymentDetails.finalPayment?.toFixed(2)}
+                    LKR {paymentDetails.finalPayment?.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -709,7 +709,7 @@ export default function FinalPaymentPage() {
               <div className="flex-1">
                 <p className="font-medium">Total Project Price</p>
                 <p className="text-lg font-semibold">
-                  ${paymentDetails.totalAmount?.toFixed(2)}
+                  LKR {paymentDetails.totalAmount?.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -721,7 +721,7 @@ export default function FinalPaymentPage() {
               <div className="flex-1">
                 <p className="font-medium">Initial Deposit Paid (10%)</p>
                 <p className="text-sm text-emerald-600 font-semibold">
-                  ${paymentDetails.initialPayment?.toFixed(2)} ✓
+                  LKR {paymentDetails.initialPayment?.toFixed(2)} ✓
                 </p>
               </div>
             </div>
@@ -734,7 +734,7 @@ export default function FinalPaymentPage() {
                 Final Payment (90%)
               </p>
               <p className="text-4xl font-bold text-emerald-900">
-                ${paymentDetails.finalPayment?.toFixed(2)}
+                LKR {paymentDetails.finalPayment?.toFixed(2)}
               </p>
               <p className="text-sm text-emerald-600">
                 Complete this payment to download all project files
@@ -768,7 +768,7 @@ export default function FinalPaymentPage() {
             ) : (
               <>
                 <Lock className="mr-2 h-5 w-5" />
-                {USE_MOCK_PAYMENT ? "Test Payment" : `Pay $${paymentDetails.finalPayment?.toFixed(2)} Now`}
+                {USE_MOCK_PAYMENT ? "Test Payment" : `Pay LKR ${paymentDetails.finalPayment?.toFixed(2)} Now`}
               </>
             )}
           </Button>
@@ -826,7 +826,7 @@ export default function FinalPaymentPage() {
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-slate-600">Amount:</span>
                 <span className="text-lg font-bold text-emerald-600">
-                  ${paymentDetails?.finalPayment?.toFixed(2)}
+                  LKR {paymentDetails?.finalPayment?.toFixed(2)}
                 </span>
               </div>
               <Separator />

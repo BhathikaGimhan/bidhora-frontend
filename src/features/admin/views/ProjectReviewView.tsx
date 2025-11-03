@@ -363,13 +363,13 @@ export function ProjectReviewView() {
       title: "Client Budget",
       sortable: false,
       render: (value: { min: number; max: number }) =>
-        `$${value.min.toLocaleString()} - $${value.max.toLocaleString()}`,
+        `LKR ${value.min.toLocaleString()} - LKR ${value.max.toLocaleString()}`,
     },
     {
       key: "adminPrice",
-      title: "Admin Price",
+      title: "Admin Price (LKR)",
       sortable: true,
-      render: (value: number) => (value ? `$${value.toLocaleString()}` : "-"),
+      render: (value: number) => (value ? `LKR ${value.toLocaleString()}` : "-"),
     },
     {
       key: "adminDuration",
@@ -713,7 +713,12 @@ export function ProjectReviewView() {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Project Value:</span>
                     <span className="font-semibold">
-                      ${(selectedProject as any).adminPrice?.toFixed(2)}
+                                          <div>
+                      <div className="text-xs text-muted-foreground">Price (LKR)</div>
+                      <div className="font-medium">
+                      LKR {(selectedProject as any).adminPrice?.toFixed(2)}
+                      </div>
+                    </div>
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">

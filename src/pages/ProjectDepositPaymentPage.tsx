@@ -418,7 +418,7 @@ export default function ProjectDepositPaymentPage() {
                 <div>
                   <p className="font-medium">Deposit Paid</p>
                   <p className="text-lg font-semibold text-emerald-600">
-                    ${project.initialPaymentAmount?.toFixed(2)}
+                    LKR {project.initialPaymentAmount?.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -477,7 +477,7 @@ export default function ProjectDepositPaymentPage() {
               <div className="flex-1">
                 <p className="font-medium">Total Project Price</p>
                 <p className="text-lg font-semibold">
-                  ${project.adminPrice?.toFixed(2)}
+                  LKR {project.adminPrice?.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -519,7 +519,7 @@ export default function ProjectDepositPaymentPage() {
                 Initial Deposit (10%)
               </p>
               <p className="text-4xl font-bold text-blue-900">
-                ${project.initialPaymentAmount?.toFixed(2)}
+                LKR {project.initialPaymentAmount?.toFixed(2)}
               </p>
               <p className="text-sm text-blue-600">
                 This secures your project slot and enables employee assignment
@@ -553,7 +553,7 @@ export default function ProjectDepositPaymentPage() {
             ) : (
               <>
                 <Lock className="mr-2 h-5 w-5" />
-                {USE_MOCK_PAYMENT ? "Test Payment" : `Pay $${project.initialPaymentAmount?.toFixed(2)} Now`}
+                {USE_MOCK_PAYMENT ? "Test Payment" : `Pay LKR ${project.initialPaymentAmount?.toFixed(2)} Now`}
               </>
             )}
           </Button>
@@ -612,7 +612,7 @@ export default function ProjectDepositPaymentPage() {
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-slate-600">Amount:</span>
                 <span className="text-lg font-bold text-blue-600">
-                  ${project?.initialPaymentAmount?.toFixed(2)}
+                  LKR {project?.initialPaymentAmount?.toFixed(2)}
                 </span>
               </div>
               <Separator />

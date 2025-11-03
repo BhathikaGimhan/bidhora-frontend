@@ -105,9 +105,9 @@ export function TransactionsView() {
     },
     {
       key: 'amount',
-      title: 'Amount',
+      title: 'Amount (LKR)',
       sortable: true,
-      render: (value: number) => `$${value.toLocaleString()}`,
+      render: (value: number) => `LKR ${value.toLocaleString()}`,
     },
     {
       key: 'status',

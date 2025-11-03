@@ -350,7 +350,7 @@ export default function AssignEmployeePage() {
                             Project Price
                           </p>
                           <p className="font-semibold">
-                            ${project.adminPrice?.toFixed(2)}
+                            LKR {project.adminPrice?.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -362,7 +362,7 @@ export default function AssignEmployeePage() {
                             Deposit Paid
                           </p>
                           <p className="font-semibold text-green-600">
-                            ${project.initialPaymentAmount?.toFixed(2)}
+                            LKR {project.initialPaymentAmount?.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -503,7 +503,7 @@ export default function AssignEmployeePage() {
                             Project Price
                           </p>
                           <p className="font-semibold">
-                            ${project.adminPrice?.toFixed(2)}
+                            LKR {project.adminPrice?.toFixed(2)}
                           </p>
                         </div>
                       </div>

@@ -274,7 +274,10 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Budget</p>
                       <p className="text-lg font-semibold">
-                        ${project.budget.min.toLocaleString()} - ${project.budget.max.toLocaleString()}
+                                              <div>
+                        <span className="font-medium">Budget Range:</span>{" "}
+                        LKR {project.budget.min.toLocaleString()} - LKR {project.budget.max.toLocaleString()}
+                      </div>
                       </p>
                     </div>
                   </div>

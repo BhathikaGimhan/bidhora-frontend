@@ -380,13 +380,13 @@ export function UrgentProjectsView() {
       title: "Client Budget",
       sortable: false,
       render: (value: { min: number; max: number }) =>
-        `$${value.min.toLocaleString()} - $${value.max.toLocaleString()}`,
+        `LKR ${value.min.toLocaleString()} - LKR ${value.max.toLocaleString()}`,
     },
     {
       key: "adminPrice",
-      title: "Admin Price",
+      title: "Admin Price (LKR)",
       sortable: true,
-      render: (value: number) => (value ? `$${value.toLocaleString()}` : "-"),
+      render: (value: number) => (value ? `LKR ${value.toLocaleString()}` : "-"),
     },
     {
       key: "assignedEmployeeName",

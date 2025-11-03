@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Project, ProjectDocument } from '@/Services/projectService';
 import { ProjectReviewDialog } from './ProjectReviewDialog';
+import { ReviewService } from '@/Services/reviewService';
 
 interface OngoingProjectDetailsProps {
   project: Project & {
@@ -44,6 +45,29 @@ export const OngoingProjectDetails = ({
   onBack,
 }: OngoingProjectDetailsProps) => {
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [hasReviewInCollection, setHasReviewInCollection] = useState(false);
+  const [checkingReview, setCheckingReview] = useState(true);
+
+  // Check if review exists in reviews collection
+  useEffect(() => {
+    const checkForReview = async () => {
+      if (project.status === 'completed') {
+        try {
+          setCheckingReview(true);
+          const hasReview = await ReviewService.checkProjectHasReview(project.id);
+          setHasReviewInCollection(hasReview);
+        } catch (error) {
+          console.error('Error checking for review:', error);
+        } finally {
+          setCheckingReview(false);
+        }
+      } else {
+        setCheckingReview(false);
+      }
+    };
+
+    checkForReview();
+  }, [project.id, project.status]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -258,7 +282,7 @@ export const OngoingProjectDetails = ({
                       <div>
                         <p className="text-sm font-medium">Project Value</p>
                         <p className="text-sm text-muted-foreground">
-                          ${project.adminPrice.toLocaleString()}
+                          LKR {project.adminPrice.toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -360,7 +384,7 @@ export const OngoingProjectDetails = ({
                 ))}
                 
                 {/* Review Button - Show if not yet reviewed */}
-                {!project.customerRating && (
+                {!checkingReview && !project.customerRating && !hasReviewInCollection && (
                   <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
                     <div className="flex items-start gap-3">
                       <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
@@ -556,8 +580,8 @@ export const OngoingProjectDetails = ({
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Budget Range</span>
                   <span className="text-sm font-medium">
-                    ${project.budgetMin.toLocaleString()}
-                    {project.budgetMax && ` - $${project.budgetMax.toLocaleString()}`}
+                    LKR {project.budgetMin.toLocaleString()}
+                    {project.budgetMax && ` - LKR ${project.budgetMax.toLocaleString()}`}
                   </span>
                 </div>
               )}
@@ -566,7 +590,7 @@ export const OngoingProjectDetails = ({
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Project Value</span>
                   <span className="text-sm font-medium">
-                    ${project.adminPrice.toLocaleString()}
+                    LKR {project.adminPrice.toLocaleString()}
                   </span>
                 </div>
               )}
