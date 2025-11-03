@@ -37,7 +37,12 @@ export function SubmitWorkView() {
       try {
         const user = auth.currentUser;
         if (!user) {
-          navigate('/login');
+          console.warn('No authenticated user found');
+          toast({
+            variant: 'destructive',
+            title: 'Authentication Required',
+            description: 'Please ensure you are logged in.',
+          });
           return;
         }
 

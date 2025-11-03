@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject, EmployeeStats } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
-import { collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
+import { collection, query, where, getFirestore, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export function DashboardView() {
@@ -36,7 +36,7 @@ export function DashboardView() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        navigate('/login');
+        console.warn('No authenticated user found');
         return;
       }
 
@@ -49,92 +49,127 @@ export function DashboardView() {
         where('assignedEmployeeId', '==', user.uid)
       );
       
-      const snapshot = await getDocs(q);
-      const projects: AssignedProject[] = [];
-      
-      let inProgress = 0;
-      let completed = 0;
-      let needsRevision = 0;
-      
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const project: AssignedProject = {
-          id: doc.id,
-          title: data.title || '',
-          description: data.description || '',
-          status: data.status || 'assigned',
-          clientId: data.createdBy || '',
-          clientName: data.buyerEmail || '',
-          budget: {
-            min: data.budgetMin || 0,
-            max: data.budgetMax || 0,
-          },
-          adminPrice: data.adminPrice,
-          adminDuration: data.adminDuration,
-          adminDurationUnit: data.adminDurationUnit,
-          deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
-          createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
-          assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
-          category: data.category || '',
-          skillsRequired: data.skills || [],
-          assignedEmployeeId: data.assignedEmployeeId || '',
-          assignedEmployeeName: data.assignedEmployeeName || '',
-          assignedEmployeeEmail: data.assignedEmployeeEmail || '',
-          adminNotes: data.adminNotes,
-          submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
-          adminReviewStatus: data.adminReviewStatus,
-          adminReviewNotes: data.adminReviewNotes,
-          downloadUrl: data.downloadUrl,
-          documents: data.documents,
-        };
-        
-        projects.push(project);
-        
-        // Count by status
-        if (project.status === 'in_progress' || project.status === 'assigned') {
-          inProgress++;
-        } else if (project.status === 'completed' || project.status === 'completed_by_employee') {
-          completed++;
-        } else if (project.status === 'needs_revision') {
-          needsRevision++;
+      // Set up real-time listener
+      const unsubscribe = onSnapshot(q,
+        (snapshot) => {
+          const projects: AssignedProject[] = [];
+          
+          let inProgress = 0;
+          let completed = 0;
+          let needsRevision = 0;
+          
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const project: AssignedProject = {
+              id: doc.id,
+              title: data.title || '',
+              description: data.description || '',
+              status: data.status || 'assigned',
+              clientId: data.createdBy || '',
+              clientName: data.buyerEmail || '',
+              budget: {
+                min: data.budgetMin || 0,
+                max: data.budgetMax || 0,
+              },
+              adminPrice: data.adminPrice,
+              adminDuration: data.adminDuration,
+              adminDurationUnit: data.adminDurationUnit,
+              deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
+              createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
+              assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
+              category: data.category || '',
+              skillsRequired: data.skills || [],
+              assignedEmployeeId: data.assignedEmployeeId || '',
+              assignedEmployeeName: data.assignedEmployeeName || '',
+              assignedEmployeeEmail: data.assignedEmployeeEmail || '',
+              adminNotes: data.adminNotes,
+              submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
+              adminReviewStatus: data.adminReviewStatus,
+              adminReviewNotes: data.adminReviewNotes,
+              downloadUrl: data.downloadUrl,
+              documents: data.documents,
+            };
+            
+            projects.push(project);
+            
+            // Count by status
+            if (project.status === 'in_progress' || project.status === 'assigned') {
+              inProgress++;
+            } else if (project.status === 'completed' || project.status === 'completed_by_employee') {
+              completed++;
+            } else if (project.status === 'needs_revision') {
+              needsRevision++;
+            }
+          });
+          
+          setStats({
+            totalAssigned: projects.length,
+            inProgress,
+            completed,
+            needsRevision,
+          });
+          
+          // Get recent 5 projects
+          setRecentProjects(projects.slice(0, 5));
+          setLoading(false);
+          setRefreshing(false);
+        },
+        (error) => {
+          console.error('Error loading dashboard data:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to load dashboard data. Please try again.',
+          });
+          setLoading(false);
+          setRefreshing(false);
         }
-      });
+      );
       
-      setStats({
-        totalAssigned: projects.length,
-        inProgress,
-        completed,
-        needsRevision,
-      });
-      
-      // Get recent 5 projects
-      setRecentProjects(projects.slice(0, 5));
+      // Return cleanup function
+      return unsubscribe;
       
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('Error setting up dashboard listener:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to load dashboard data. Please try again.',
       });
-    } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadDashboardData();
+    let unsubscribe: (() => void) | undefined;
+    
+    const setupListener = async () => {
+      unsubscribe = await loadDashboardData();
+    };
+    
+    setupListener();
+    
+    // Cleanup listener on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]);
+  }, []);
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
-    await loadDashboardData();
-    toast({
-      title: 'Refreshed',
-      description: 'Dashboard data updated successfully',
-    });
+    // The real-time listener will automatically update the data
+    // Just show a toast to indicate refresh
+    setTimeout(() => {
+      setRefreshing(false);
+      toast({
+        title: 'Refreshed',
+        description: 'Dashboard data is up to date',
+      });
+    }, 500);
   };
 
   const getStatusColor = (status: string) => {

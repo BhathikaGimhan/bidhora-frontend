@@ -15,7 +15,7 @@ import { Search, Calendar, DollarSign, RefreshCw, AlertCircle } from 'lucide-rea
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
-import { collection, query, where, getDocs, getFirestore, orderBy } from 'firebase/firestore';
+import { collection, query, where, getFirestore, orderBy, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export function ProjectsView() {
@@ -32,7 +32,7 @@ export function ProjectsView() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        navigate('/login');
+        console.warn('No authenticated user found');
         return;
       }
 
@@ -46,81 +46,116 @@ export function ProjectsView() {
         orderBy('assignedAt', 'desc')
       );
       
-      const snapshot = await getDocs(q);
-      const projectsList: AssignedProject[] = [];
+      // Set up real-time listener
+      const unsubscribe = onSnapshot(q, 
+        (snapshot) => {
+          const projectsList: AssignedProject[] = [];
+          
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            // Filter out completed projects - they go to the Completed view
+            if (data.status !== 'completed') {
+              projectsList.push({
+              id: doc.id,
+              title: data.title || '',
+              description: data.description || '',
+              status: data.status || 'assigned',
+              clientId: data.createdBy || '',
+              clientName: data.buyerEmail || '',
+              budget: {
+                min: data.budgetMin || 0,
+                max: data.budgetMax || 0,
+              },
+              adminPrice: data.adminPrice,
+              adminDuration: data.adminDuration,
+              adminDurationUnit: data.adminDurationUnit,
+              deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
+              createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
+              assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
+              category: data.category || '',
+              skillsRequired: data.skills || [],
+              assignedEmployeeId: data.assignedEmployeeId || '',
+              assignedEmployeeName: data.assignedEmployeeName || '',
+              assignedEmployeeEmail: data.assignedEmployeeEmail || '',
+              adminNotes: data.adminNotes,
+              submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
+              adminReviewStatus: data.adminReviewStatus,
+              adminReviewNotes: data.adminReviewNotes,
+              downloadUrl: data.downloadUrl,
+              documents: data.documents,
+              isUrgent: data.isUrgent || false,
+            });
+          }
+          });
+          
+          // Sort projects: urgent projects first, then by assigned date
+          projectsList.sort((a, b) => {
+            if (a.isUrgent && !b.isUrgent) return -1;
+            if (!a.isUrgent && b.isUrgent) return 1;
+            return new Date(b.assignedDate).getTime() - new Date(a.assignedDate).getTime();
+          });
+          
+          setProjects(projectsList);
+          setFilteredProjects(projectsList);
+          setLoading(false);
+          setRefreshing(false);
+        },
+        (error) => {
+          console.error('Error loading projects:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to load projects. Please try again.',
+          });
+          setLoading(false);
+          setRefreshing(false);
+        }
+      );
       
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        // Filter out completed projects - they go to the Completed view
-        if (data.status !== 'completed') {
-          projectsList.push({
-          id: doc.id,
-          title: data.title || '',
-          description: data.description || '',
-          status: data.status || 'assigned',
-          clientId: data.createdBy || '',
-          clientName: data.buyerEmail || '',
-          budget: {
-            min: data.budgetMin || 0,
-            max: data.budgetMax || 0,
-          },
-          adminPrice: data.adminPrice,
-          adminDuration: data.adminDuration,
-          adminDurationUnit: data.adminDurationUnit,
-          deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
-          createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
-          assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
-          category: data.category || '',
-          skillsRequired: data.skills || [],
-          assignedEmployeeId: data.assignedEmployeeId || '',
-          assignedEmployeeName: data.assignedEmployeeName || '',
-          assignedEmployeeEmail: data.assignedEmployeeEmail || '',
-          adminNotes: data.adminNotes,
-          submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
-          adminReviewStatus: data.adminReviewStatus,
-          adminReviewNotes: data.adminReviewNotes,
-          downloadUrl: data.downloadUrl,
-          documents: data.documents,
-          isUrgent: data.isUrgent || false,
-        });
-      }
-      });
-      
-      // Sort projects: urgent projects first, then by assigned date
-      projectsList.sort((a, b) => {
-        if (a.isUrgent && !b.isUrgent) return -1;
-        if (!a.isUrgent && b.isUrgent) return 1;
-        return new Date(b.assignedDate).getTime() - new Date(a.assignedDate).getTime();
-      });
-      
-      setProjects(projectsList);
-      setFilteredProjects(projectsList);
+      // Return cleanup function
+      return unsubscribe;
       
     } catch (error) {
-      console.error('Error loading projects:', error);
+      console.error('Error setting up projects listener:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to load projects. Please try again.',
       });
-    } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadProjects();
+    let unsubscribe: (() => void) | undefined;
+    
+    const setupListener = async () => {
+      unsubscribe = await loadProjects();
+    };
+    
+    setupListener();
+    
+    // Cleanup listener on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]);
+  }, []);
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
-    await loadProjects();
-    toast({
-      title: 'Refreshed',
-      description: 'Projects list updated successfully',
-    });
+    // The real-time listener will automatically update the data
+    // Just show a toast to indicate refresh
+    setTimeout(() => {
+      setRefreshing(false);
+      toast({
+        title: 'Refreshed',
+        description: 'Projects list is up to date',
+      });
+    }, 500);
   };
 
   useEffect(() => {

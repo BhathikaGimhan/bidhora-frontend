@@ -8,7 +8,7 @@ import { Search, Calendar, DollarSign, Award, RefreshCw, AlertCircle } from 'luc
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
-import { collection, query, where, getDocs, getFirestore, orderBy } from 'firebase/firestore';
+import { collection, query, where, getFirestore, orderBy, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export function CompletedView() {
@@ -24,7 +24,7 @@ export function CompletedView() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        navigate('/login');
+        console.warn('No authenticated user found');
         return;
       }
 
@@ -39,78 +39,113 @@ export function CompletedView() {
         orderBy('assignedAt', 'desc')
       );
       
-      const snapshot = await getDocs(q);
-      const projectsList: AssignedProject[] = [];
+      // Set up real-time listener
+      const unsubscribe = onSnapshot(q,
+        (snapshot) => {
+          const projectsList: AssignedProject[] = [];
+          
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            projectsList.push({
+              id: doc.id,
+              title: data.title || '',
+              description: data.description || '',
+              status: data.status || 'completed',
+              clientId: data.createdBy || '',
+              clientName: data.buyerEmail || '',
+              budget: {
+                min: data.budgetMin || 0,
+                max: data.budgetMax || 0,
+              },
+              adminPrice: data.adminPrice,
+              adminDuration: data.adminDuration,
+              adminDurationUnit: data.adminDurationUnit,
+              deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
+              createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
+              assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
+              category: data.category || '',
+              skillsRequired: data.skills || [],
+              assignedEmployeeId: data.assignedEmployeeId || '',
+              assignedEmployeeName: data.assignedEmployeeName || '',
+              assignedEmployeeEmail: data.assignedEmployeeEmail || '',
+              adminNotes: data.adminNotes,
+              submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
+              adminReviewStatus: data.adminReviewStatus,
+              adminReviewNotes: data.adminReviewNotes,
+              downloadUrl: data.downloadUrl,
+              documents: data.documents,
+              isUrgent: data.isUrgent || false,
+            });
+          });
+          
+          // Sort: urgent projects first
+          projectsList.sort((a, b) => {
+            if (a.isUrgent && !b.isUrgent) return -1;
+            if (!a.isUrgent && b.isUrgent) return 1;
+            return 0;
+          });
+          
+          setProjects(projectsList);
+          setFilteredProjects(projectsList);
+          setLoading(false);
+          setRefreshing(false);
+        },
+        (error) => {
+          console.error('Error loading completed projects:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to load completed projects. Please try again.',
+          });
+          setLoading(false);
+          setRefreshing(false);
+        }
+      );
       
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        projectsList.push({
-          id: doc.id,
-          title: data.title || '',
-          description: data.description || '',
-          status: data.status || 'completed',
-          clientId: data.createdBy || '',
-          clientName: data.buyerEmail || '',
-          budget: {
-            min: data.budgetMin || 0,
-            max: data.budgetMax || 0,
-          },
-          adminPrice: data.adminPrice,
-          adminDuration: data.adminDuration,
-          adminDurationUnit: data.adminDurationUnit,
-          deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
-          createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
-          assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
-          category: data.category || '',
-          skillsRequired: data.skills || [],
-          assignedEmployeeId: data.assignedEmployeeId || '',
-          assignedEmployeeName: data.assignedEmployeeName || '',
-          assignedEmployeeEmail: data.assignedEmployeeEmail || '',
-          adminNotes: data.adminNotes,
-          submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
-          adminReviewStatus: data.adminReviewStatus,
-          adminReviewNotes: data.adminReviewNotes,
-          downloadUrl: data.downloadUrl,
-          documents: data.documents,
-          isUrgent: data.isUrgent || false,
-        });
-      });
-      
-      // Sort: urgent projects first
-      projectsList.sort((a, b) => {
-        if (a.isUrgent && !b.isUrgent) return -1;
-        if (!a.isUrgent && b.isUrgent) return 1;
-        return 0;
-      });
-      
-      setProjects(projectsList);
-      setFilteredProjects(projectsList);
+      // Return cleanup function
+      return unsubscribe;
       
     } catch (error) {
-      console.error('Error loading completed projects:', error);
+      console.error('Error setting up completed projects listener:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to load completed projects. Please try again.',
       });
-    } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadCompletedProjects();
+    let unsubscribe: (() => void) | undefined;
+    
+    const setupListener = async () => {
+      unsubscribe = await loadCompletedProjects();
+    };
+    
+    setupListener();
+    
+    // Cleanup listener on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]);
+  }, []);
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
-    await loadCompletedProjects();
-    toast({
-      title: 'Refreshed',
-      description: 'Completed projects list updated successfully',
-    });
+    // The real-time listener will automatically update the data
+    // Just show a toast to indicate refresh
+    setTimeout(() => {
+      setRefreshing(false);
+      toast({
+        title: 'Refreshed',
+        description: 'Completed projects list is up to date',
+      });
+    }, 500);
   };
 
   useEffect(() => {
