@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DataTable } from '@/features/admin/components/DataTable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,10 +42,12 @@ export function UsersView() {
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionType, setActionType] = useState<ActionType>(null);
+  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [authError, setAuthError] = useState(false);
   const { toast } = useToast();
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setAuthError(false);
@@ -82,7 +84,7 @@ export function UsersView() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [toast]);
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
@@ -92,6 +94,39 @@ export function UsersView() {
       description: 'Users list updated successfully',
     });
   };
+
+  const applyFilters = useCallback(() => {
+    let filtered = users;
+
+    // Apply role filter
+    if (selectedRole !== 'all') {
+      filtered = filtered.filter(user => user.role === selectedRole);
+    }
+
+    // Apply search filter
+    if (searchQuery.trim() !== '') {
+      const lowercaseQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(user =>
+        user.name.toLowerCase().includes(lowercaseQuery) ||
+        user.email.toLowerCase().includes(lowercaseQuery) ||
+        user.role.toLowerCase().includes(lowercaseQuery)
+      );
+    }
+
+    setFilteredUsers(filtered);
+  }, [users, selectedRole, searchQuery]);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleRoleFilter = (role: string) => {
+    setSelectedRole(role);
+  };
+
+  useEffect(() => {
+    applyFilters();
+  }, [users, selectedRole, searchQuery, applyFilters]);
 
   useEffect(() => {
     // Wait for auth to initialize
@@ -105,22 +140,7 @@ export function UsersView() {
     });
 
     return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleSearch = (query: string) => {
-    if (query.trim() === '') {
-      setFilteredUsers(users);
-    } else {
-      const lowercaseQuery = query.toLowerCase();
-      const filtered = users.filter(user =>
-        user.name.toLowerCase().includes(lowercaseQuery) ||
-        user.email.toLowerCase().includes(lowercaseQuery) ||
-        user.role.toLowerCase().includes(lowercaseQuery)
-      );
-      setFilteredUsers(filtered);
-    }
-  };
+  }, [fetchUsers]);
 
   const openConfirmDialog = (user: User, action: ActionType) => {
     setSelectedUser(user);
@@ -276,23 +296,6 @@ export function UsersView() {
       sortable: true,
     },
     {
-      key: 'totalEarnings',
-      title: 'Earnings (LKR)',
-      sortable: true,
-      render: (value: number) => `LKR ${value.toLocaleString()}`,
-    },
-    {
-      key: 'rating',
-      title: 'Rating',
-      sortable: true,
-      render: (value: number) => (
-        <div className="flex items-center space-x-1">
-          <span>{value.toFixed(1)}</span>
-          <span className="text-yellow-500">★</span>
-        </div>
-      ),
-    },
-    {
       key: 'joinedDate',
       title: 'Joined',
       sortable: true,
@@ -414,6 +417,41 @@ export function UsersView() {
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
+        </div>
+
+        {/* Role Filter */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm font-medium">Filter by Role:</span>
+          <div className="flex gap-1">
+            <Button
+              variant={selectedRole === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleRoleFilter('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={selectedRole === 'buyer' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleRoleFilter('buyer')}
+            >
+              Buyer
+            </Button>
+            <Button
+              variant={selectedRole === 'employee' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleRoleFilter('employee')}
+            >
+              Employee
+            </Button>
+            <Button
+              variant={selectedRole === 'admin' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleRoleFilter('admin')}
+            >
+              Admin
+            </Button>
+          </div>
         </div>
         
         <DataTable
