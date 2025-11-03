@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/features/admin/components/DataTable";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +48,7 @@ export default function WorkSubmissionsView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected">("pending");
 
   useEffect(() => {
     // Wait for auth state to be ready
@@ -223,6 +217,140 @@ export default function WorkSubmissionsView() {
     });
   };
 
+  // Filter and sort submissions
+  const pendingSubmissions = submissions
+    .filter((s) => s.status === "pending_review")
+    .sort((a, b) => {
+      // Prioritize urgent submissions
+      if (a.isUrgent && !b.isUrgent) return -1;
+      if (!a.isUrgent && b.isUrgent) return 1;
+      // Then sort by submission date (newest first)
+      return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+    });
+
+  const approvedSubmissions = submissions
+    .filter((s) => s.status === "approved")
+    .sort((a, b) => {
+      // Sort by review date (newest first)
+      const dateA = a.reviewedAt ? new Date(a.reviewedAt).getTime() : 0;
+      const dateB = b.reviewedAt ? new Date(b.reviewedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+  const rejectedSubmissions = submissions
+    .filter((s) => s.status === "rejected")
+    .sort((a, b) => {
+      // Sort by review date (newest first)
+      const dateA = a.reviewedAt ? new Date(a.reviewedAt).getTime() : 0;
+      const dateB = b.reviewedAt ? new Date(b.reviewedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+  const urgentPendingCount = pendingSubmissions.filter((s) => s.isUrgent).length;
+
+  // Define columns for DataTable
+  const columns = [
+    {
+      key: "projectTitle",
+      title: "Project",
+      sortable: true,
+      render: (value: string, submission: WorkSubmission) => (
+        <div className="flex items-center gap-2">
+          {submission.isUrgent && submission.status === 'pending_review' && (
+            <div className="relative">
+              <AlertCircle className="w-5 h-5 text-red-500 animate-pulse" />
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+            </div>
+          )}
+          <span className={submission.isUrgent && submission.status === 'pending_review' ? 'text-red-700 dark:text-red-400 font-semibold' : ''}>
+            {value || "N/A"}
+          </span>
+          {submission.isUrgent && submission.status === 'pending_review' && (
+            <Badge className="bg-red-600 hover:bg-red-700 text-white text-xs animate-pulse">
+              🚨 URGENT
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "submitterName",
+      title: "Submitted By",
+      sortable: true,
+      render: (value: string, submission: WorkSubmission) => (
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={submission.submitterPhotoURL} />
+            <AvatarFallback>
+              {(value || "U").substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span>{value || "Unknown"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "id",
+      title: "Type",
+      sortable: false,
+      render: (value: string) => getSubmissionTypeBadge(value),
+    },
+    {
+      key: "buyerName",
+      title: "Buyer",
+      sortable: true,
+      render: (value: string, submission: WorkSubmission) => (
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={submission.buyerPhotoURL} />
+            <AvatarFallback>
+              {(value || "U").substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span>{value || "Unknown"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "submittedAt",
+      title: "Submitted",
+      sortable: true,
+      render: (value: Date | string) => formatDate(value),
+    },
+    {
+      key: "files",
+      title: "Files",
+      sortable: false,
+      render: (value: Array<{ name: string; url: string; size: number }>) => (
+        <div className="flex items-center gap-1">
+          <FileText className="w-4 h-4" />
+          <span>{value?.length || 0}</span>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      title: "Status",
+      sortable: true,
+      render: (value: string) => getStatusBadge(value),
+    },
+  ];
+
+  // Define actions for DataTable
+  const actions = (submission: WorkSubmission) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => handleViewSubmission(submission)}
+    >
+      <Eye className="w-4 h-4 mr-1" />
+      View
+    </Button>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -231,29 +359,145 @@ export default function WorkSubmissionsView() {
     );
   }
 
+  // Render submission list component
+  const renderSubmissionList = (submissionList: WorkSubmission[]) => {
+    return (
+      <>
+        {/* Mobile View */}
+        <div className="block lg:hidden">
+          {submissionList.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground px-4">
+              No work submissions found
+            </div>
+          ) : (
+            <div className="space-y-3 p-4">
+              {submissionList.map((submission) => (
+                <Card 
+                  key={submission.id} 
+                  className={`overflow-hidden relative ${
+                    submission.isUrgent && submission.status === 'pending_review'
+                      ? 'border-2 border-red-500 shadow-lg shadow-red-200/50 dark:shadow-red-900/30 bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background' 
+                      : ''
+                  }`}
+                >
+                  {/* Corner accent for urgent pending reviews */}
+                  {submission.isUrgent && submission.status === 'pending_review' && (
+                    <>
+                      <div className="absolute top-0 right-0 w-0 h-0 border-t-[40px] border-t-red-500 border-l-[40px] border-l-transparent" />
+                      <div className="absolute top-2 right-2">
+                        <Badge className="bg-red-600 hover:bg-red-700 text-white text-[10px] px-1.5 py-0 h-5 animate-pulse">
+                          🚨 URGENT
+                        </Badge>
+                      </div>
+                    </>
+                  )}
+                  
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {submission.isUrgent && submission.status === 'pending_review' && (
+                            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 animate-pulse" />
+                          )}
+                          <h3 className={`font-semibold text-sm truncate ${
+                            submission.isUrgent && submission.status === 'pending_review' ? 'text-red-700 dark:text-red-400' : ''
+                          }`}>
+                            {submission.projectTitle || "N/A"}
+                          </h3>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={submission.submitterPhotoURL} />
+                            <AvatarFallback className="text-[10px]">
+                              {(submission.submitterName || "U")
+                                .substring(0, 2)
+                                .toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="text-xs text-muted-foreground">
+                            by {submission.submitterName || "Unknown"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 items-end">
+                        {getStatusBadge(submission.status)}
+                        {getSubmissionTypeBadge(submission.id)}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Buyer:</span>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={submission.buyerPhotoURL} />
+                            <AvatarFallback className="text-[10px]">
+                              {(submission.buyerName || "U")
+                                .substring(0, 2)
+                                .toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="font-medium truncate">
+                            {submission.buyerName || "Unknown"}
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Files:</span>
+                        <p className="font-medium flex items-center gap-1">
+                          <FileText className="w-3 h-3" />
+                          {submission.files.length}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      {formatDate(submission.submittedAt)}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleViewSubmission(submission)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop View */}
+        <div className="hidden lg:block">
+          <DataTable
+            title=""
+            data={submissionList}
+            columns={columns}
+            searchPlaceholder="Search submissions..."
+            actions={actions}
+          />
+        </div>
+      </>
+    );
+  };
+
   return (
-    <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Work Submissions</h1>
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+          <h2 className="text-3xl font-bold">Work Submissions</h2>
+          <p className="text-muted-foreground">
             Review and approve completed work submitted by employees
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleManualRefresh}
-          disabled={refreshing}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </Button>
       </div>
 
       {/* Urgent Submissions Alert Banner - Only show for pending reviews */}
-      {submissions.some(s => s.isUrgent && s.status === 'pending_review') && (
+      {urgentPendingCount > 0 && (
         <div className="relative overflow-hidden rounded-lg border-2 border-red-200 dark:border-red-800 bg-gradient-to-r from-red-50 via-red-100 to-red-50 dark:from-red-950/20 dark:via-red-900/30 dark:to-red-950/20 p-4">
           {/* Animated blur effects */}
           <div className="absolute -top-10 -left-10 w-32 h-32 bg-red-300/30 dark:bg-red-600/20 rounded-full blur-2xl animate-pulse" />
@@ -271,7 +515,7 @@ export default function WorkSubmissionsView() {
                   ⚠️ Urgent Work Submissions Require Review
                 </h3>
                 <Badge className="bg-red-600 hover:bg-red-700 text-white animate-bounce">
-                  {submissions.filter(s => s.isUrgent && s.status === 'pending_review').length} URGENT
+                  {urgentPendingCount} URGENT
                 </Badge>
               </div>
               <p className="text-sm text-red-700 dark:text-red-300 mb-2">
@@ -280,8 +524,8 @@ export default function WorkSubmissionsView() {
               
               {/* Show first 3 urgent pending submissions */}
               <div className="flex flex-wrap gap-2">
-                {submissions
-                  .filter(s => s.isUrgent && s.status === 'pending_review')
+                {pendingSubmissions
+                  .filter(s => s.isUrgent)
                   .slice(0, 3)
                   .map(submission => (
                     <Badge 
@@ -292,12 +536,12 @@ export default function WorkSubmissionsView() {
                       {submission.projectTitle}
                     </Badge>
                   ))}
-                {submissions.filter(s => s.isUrgent && s.status === 'pending_review').length > 3 && (
+                {urgentPendingCount > 3 && (
                   <Badge 
                     variant="outline" 
                     className="text-xs bg-white/50 dark:bg-red-950/50 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300"
                   >
-                    +{submissions.filter(s => s.isUrgent && s.status === 'pending_review').length - 3} more
+                    +{urgentPendingCount - 3} more
                   </Badge>
                 )}
               </div>
@@ -306,236 +550,88 @@ export default function WorkSubmissionsView() {
         </div>
       )}
 
-      <Card>
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-lg sm:text-xl">
-            All Work Submissions
-          </CardTitle>
-          <CardDescription className="text-sm">
-            {submissions.length} total submission
-            {submissions.length !== 1 ? "s" : ""}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 sm:p-6">
-          {/* Mobile View */}
-          <div className="block lg:hidden">
-            {submissions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground px-4">
-                No work submissions found
-              </div>
-            ) : (
-              <div className="space-y-3 p-4">
-                {submissions.map((submission) => (
-                  <Card 
-                    key={submission.id} 
-                    className={`overflow-hidden relative ${
-                      submission.isUrgent && submission.status === 'pending_review'
-                        ? 'border-2 border-red-500 shadow-lg shadow-red-200/50 dark:shadow-red-900/30 bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background' 
-                        : ''
-                    }`}
-                  >
-                    {/* Corner accent for urgent pending reviews */}
-                    {submission.isUrgent && submission.status === 'pending_review' && (
-                      <>
-                        <div className="absolute top-0 right-0 w-0 h-0 border-t-[40px] border-t-red-500 border-l-[40px] border-l-transparent" />
-                        <div className="absolute top-2 right-2">
-                          <Badge className="bg-red-600 hover:bg-red-700 text-white text-[10px] px-1.5 py-0 h-5 animate-pulse">
-                            🚨 URGENT
-                          </Badge>
-                        </div>
-                      </>
-                    )}
-                    
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            {submission.isUrgent && submission.status === 'pending_review' && (
-                              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 animate-pulse" />
-                            )}
-                            <h3 className={`font-semibold text-sm truncate ${
-                              submission.isUrgent && submission.status === 'pending_review' ? 'text-red-700 dark:text-red-400' : ''
-                            }`}>
-                              {submission.projectTitle || "N/A"}
-                            </h3>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Avatar className="h-5 w-5">
-                              <AvatarImage src={submission.submitterPhotoURL} />
-                              <AvatarFallback className="text-[10px]">
-                                {(submission.submitterName || "U")
-                                  .substring(0, 2)
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <p className="text-xs text-muted-foreground">
-                              by {submission.submitterName || "Unknown"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1 items-end">
-                          {getStatusBadge(submission.status)}
-                          {getSubmissionTypeBadge(submission.id)}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Buyer:</span>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <Avatar className="h-5 w-5">
-                              <AvatarImage src={submission.buyerPhotoURL} />
-                              <AvatarFallback className="text-[10px]">
-                                {(submission.buyerName || "U")
-                                  .substring(0, 2)
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <p className="font-medium truncate">
-                              {submission.buyerName || "Unknown"}
-                            </p>
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Files:</span>
-                          <p className="font-medium flex items-center gap-1">
-                            <FileText className="w-3 h-3" />
-                            {submission.files.length}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground">
-                        {formatDate(submission.submittedAt)}
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => handleViewSubmission(submission)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Details
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "pending" | "approved" | "rejected")} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="pending" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Pending Review
+            {pendingSubmissions.length > 0 && (
+              <Badge 
+                variant={urgentPendingCount > 0 ? "destructive" : "secondary"} 
+                className={`ml-1 ${urgentPendingCount > 0 ? 'animate-pulse' : ''}`}
+              >
+                {pendingSubmissions.length}
+              </Badge>
             )}
-          </div>
+          </TabsTrigger>
+          <TabsTrigger value="approved" className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Approved
+            {approvedSubmissions.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {approvedSubmissions.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="rejected" className="flex items-center gap-2">
+            <XCircle className="h-4 w-4" />
+            Rejected
+            {rejectedSubmissions.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {rejectedSubmissions.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Desktop View */}
-          <div className="hidden lg:block overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Submitted By</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Files</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {submissions.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center py-8 text-muted-foreground"
-                    >
-                      No work submissions found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  submissions.map((submission) => (
-                    <TableRow 
-                      key={submission.id}
-                      className={
-                        submission.isUrgent && submission.status === 'pending_review'
-                          ? 'bg-gradient-to-r from-red-50 via-red-50/50 to-transparent dark:from-red-950/20 dark:via-red-900/10 dark:to-transparent border-l-4 border-l-red-500' 
-                          : ''
-                      }
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {submission.isUrgent && submission.status === 'pending_review' && (
-                            <div className="relative">
-                              <AlertCircle className="w-5 h-5 text-red-500 animate-pulse" />
-                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                              </span>
-                            </div>
-                          )}
-                          <span className={submission.isUrgent && submission.status === 'pending_review' ? 'text-red-700 dark:text-red-400 font-semibold' : ''}>
-                            {submission.projectTitle || "N/A"}
-                          </span>
-                          {submission.isUrgent && submission.status === 'pending_review' && (
-                            <Badge className="bg-red-600 hover:bg-red-700 text-white text-xs animate-pulse">
-                              🚨 URGENT
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={submission.submitterPhotoURL} />
-                            <AvatarFallback>
-                              {(submission.submitterName || "U")
-                                .substring(0, 2)
-                                .toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{submission.submitterName || "Unknown"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getSubmissionTypeBadge(submission.id)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={submission.buyerPhotoURL} />
-                            <AvatarFallback>
-                              {(submission.buyerName || "U")
-                                .substring(0, 2)
-                                .toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{submission.buyerName || "Unknown"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(submission.submittedAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <FileText className="w-4 h-4" />
-                          <span>{submission.files.length}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(submission.status)}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewSubmission(submission)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+        <TabsContent value="pending" className="mt-6">
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+          {renderSubmissionList(pendingSubmissions)}
+        </TabsContent>
+
+        <TabsContent value="approved" className="mt-6">
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
+          {renderSubmissionList(approvedSubmissions)}
+        </TabsContent>
+
+        <TabsContent value="rejected" className="mt-6">
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
+          {renderSubmissionList(rejectedSubmissions)}
+        </TabsContent>
+      </Tabs>
 
       {/* Detail Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

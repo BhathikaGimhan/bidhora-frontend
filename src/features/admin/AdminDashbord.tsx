@@ -6,7 +6,6 @@ import { DashboardView } from "@/features/admin/views/DashboardView";
 import { UsersView } from "@/features/admin/views/UsersView";
 import { UrgentProjectsView } from "@/features/admin/views/UrgentProjectsView";
 import { ProjectReviewView } from "@/features/admin/views/ProjectReviewView";
-import { TransactionsView } from "@/features/admin/views/TransactionsView";
 import { NotificationsView } from "@/features/admin/views/NotificationsView";
 import { SettingsView } from "@/features/admin/views/SettingsView";
 import WorkSubmissionsView from "@/features/admin/views/WorkSubmissionsView";
@@ -66,7 +65,6 @@ export default function AdminPanel() {
             <Route path="/work-submissions" element={<WorkSubmissionsView />} />
             <Route path="/projects" element={<UrgentProjectsView />} />
             <Route path="/project-review" element={<ProjectReviewView />} />
-            <Route path="/transactions" element={<TransactionsView />} />
             <Route path="/notifications" element={<NotificationsView />} />
             <Route path="/faq" element={<FAQView />} />
             <Route path="/settings" element={<SettingsView />} />
