@@ -28,6 +28,15 @@ export interface Project {
   skillsRequired: string[];
   featured: boolean;
   isUrgent?: boolean;
+  documents?: ProjectDocument[]; // Buyer's uploaded documents
+}
+
+export interface ProjectDocument {
+  url: string;
+  name: string;
+  type?: string;
+  size?: number;
+  uploadedAt: string;
 }
 
 export interface ProjectStats {
