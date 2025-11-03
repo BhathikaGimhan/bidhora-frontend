@@ -740,15 +740,15 @@ export function UrgentProjectsView() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="employee" className="text-right">
-                Employee
+            <div className="space-y-2">
+              <Label htmlFor="employee">
+                Select Employee
               </Label>
               <Select
                 value={selectedEmployeeId}
                 onValueChange={setSelectedEmployeeId}
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select an employee" />
                 </SelectTrigger>
                 <SelectContent>
@@ -767,7 +767,7 @@ export function UrgentProjectsView() {
               </Select>
             </div>
             {selectedProject && (
-              <div className="col-span-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-sm text-red-700 dark:text-red-400">
                   <strong>⚠️ Priority Notice:</strong> This urgent project requires immediate attention. 
                   The assigned employee will receive an email marked as URGENT.
