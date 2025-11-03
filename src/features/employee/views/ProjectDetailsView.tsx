@@ -21,7 +21,9 @@ import {
   Mail,
   Tag,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  FileText,
+  Download
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject } from '@/features/employee/models/AssignedProjectModel';
@@ -109,6 +111,7 @@ export function ProjectDetailsView() {
               adminReviewNotes: data.adminReviewNotes,
               downloadUrl: data.downloadUrl,
               documents: data.documents,
+              isUrgent: data.isUrgent || false,
             };
             setProject(projectData);
 
@@ -328,12 +331,74 @@ export function ProjectDetailsView() {
         </div>
       </div>
 
+      {/* Urgent Project Alert */}
+      {project.isUrgent && (
+        <div className="relative overflow-hidden p-6 bg-gradient-to-r from-red-600 via-red-700 to-red-600 dark:from-red-700 dark:via-red-800 dark:to-red-700 rounded-xl shadow-2xl border-2 border-red-400 dark:border-red-500">
+          {/* Animated background elements */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse delay-75"></div>
+          
+          <div className="relative flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl shadow-2xl">
+                <AlertCircle className="h-8 w-8 text-white animate-pulse" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <h3 className="text-2xl font-black text-white drop-shadow-lg">
+                  🚨 URGENT PROJECT
+                </h3>
+                <Badge className="bg-yellow-400 text-red-900 font-bold px-3 py-1 text-sm animate-bounce shadow-lg">
+                  IMMEDIATE ACTION REQUIRED
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                <p className="text-white/95 font-semibold text-base leading-relaxed drop-shadow-md">
+                  ⚡ This project has been marked as HIGH PRIORITY and requires immediate attention.
+                </p>
+                <p className="text-white/90 text-sm leading-relaxed drop-shadow-md">
+                  🎯 Please prioritize this work and complete it as soon as possible to meet critical deadlines.
+                </p>
+              </div>
+              <div className="mt-4 p-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                <p className="text-white/95 text-sm font-medium flex items-center gap-2">
+                  <span className="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></span>
+                  <span className="w-2 h-2 bg-yellow-400 rounded-full absolute"></span>
+                  <span className="ml-2">Urgent projects receive priority review and faster payment processing.</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Project Overview */}
-      <Card>
-        <CardHeader>
+      <Card className={`${project.isUrgent ? 'border-red-500 border-2 shadow-xl shadow-red-200 dark:shadow-red-900/50 bg-gradient-to-br from-red-50/30 to-white dark:from-red-950/10 dark:to-background' : ''}`}>
+        <CardHeader className={project.isUrgent ? 'bg-gradient-to-r from-red-50 to-transparent dark:from-red-950/20 dark:to-transparent' : ''}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="text-2xl mb-2">{project.title}</CardTitle>
+              <div className="flex items-center gap-3 mb-2">
+                {project.isUrgent && (
+                  <div className="relative">
+                    <AlertCircle className="h-7 w-7 text-red-500 animate-pulse" />
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+                  </div>
+                )}
+                <CardTitle className={`text-2xl ${project.isUrgent ? 'text-red-700 dark:text-red-400 font-bold' : ''}`}>
+                  {project.title}
+                </CardTitle>
+              </div>
+              {project.isUrgent && (
+                <div className="mb-3 flex items-center gap-2">
+                  <Badge variant="destructive" className="font-bold text-sm px-3 py-1 bg-red-600 hover:bg-red-700 shadow-lg animate-pulse">
+                    🚨 URGENT PROJECT - HIGH PRIORITY
+                  </Badge>
+                  <Badge className="bg-yellow-400 text-red-900 font-bold text-xs px-2 py-1">
+                    FAST TRACK
+                  </Badge>
+                </div>
+              )}
               <CardDescription className="text-base">
                 {project.description}
               </CardDescription>
@@ -500,6 +565,58 @@ export function ProjectDetailsView() {
                   </div>
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Buyer Documents Section */}
+      {project.documents && project.documents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Buyer's Project Documents
+            </CardTitle>
+            <CardDescription>
+              Reference documents uploaded by the buyer for this project
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {project.documents.map((doc, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-accent transition-colors"
+                >
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{doc.name}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {doc.size && (
+                          <span>{(doc.size / 1024 / 1024).toFixed(2)} MB</span>
+                        )}
+                        {doc.uploadedAt && (
+                          <span>
+                            • Uploaded{' '}
+                            {new Date(doc.uploadedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(doc.url, '_blank')}
+                    className="flex-shrink-0"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

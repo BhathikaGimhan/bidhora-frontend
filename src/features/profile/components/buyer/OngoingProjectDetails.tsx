@@ -1,33 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, 
   Calendar, 
   DollarSign, 
-  User, 
   Clock, 
-  MessageCircle, 
-  Eye,
   CheckCircle2,
   AlertCircle,
   Download,
   FileText,
   Tag,
-  Mail
 } from 'lucide-react';
-import { Project, User as UserType, ProjectDocument } from '@/Services/projectService';
-import { useEffect, useState } from 'react';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { Project, ProjectDocument } from '@/Services/projectService';
 
 interface OngoingProjectDetailsProps {
   project: Project & {
     status: string;
     assignedTo?: string;
-    assignedSeller?: UserType;
     progress?: number; // 0-100
     adminPrice?: number;
     adminDuration?: number;
@@ -43,51 +35,10 @@ interface OngoingProjectDetailsProps {
   onViewSellerProfile?: (sellerId: string) => void;
 }
 
-interface EmployeeInfo {
-  displayName: string;
-  email: string;
-  photoURL?: string;
-  phoneNumber?: string;
-}
-
 export const OngoingProjectDetails = ({
   project,
   onBack,
-  onContactSeller,
-  onViewSellerProfile
 }: OngoingProjectDetailsProps) => {
-  const [employeeInfo, setEmployeeInfo] = useState<EmployeeInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  // Fetch employee information
-  useEffect(() => {
-    const fetchEmployeeInfo = async () => {
-      const employeeId = project.assignedEmployeeId || project.assignedTo;
-      if (!employeeId) return;
-
-      try {
-        setLoading(true);
-        const db = getFirestore();
-        const userDoc = await getDoc(doc(db, 'users', employeeId));
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setEmployeeInfo({
-            displayName: userData.displayName || userData.name || 'Anonymous',
-            email: userData.email || '',
-            photoURL: userData.photoURL || userData.profileUrl,
-            phoneNumber: userData.phoneNumber,
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching employee info:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEmployeeInfo();
-  }, [project.assignedEmployeeId, project.assignedTo]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -409,104 +360,81 @@ export const OngoingProjectDetails = ({
 
         {/* Assigned Employee Sidebar */}
         <div className="space-y-6">
-          {/* Employee Information */}
-          {(project.assignedEmployeeId || project.assignedTo) ? (
+          {/* Status Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Project Status</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-lg ${
+                  project.status === 'completed' ? 'bg-green-100 dark:bg-green-950' :
+                  project.status === 'assigned' ? 'bg-blue-100 dark:bg-blue-950' :
+                  'bg-gray-100 dark:bg-gray-900'
+                }`}>
+                  <CheckCircle2 className={`w-6 h-6 ${
+                    project.status === 'completed' ? 'text-green-600' :
+                    project.status === 'assigned' ? 'text-blue-600' :
+                    'text-gray-600'
+                  }`} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{getStatusLabel(project.status)}</p>
+                  <p className="text-sm text-muted-foreground">Current Status</p>
+                </div>
+              </div>
+
+              {project.assignedAt && (
+                <div className="pt-3 border-t text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    <span>Work started on {formatDate(project.assignedAt)}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Project Documents Section - Show buyer's original uploaded documents */}
+          {project.documents && project.documents.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Assigned Employee</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {loading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : employeeInfo ? (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage 
-                          src={employeeInfo.photoURL || ''} 
-                          alt={employeeInfo.displayName || 'Employee'} 
-                        />
-                        <AvatarFallback className="text-lg">
-                          {employeeInfo.displayName.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <h4 className="font-medium">
-                          {employeeInfo.displayName}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {employeeInfo.email}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="space-y-2">
-                      <Button
-                        onClick={() => {
-                          const employeeId = project.assignedEmployeeId || project.assignedTo || '';
-                          onViewSellerProfile?.(employeeId);
-                        }}
-                        variant="outline"
-                        className="w-full flex items-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        View Profile
-                      </Button>
-                      
-                      <Button
-                        onClick={() => {
-                          const employeeId = project.assignedEmployeeId || project.assignedTo || '';
-                          onContactSeller?.(employeeId, project.title);
-                        }}
-                        className="w-full flex items-center gap-2"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        Contact Employee
-                      </Button>
-                    </div>
-
-                    {project.assignedAt && (
-                      <div className="pt-4 border-t text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3" />
-                          <span>Assigned on {formatDate(project.assignedAt)}</span>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-16 w-16">
-                      <AvatarFallback>
-                        <User className="h-8 w-8" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h4 className="font-medium">
-                        {project.assignedEmployeeName || 'Employee'}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {project.assignedEmployeeEmail || 'Loading...'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Employee Assignment</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Your Project Documents
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-4">
-                  <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    No employee assigned to this project yet
-                  </p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Documents you uploaded with this project
+                </p>
+                <div className="space-y-2">
+                  {project.documents.map((doc: ProjectDocument, index: number) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 border border-border rounded-lg hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{doc.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {doc.size && (
+                              <span>{(doc.size / 1024 / 1024).toFixed(2)} MB</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(doc.url, '_blank')}
+                        className="flex-shrink-0 ml-2"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

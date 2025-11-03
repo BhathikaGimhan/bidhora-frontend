@@ -31,6 +31,7 @@ export interface AssignedProject {
   adminReviewNotes?: string;
   downloadUrl?: string;
   documents?: ProjectDocument[];
+  isUrgent?: boolean;
 }
 
 export interface ProjectDocument {

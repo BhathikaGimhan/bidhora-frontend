@@ -45,6 +45,7 @@ export interface WorkSubmission {
   reviewedAt?: Date;
   reviewedBy?: string;
   reviewNotes?: string;
+  isUrgent?: boolean;
 }
 
 export interface PaymentInfo {
@@ -245,28 +246,45 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
       ),
     ]);
 
-    // Process regular work submissions
-    const regularSubmissions = workSubmissionsSnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        proposalId: data.proposalId,
-        projectId: data.projectId,
-        submitterId: data.submitterId || data.sellerId,
-        projectTitle: data.projectTitle,
-        submitterName: data.submitterName || data.sellerName,
-        submitterPhotoURL: data.submitterPhotoURL || data.sellerPhotoURL,
-        buyerName: data.buyerName,
-        buyerPhotoURL: data.buyerPhotoURL,
-        description: data.description,
-        files: data.files || [],
-        status: data.status,
-        submittedAt: data.submittedAt?.toDate() || new Date(),
-        reviewedAt: data.reviewedAt?.toDate(),
-        reviewedBy: data.reviewedBy,
-        reviewNotes: data.reviewNotes,
-      };
-    });
+    // Process regular work submissions and fetch isUrgent from projects
+    const regularSubmissions = await Promise.all(
+      workSubmissionsSnapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        
+        // Fetch isUrgent flag from project
+        let isUrgent = false;
+        if (data.projectId) {
+          try {
+            const projectDoc = await getDoc(doc(db, "projects", data.projectId));
+            if (projectDoc.exists()) {
+              isUrgent = projectDoc.data()?.isUrgent || false;
+            }
+          } catch (error) {
+            console.error(`Error fetching project ${data.projectId}:`, error);
+          }
+        }
+
+        return {
+          id: doc.id,
+          proposalId: data.proposalId,
+          projectId: data.projectId,
+          submitterId: data.submitterId || data.sellerId,
+          projectTitle: data.projectTitle,
+          submitterName: data.submitterName || data.sellerName,
+          submitterPhotoURL: data.submitterPhotoURL || data.sellerPhotoURL,
+          buyerName: data.buyerName,
+          buyerPhotoURL: data.buyerPhotoURL,
+          description: data.description,
+          files: data.files || [],
+          status: data.status,
+          submittedAt: data.submittedAt?.toDate() || new Date(),
+          reviewedAt: data.reviewedAt?.toDate(),
+          reviewedBy: data.reviewedBy,
+          reviewNotes: data.reviewNotes,
+          isUrgent,
+        };
+      })
+    );
 
     // Process employee submissions from projects
     const employeeSubmissions = projectsSnapshot.docs
@@ -276,6 +294,15 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
       })
       .map((doc) => {
         const data = doc.data();
+        
+        // Determine status
+        let status: "pending_review" | "approved" | "rejected" = "pending_review";
+        if (data.adminReviewStatus === "approved") {
+          status = "approved";
+        } else if (data.adminReviewStatus === "needs_revision") {
+          status = "rejected";
+        }
+        
         return {
           id: `employee_${doc.id}`,
           proposalId: "", // No proposal for employee assignments
@@ -288,22 +315,24 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
           buyerPhotoURL: data.buyerPhotoURL || null,
           description: data.employeeNotes || "No description provided",
           files: data.documents || [],
-          status:
-            data.adminReviewStatus === "approved"
-              ? "approved"
-              : data.adminReviewStatus === "needs_revision"
-              ? "rejected"
-              : "pending_review",
+          status,
           submittedAt: data.submittedToAdminAt?.toDate() || new Date(),
           reviewedAt: data.adminReviewedAt?.toDate(),
           reviewedBy: data.adminReviewedBy,
           reviewNotes: data.adminReviewNotes,
+          isUrgent: data.isUrgent || false,
         };
       });
 
-    // Combine and sort by submission date
+    // Combine and sort by submission date (urgent first)
     const allSubmissions = [...regularSubmissions, ...employeeSubmissions].sort(
-      (a, b) => b.submittedAt.getTime() - a.submittedAt.getTime()
+      (a, b) => {
+        // Urgent submissions come first
+        if (a.isUrgent && !b.isUrgent) return -1;
+        if (!a.isUrgent && b.isUrgent) return 1;
+        // Then sort by submission date
+        return b.submittedAt.getTime() - a.submittedAt.getTime();
+      }
     );
 
     return allSubmissions;

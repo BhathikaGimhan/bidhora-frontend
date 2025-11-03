@@ -28,6 +28,7 @@ export interface EmployeeAssignmentNotificationData {
   projectPrice: number;
   projectId: string;
   buyerEmail: string;
+  isUrgent?: boolean;
 }
 
 export interface FinalPaymentNotificationData {
@@ -150,6 +151,7 @@ class EmailService {
           project_price: notificationData.projectPrice,
           project_id: notificationData.projectId,
           buyer_email: notificationData.buyerEmail,
+          is_urgent: notificationData.isUrgent || false,
         },
         {
           headers: {

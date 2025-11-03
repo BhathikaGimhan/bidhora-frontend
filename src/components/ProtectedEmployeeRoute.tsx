@@ -48,7 +48,7 @@ export function ProtectedEmployeeRoute({ children }: ProtectedEmployeeRouteProps
   }
 
   if (!auth.currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   if (!isEmployee) {

@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Calendar, DollarSign, Award, RefreshCw } from 'lucide-react';
+import { Search, Calendar, DollarSign, Award, RefreshCw, AlertCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { AssignedProject } from '@/features/employee/models/AssignedProjectModel';
 import { auth } from '@/firebaseConfig';
-import { collection, query, where, getDocs, getFirestore, orderBy } from 'firebase/firestore';
+import { collection, query, where, getFirestore, orderBy, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export function CompletedView() {
@@ -24,7 +24,7 @@ export function CompletedView() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        navigate('/login');
+        console.warn('No authenticated user found');
         return;
       }
 
@@ -39,70 +39,113 @@ export function CompletedView() {
         orderBy('assignedAt', 'desc')
       );
       
-      const snapshot = await getDocs(q);
-      const projectsList: AssignedProject[] = [];
+      // Set up real-time listener
+      const unsubscribe = onSnapshot(q,
+        (snapshot) => {
+          const projectsList: AssignedProject[] = [];
+          
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            projectsList.push({
+              id: doc.id,
+              title: data.title || '',
+              description: data.description || '',
+              status: data.status || 'completed',
+              clientId: data.createdBy || '',
+              clientName: data.buyerEmail || '',
+              budget: {
+                min: data.budgetMin || 0,
+                max: data.budgetMax || 0,
+              },
+              adminPrice: data.adminPrice,
+              adminDuration: data.adminDuration,
+              adminDurationUnit: data.adminDurationUnit,
+              deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
+              createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
+              assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
+              category: data.category || '',
+              skillsRequired: data.skills || [],
+              assignedEmployeeId: data.assignedEmployeeId || '',
+              assignedEmployeeName: data.assignedEmployeeName || '',
+              assignedEmployeeEmail: data.assignedEmployeeEmail || '',
+              adminNotes: data.adminNotes,
+              submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
+              adminReviewStatus: data.adminReviewStatus,
+              adminReviewNotes: data.adminReviewNotes,
+              downloadUrl: data.downloadUrl,
+              documents: data.documents,
+              isUrgent: data.isUrgent || false,
+            });
+          });
+          
+          // Sort: urgent projects first
+          projectsList.sort((a, b) => {
+            if (a.isUrgent && !b.isUrgent) return -1;
+            if (!a.isUrgent && b.isUrgent) return 1;
+            return 0;
+          });
+          
+          setProjects(projectsList);
+          setFilteredProjects(projectsList);
+          setLoading(false);
+          setRefreshing(false);
+        },
+        (error) => {
+          console.error('Error loading completed projects:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to load completed projects. Please try again.',
+          });
+          setLoading(false);
+          setRefreshing(false);
+        }
+      );
       
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        projectsList.push({
-          id: doc.id,
-          title: data.title || '',
-          description: data.description || '',
-          status: data.status || 'completed',
-          clientId: data.createdBy || '',
-          clientName: data.buyerEmail || '',
-          budget: {
-            min: data.budgetMin || 0,
-            max: data.budgetMax || 0,
-          },
-          adminPrice: data.adminPrice,
-          adminDuration: data.adminDuration,
-          adminDurationUnit: data.adminDurationUnit,
-          deadline: data.deadline?.toDate?.().toISOString().split('T')[0] || '',
-          createdDate: data.createdAt?.toDate?.().toISOString().split('T')[0] || '',
-          assignedDate: data.assignedAt?.toDate?.().toISOString().split('T')[0] || '',
-          category: data.category || '',
-          skillsRequired: data.skills || [],
-          assignedEmployeeId: data.assignedEmployeeId || '',
-          assignedEmployeeName: data.assignedEmployeeName || '',
-          assignedEmployeeEmail: data.assignedEmployeeEmail || '',
-          adminNotes: data.adminNotes,
-          submittedToAdminAt: data.submittedToAdminAt?.toDate?.().toISOString(),
-          adminReviewStatus: data.adminReviewStatus,
-          adminReviewNotes: data.adminReviewNotes,
-          downloadUrl: data.downloadUrl,
-          documents: data.documents,
-        });
-      });
-      
-      setProjects(projectsList);
-      setFilteredProjects(projectsList);
+      // Return cleanup function
+      return unsubscribe;
       
     } catch (error) {
-      console.error('Error loading completed projects:', error);
+      console.error('Error setting up completed projects listener:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to load completed projects. Please try again.',
       });
-    } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadCompletedProjects();
+    let unsubscribe: (() => void) | undefined;
+    
+    const setupListener = async () => {
+      unsubscribe = await loadCompletedProjects();
+    };
+    
+    setupListener();
+    
+    // Cleanup listener on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]);
+  }, []);
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
-    await loadCompletedProjects();
-    toast({
-      title: 'Refreshed',
-      description: 'Completed projects list updated successfully',
-    });
+    // The real-time listener will automatically update the data
+    // Just show a toast to indicate refresh
+    setTimeout(() => {
+      setRefreshing(false);
+      toast({
+        title: 'Refreshed',
+        description: 'Completed projects list is up to date',
+      });
+    }, 500);
   };
 
   useEffect(() => {
@@ -179,11 +222,28 @@ export function CompletedView() {
           {filteredProjects.map((project) => (
             <Card
               key={project.id}
-              className="hover:shadow-lg transition-shadow"
+              className={`hover:shadow-lg transition-all duration-300 relative overflow-hidden ${
+                project.isUrgent 
+                  ? 'border-red-500 border-2 shadow-lg shadow-red-200 dark:shadow-red-900/50 bg-gradient-to-br from-red-50/30 to-white dark:from-red-950/10 dark:to-background' 
+                  : ''
+              }`}
             >
-              <CardHeader>
+              {project.isUrgent && (
+                <>
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/10 dark:bg-red-500/20 rounded-bl-full"></div>
+                  <div className="absolute top-2 right-2">
+                    <Badge className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-lg">
+                      🚨 URGENT
+                    </Badge>
+                  </div>
+                </>
+              )}
+              <CardHeader className={project.isUrgent ? 'pt-10' : ''}>
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg line-clamp-2">
+                  <CardTitle className={`text-lg line-clamp-2 flex items-center gap-2 ${project.isUrgent ? 'text-red-700 dark:text-red-400' : ''}`}>
+                    {project.isUrgent && (
+                      <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                    )}
                     {project.title}
                   </CardTitle>
                   <Badge className="bg-green-500 hover:bg-green-600">

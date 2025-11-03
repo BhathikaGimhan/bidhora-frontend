@@ -28,7 +28,6 @@ const sidebarItems = [
   { title: "Work Submissions", url: "/admin/work-submissions", icon: Package },
   { title: "Urgent Projects", url: "/admin/projects", icon: AlertCircle },
   { title: "Project Review", url: "/admin/project-review", icon: DollarSign },
-  { title: "Transactions", url: "/admin/transactions", icon: CreditCard },
   { title: "FAQ Management", url: "/admin/faq", icon: HelpCircle },
   { title: "Notifications", url: "/admin/notifications", icon: Bell },
   { title: "Settings", url: "/admin/settings", icon: Settings },

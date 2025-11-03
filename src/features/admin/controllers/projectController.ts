@@ -90,6 +90,7 @@ class ProjectController {
         skillsRequired: project.skills || [],
         featured: false, // Default to false since not in Firestore data
         isUrgent: project.isUrgent || false, // Include isUrgent field
+        documents: project.documents || [], // Include buyer's uploaded documents
       }));
 
       this.isLoaded = true;

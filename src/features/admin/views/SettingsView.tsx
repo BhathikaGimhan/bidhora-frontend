@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Save, Mail, Bell, Shield, Database } from 'lucide-react';
+import { Save, Mail, Bell, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function SettingsView() {
@@ -26,11 +26,6 @@ export function SettingsView() {
     requireEmailVerification: true,
     twoFactorAuth: false,
     sessionTimeout: 60,
-    
-    // Commission Settings
-    freelancerCommission: 10,
-    clientCommission: 3,
-    minimumWithdrawal: 50,
     
     // Email Settings
     smtpHost: 'smtp.example.com',
@@ -195,47 +190,6 @@ export function SettingsView() {
               value={settings.sessionTimeout}
               onChange={(e) => handleInputChange('sessionTimeout', parseInt(e.target.value))}
             />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Commission Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Database className="h-5 w-5" />
-            <span>Commission & Payment Settings</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="freelancerCommission">Freelancer Commission (%)</Label>
-              <Input
-                id="freelancerCommission"
-                type="number"
-                value={settings.freelancerCommission}
-                onChange={(e) => handleInputChange('freelancerCommission', parseInt(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="clientCommission">Client Commission (%)</Label>
-              <Input
-                id="clientCommission"
-                type="number"
-                value={settings.clientCommission}
-                onChange={(e) => handleInputChange('clientCommission', parseInt(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="minimumWithdrawal">Minimum Withdrawal ($)</Label>
-              <Input
-                id="minimumWithdrawal"
-                type="number"
-                value={settings.minimumWithdrawal}
-                onChange={(e) => handleInputChange('minimumWithdrawal', parseInt(e.target.value))}
-              />
-            </div>
           </div>
         </CardContent>
       </Card>

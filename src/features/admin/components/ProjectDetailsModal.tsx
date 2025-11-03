@@ -28,6 +28,7 @@ import {
   CheckCircle,
   XCircle,
   Briefcase,
+  Download,
 } from 'lucide-react';
 import { Project } from '@/features/admin/models/ProjectModel';
 
@@ -335,6 +336,58 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                 )}
               </CardContent>
             </Card>
+
+            {/* Buyer Documents Section */}
+            {project.documents && project.documents.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5" />
+                    <span>Buyer's Project Documents</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Documents uploaded by the buyer with the project
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {project.documents.map((doc, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-accent transition-colors"
+                      >
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{doc.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {doc.size && (
+                                <span>{(doc.size / 1024 / 1024).toFixed(2)} MB</span>
+                              )}
+                              {doc.uploadedAt && (
+                                <span>
+                                  • Uploaded{' '}
+                                  {new Date(doc.uploadedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(doc.url, '_blank')}
+                          className="flex-shrink-0"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Client Information */}
             <Card>
