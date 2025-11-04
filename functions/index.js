@@ -370,7 +370,7 @@ exports.sendProjectPriceNotification = onRequest(
 
               <div class="price-box">
                 <div class="price-label">Total Project Price</div>
-                <div class="price-amount">$${project_price}</div>
+                <div class="price-amount">LKR ${project_price}</div>
                 <div class="project-title">${project_title}</div>
               </div>
 
@@ -391,7 +391,7 @@ exports.sendProjectPriceNotification = onRequest(
                 }
                 <div class="detail-row">
                   <span class="detail-label">Total Price:</span>
-                  <span class="detail-value">$${project_price}</span>
+                  <span class="detail-value">LKR ${project_price}</span>
                 </div>
               </div>
 
@@ -415,7 +415,7 @@ exports.sendProjectPriceNotification = onRequest(
               <div class="payment-section">
                 <div style="font-size: 32px; margin-bottom: 15px;">💳</div>
                 <div class="deposit-label">Initial Deposit Required</div>
-                <div class="deposit-amount">$${deposit_amount}</div>
+                <div class="deposit-amount">LKR ${deposit_amount}</div>
                 <div class="deposit-note">
                   To proceed with your project, we require a <span class="highlight">10% deposit</span> of the total project price.<br>
                   This secures your project slot and allows us to assign an employee to start working on it.
@@ -612,7 +612,7 @@ exports.sendEmployeeAssignmentNotification = onRequest(
                     <div class="detail-row">
                       <span class="detail-label">💰 Project Value:</span>
                       <span class="detail-value">
-                        <span class="price-badge">$${project_price.toFixed(
+                        <span class="price-badge">LKR ${project_price.toFixed(
                           2
                         )}</span>
                       </span>

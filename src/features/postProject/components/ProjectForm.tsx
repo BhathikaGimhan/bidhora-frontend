@@ -20,93 +20,65 @@ interface Props {
 }
 
 const categories = [
-  // Writing & Translation
-  "Articles & Blog Posts",
-  "Copywriting",
-  "Translation",
-  "Proofreading",
-  "Resume Writing",
-  "Business Names & Slogans",
-  
-  // Academic Services
-  "Report Writing",
-  "Assignments",
-  "Presentations",
-  "Research Papers",
-  "Thesis & Dissertation Assistance",
-  
-  // Finance & Accounting
-  "Bookkeeping",
-  "Business Valuation",
-  "Financial Forecasting",
-  
-  // Consulting & Career
-  "Business Consulting",
-  "Resume Review",
-  "Career Coaching",
-  
-  // Business
-  "Business Plans",
-  "Market Research",
-  "Virtual Assistance",
-  "Branding Services",
-  
-  // Digital Marketing
-  "SEO",
-  "Social Media Marketing",
-  "Email Marketing",
-  "Marketing Strategy",
-  
-  // Programming & Tech
-  "Website & App Development",
+  // Software Development Main
+  "Web Development",
+  "Mobile App Development (Android / iOS)",
+  "Desktop Application Development",
   "Game Development",
-  "Chatbot & Automation",
-  "Software Development",
-  "AI Tools Setup",
+  "Chatbot Development",
+  "API Development & Integration",
+  "Bug Fixing / Debugging",
+  "Custom Software Development",
+  "Database Design & Management",
+  "Automation Scripts (Python, JS, etc.)",
+  "UI/UX Frontend Development (React, Vue, Angular)",
   
-  // Graphics & Design
+  // Graphic Design Main
   "Logo Design",
-  "Illustrations",
-  "Web Design",
-  "Product & Packaging Design",
-  "3D Models",
+  "Business Card & Stationery Design",
+  "Flyer / Brochure Design",
+  "Poster Design",
+  "Social Media Post Design",
+  "Banner / Ad Design",
+  "Infographic Design",
+  "T-shirt & Merchandise Design",
+  "Packaging Design",
+  "Illustration",
+  "Presentation Design (PowerPoint / Pitch Decks)",
+  "Website UI/UX Design",
+  "3D Product Mockups",
+  "Brand Style Guides",
   
-  // Music & Audio
-  "Voice Overs",
-  "Mixing & Mastering",
-  "Podcast Editing",
-  "Music Production",
+  // Video Editing
+  "YouTube Video Editing",
+  "Short Form Content (TikTok / Reels) Editing",
+  "Promotional / Advertisement Video Editing",
+  "Wedding / Event Video Editing",
+  "Color Grading & Correction",
+  "Subtitle / Caption Adding",
+  "Green Screen Editing",
+  "VFX / Motion Graphics",
+  "Slideshow / Photo-to-Video",
+  "Intro / Outro Creation",
+  "Music Video Editing",
+  "Podcast Video Editing",
   
-  // AI Services
-  "AI Image Generation",
-  "AI Voiceover",
-  "AI Video",
-  
-  // Lifestyle
-  "Life Coaching",
-  "Fitness & Diet Plans",
-  "Online Lessons",
-  
-  // Video & Animation
-  "Video Editing",
-  "Explainer Videos",
-  "3D Animation",
-  "Logo Animation",
-  "Product & Ad Videos",
-  
-  // Writing & Research Support
-  "Ghostwriting",
+  // Academic Writing & Note Writing
+  "Essay Writing",
+  "Research Paper Writing",
+  "Report Writing",
+  "Thesis / Dissertation Assistance",
+  "Literature Review Writing",
+  "Case Study Writing",
+  "Note Writing (Handwritten / Typed Lecture Notes)",
+  "Summarizing Textbooks or Lessons",
+  "Study Guide Preparation",
   "Proofreading & Editing",
-  "Citation & Referencing Help",
-  "Literature Review Assistance",
-  "Study Notes & Summaries",
-  
-  // Marketing & Branding Support
-  "Brand Identity Consulting",
-  "Campaign Strategy Support",
-  "Press Release Writing",
-  "Market Analysis Reports",
-  "Social Media Content Planning",
+  "Data Analysis (SPSS / Excel / R)",
+  "PowerPoint Presentation Preparation",
+  "Academic Referencing (APA, MLA, Harvard, etc.)",
+  "Assignment Help (School / University level)",
+  "Research Proposal Writing",
 ];
 
 const ProjectForm: React.FC<Props> = ({ formData, setFormData, onSubmit, isSubmitting, onCancel }) => {

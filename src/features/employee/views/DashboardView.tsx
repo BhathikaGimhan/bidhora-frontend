@@ -561,7 +561,7 @@ export function DashboardView() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/employee/projects')}
+              onClick={() => navigate('/employee/completed')}
             >
               View All
             </Button>

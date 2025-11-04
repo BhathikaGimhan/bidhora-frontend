@@ -1613,3 +1613,57 @@ export const toggleProjectUrgentStatus = async (
     throw error;
   }
 };
+
+/**
+ * Get employee projects (projects assigned to a specific employee)
+ */
+export const getEmployeeProjects = async (employeeId: string) => {
+  try {
+    console.log("📊 Fetching projects for employee:", employeeId);
+
+    // Query projects where assignedEmployeeId matches
+    const projectsQuery = query(
+      collection(db, "projects"),
+      where("assignedEmployeeId", "==", employeeId),
+      orderBy("createdAt", "desc")
+    );
+
+    const querySnapshot = await getDocs(projectsQuery);
+    console.log(`✅ Found ${querySnapshot.size} projects for employee`);
+
+    const projects = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.title,
+        description: data.description,
+        budget: data.adminPrice || data.budgetMin || 0,
+        status: data.status,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+        completedAt: data.finalPaymentAt?.toDate ? data.finalPaymentAt.toDate() : (data.finalPaymentAt ? new Date(data.finalPaymentAt) : undefined),
+        rating: data.customerRating || 0,
+        duration: data.adminDuration 
+          ? `${data.adminDuration} ${data.adminDurationUnit || 'days'}` 
+          : undefined,
+      };
+    });
+
+    // Separate into active and completed
+    const activeProjects = projects.filter(
+      (p) => p.status !== "completed" && p.status !== "cancelled"
+    );
+    const completedProjects = projects.filter((p) => p.status === "completed");
+
+    console.log("📊 Active projects:", activeProjects.length);
+    console.log("📊 Completed projects:", completedProjects.length);
+
+    return {
+      all: projects,
+      active: activeProjects,
+      completed: completedProjects,
+    };
+  } catch (error) {
+    console.error("Error fetching employee projects:", error);
+    throw error;
+  }
+};
