@@ -19,16 +19,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-
-interface FAQ {
-  id: string;
-  category: string;
-  question: string;
-  answer: string;
-  tags: string[];
-}
+import { faqService, FAQ } from "@/Services/faqService";
+import { useToast } from "@/hooks/use-toast";
 
 const FAQManagement: React.FC = () => {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
@@ -36,6 +30,9 @@ const FAQManagement: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     category: "",
     question: "",
@@ -43,76 +40,28 @@ const FAQManagement: React.FC = () => {
     tags: "",
   });
 
-  // Mock data - in real app this would come from API
+  // Fetch FAQs from Firestore
   useEffect(() => {
-    const mockFaqs: FAQ[] = [
-      {
-        id: "1",
-        category: "account",
-        question: "How do I create an account?",
-        answer:
-          "To create an account, click on the 'Sign Up' button in the top right corner. Fill in your details including name, email, and password. You'll receive a confirmation email to verify your account.",
-        tags: ["registration", "signup", "account"],
-      },
-      {
-        id: "2",
-        category: "account",
-        question: "How do I reset my password?",
-        answer:
-          "Click on 'Forgot Password' on the login page. Enter your email address and we'll send you a reset link. Follow the instructions in the email to create a new password.",
-        tags: ["password", "reset", "login"],
-      },
-      {
-        id: "3",
-        category: "services",
-        question: "What services does Bidhora offer?",
-        answer:
-          "Bidhora provides professional document processing, data entry, formatting, and digital solutions. Our expert team handles all your business documentation needs with precision and quality assurance.",
-        tags: ["services", "document", "processing"],
-      },
-      {
-        id: "4",
-        category: "services",
-        question: "How long does service delivery take?",
-        answer:
-          "Delivery times vary based on the complexity and volume of work. Simple tasks may take 24-48 hours, while complex projects can take 3-7 business days. You'll receive regular updates on your project status.",
-        tags: ["delivery", "timeline", "timeframe"],
-      },
-      {
-        id: "5",
-        category: "payment",
-        question: "What payment methods do you accept?",
-        answer:
-          "We accept payments through major credit cards, debit cards, and bank transfers. All payments are processed securely through our payment gateway with industry-standard encryption.",
-        tags: ["payment", "credit card", "bank transfer"],
-      },
-      {
-        id: "6",
-        category: "payment",
-        question: "Can I get a refund?",
-        answer:
-          "Refunds are available under certain conditions as outlined in our Refund Policy. Generally, refunds are considered if we fail to deliver the service within the agreed timeframe or if the work doesn't meet the specified requirements.",
-        tags: ["refund", "money back", "cancellation"],
-      },
-      {
-        id: "7",
-        category: "technical",
-        question: "How do I upload files for processing?",
-        answer:
-          "After placing an order, you'll see an upload section in your dashboard. Click 'Upload Files' and select your documents. Supported formats include PDF, Word, Excel, and image files up to 50MB each.",
-        tags: ["upload", "files", "documents"],
-      },
-      {
-        id: "8",
-        category: "technical",
-        question: "I'm having trouble accessing my account",
-        answer:
-          "Try clearing your browser cache and cookies, or try a different browser. If the problem persists, contact our support team with your account email and a description of the issue.",
-        tags: ["login", "access", "technical issue"],
-      },
-    ];
-    setFaqs(mockFaqs);
+    fetchFAQs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchFAQs = async () => {
+    setLoading(true);
+    try {
+      const fetchedFaqs = await faqService.getAllFAQs();
+      setFaqs(fetchedFaqs);
+    } catch (error) {
+      console.error("Error fetching FAQs:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load FAQs. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = [
     { id: "account", name: "Account & Login" },
@@ -132,26 +81,49 @@ const FAQManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    handleSaveFAQ();
+  };
 
-    const newFaq: FAQ = {
-      id: editingFaq ? editingFaq.id : Date.now().toString(),
-      category: formData.category,
-      question: formData.question,
-      answer: formData.answer,
-      tags: formData.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag),
-    };
+  const handleSaveFAQ = async () => {
+    setIsSubmitting(true);
+    try {
+      const faqData = {
+        category: formData.category,
+        question: formData.question,
+        answer: formData.answer,
+        tags: formData.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag),
+      };
 
-    if (editingFaq) {
-      setFaqs(faqs.map((faq) => (faq.id === editingFaq.id ? newFaq : faq)));
-    } else {
-      setFaqs([...faqs, newFaq]);
+      if (editingFaq) {
+        await faqService.updateFAQ(editingFaq.id, faqData);
+        toast({
+          title: "Success",
+          description: "FAQ updated successfully!",
+        });
+      } else {
+        await faqService.addFAQ(faqData);
+        toast({
+          title: "Success",
+          description: "FAQ added successfully!",
+        });
+      }
+
+      await fetchFAQs();
+      resetForm();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving FAQ:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save FAQ. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    resetForm();
-    setIsDialogOpen(false);
   };
 
   const handleEdit = (faq: FAQ) => {
@@ -165,8 +137,26 @@ const FAQManagement: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setFaqs(faqs.filter((faq) => faq.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this FAQ?")) {
+      return;
+    }
+
+    try {
+      await faqService.deleteFAQ(id);
+      toast({
+        title: "Success",
+        description: "FAQ deleted successfully!",
+      });
+      await fetchFAQs();
+    } catch (error) {
+      console.error("Error deleting FAQ:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete FAQ. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const resetForm = () => {
@@ -270,14 +260,23 @@ const FAQManagement: React.FC = () => {
                   type="button"
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   className="bg-brand-primary hover:bg-brand-primary/90"
+                  disabled={isSubmitting}
                 >
-                  {editingFaq ? "Update FAQ" : "Add FAQ"}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {editingFaq ? "Updating..." : "Adding..."}
+                    </>
+                  ) : (
+                    <>{editingFaq ? "Update FAQ" : "Add FAQ"}</>
+                  )}
                 </Button>
               </div>
             </form>
@@ -321,63 +320,74 @@ const FAQManagement: React.FC = () => {
       </Card>
 
       {/* FAQ List */}
-      <div className="space-y-4">
-        {filteredFaqs.map((faq) => (
-          <Card key={faq.id}>
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="secondary">
-                      {categories.find((cat) => cat.id === faq.category)?.name}
-                    </Badge>
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">{faq.question}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed mb-3">
-                    {faq.answer}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {faq.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2 ml-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(faq)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(faq.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredFaqs.length === 0 && (
+      {loading ? (
         <Card className="text-center py-12">
           <CardContent>
-            <h3 className="text-xl font-semibold mb-2">No FAQs found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm || selectedCategory !== "all"
-                ? "Try adjusting your search or filters."
-                : "Add your first FAQ to get started."}
-            </p>
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-brand-primary" />
+            <p className="text-muted-foreground">Loading FAQs...</p>
           </CardContent>
         </Card>
+      ) : (
+        <>
+          <div className="space-y-4">
+            {filteredFaqs.map((faq) => (
+              <Card key={faq.id}>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="secondary">
+                          {categories.find((cat) => cat.id === faq.category)?.name}
+                        </Badge>
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">{faq.question}</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed mb-3">
+                        {faq.answer}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {faq.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(faq)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(faq.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {filteredFaqs.length === 0 && !loading && (
+            <Card className="text-center py-12">
+              <CardContent>
+                <h3 className="text-xl font-semibold mb-2">No FAQs found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm || selectedCategory !== "all"
+                    ? "Try adjusting your search or filters."
+                    : "Add your first FAQ to get started."}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
