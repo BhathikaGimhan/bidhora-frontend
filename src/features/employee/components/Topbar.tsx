@@ -17,6 +17,7 @@ import { auth } from '@/firebaseConfig';
 import { userProfileService } from '@/Services/userProfileService';
 import { UserProfile } from '@/features/profile/types/profile';
 import { User } from 'firebase/auth';
+import { notificationService } from '@/Services/notificationService';
 
 interface TopbarProps {
   onMobileMenuToggle: () => void;
@@ -27,9 +28,11 @@ export function EmployeeTopbar({ onMobileMenuToggle }: TopbarProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [unreadCount] = useState(0); // TODO: Implement notification system
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    let unsubscribeNotifications: (() => void) | null = null;
+
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setCurrentUser(user);
       
@@ -38,6 +41,12 @@ export function EmployeeTopbar({ onMobileMenuToggle }: TopbarProps) {
           // Fetch user profile from database
           const profileResponse = await userProfileService.getProfile();
           setUserProfile(profileResponse.user);
+          
+          // Subscribe to real-time notifications updates
+          unsubscribeNotifications = notificationService.subscribeToNotifications((notifs) => {
+            const unread = notifs.filter(n => !n.read).length;
+            setUnreadCount(unread);
+          });
         } catch (error) {
           console.error('Error fetching employee profile:', error);
           // Fallback to basic user info if profile fetch fails
@@ -51,12 +60,24 @@ export function EmployeeTopbar({ onMobileMenuToggle }: TopbarProps) {
             role: 'employee'
           } as UserProfile);
         }
+      } else {
+        // User logged out, cleanup notifications subscription
+        if (unsubscribeNotifications) {
+          unsubscribeNotifications();
+          unsubscribeNotifications = null;
+        }
+        setUnreadCount(0);
       }
       
       setLoading(false);
     });
     
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+      }
+    };
   }, []);
 
   const handleLogout = async () => {

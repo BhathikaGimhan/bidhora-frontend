@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import DotGrid from "@/components/DotGrid";
-import CreditBadge from "./CreditBadge";
 import { UserProfile } from '../types/profile';
 import { ProfilePicture } from './ProfilePicture';
 import { ProfileInfo } from './ProfileInfo';
@@ -62,13 +61,9 @@ export const ProfileHeader = ({
       {/* Profile Content */}
       <div className="container mx-auto px-4 pt-24">
         <div className="relative -mt-16 bg-card rounded-lg border items-end shadow-sm p-4 sm:p-6 flex flex-col gap-6">
-          {isOwnProfile && (
-            <div className="sm:absolute top-4 right-4 flex">
-              <CreditBadge credits={profile.credits || 0} />
-            </div>
-          )}
     
-          <div className="flex flex-col md:flex-row items-center gap-6 w-full">
+          <div className="flex flex-col md:flex-row gap-6 w-full items-start">
+            {/* Profile Picture */}
             {/* Profile Picture */}
             <ProfilePicture 
               profile={{ ...profile, photoURL: currentPhotoURL }}

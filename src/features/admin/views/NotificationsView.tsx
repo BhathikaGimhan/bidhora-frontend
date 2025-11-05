@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DataTable } from '@/features/admin/components/DataTable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,45 +19,109 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Check, Trash2, Send } from 'lucide-react';
-import { notificationController } from '@/features/admin/controllers/notificationController';
+import { MoreHorizontal, Eye, Check, Trash2, Send, Loader2 } from 'lucide-react';
 import { Notification } from '@/features/admin/models/NotificationModel';
 import { useToast } from '@/hooks/use-toast';
 import { adminActivityService } from '@/Services/adminActivityService';
+import { notificationService } from '@/Services/notificationService';
+import { userController } from '@/features/admin/controllers/userController';
 
 export function NotificationsView() {
-  const [notifications, setNotifications] = useState(notificationController.getAllNotifications());
-  const [newNotification, setNewNotification] = useState({
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [newNotification, setNewNotification] = useState<{
+    message: string;
+    recipientId: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    priority: 'low' | 'medium' | 'high';
+  }>({
     message: '',
     recipientId: 'all',
-    type: 'info' as const,
-    priority: 'medium' as const,
+    type: 'info',
+    priority: 'medium',
   });
   const { toast } = useToast();
 
-  const handleSearch = (query: string) => {
-    if (query.trim() === '') {
-      setNotifications(notificationController.getAllNotifications());
-    } else {
-      setNotifications(notificationController.searchNotifications(query));
+  useEffect(() => {
+    loadData();
+    
+    // Subscribe to real-time notifications updates
+    const unsubscribeNotifications = notificationService.subscribeToAdminNotifications((notifs) => {
+      setNotifications(notifs);
+    });
+    
+    return () => {
+      unsubscribeNotifications();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Load notifications
+      const notifs = await notificationService.getAdminNotifications();
+      setNotifications(notifs);
+
+      // Load employees
+      const users = await userController.getAllUsers();
+      const employeeUsers = users
+        .filter(user => user.role === 'employee')
+        .map(user => ({
+          id: user.id,
+          name: user.name,
+          email: user.email
+        }));
+      setEmployees(employeeUsers);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load data',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMarkAsRead = (notificationId: string) => {
-    const success = notificationController.markAsRead(notificationId);
-    if (success) {
-      setNotifications(notificationController.getAllNotifications());
+  const handleSearch = (query: string) => {
+    if (query.trim() === '') {
+      loadData();
+    } else {
+      const filtered = notifications.filter(n => 
+        n.message.toLowerCase().includes(query.toLowerCase()) ||
+        n.recipientName?.toLowerCase().includes(query.toLowerCase())
+      );
+      setNotifications(filtered);
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await notificationService.markAsRead(notificationId);
+      await loadData();
       toast({
         title: 'Notification Updated',
         description: 'Notification marked as read',
+      });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update notification',
+        variant: 'destructive',
       });
     }
   };
 
   const handleDeleteNotification = async (notificationId: string) => {
     const notificationToDelete = notifications.find(n => n.id === notificationId);
-    const success = notificationController.deleteNotification(notificationId);
-    if (success) {
+    try {
+      await notificationService.deleteNotification(notificationId);
+      
       // Log activity
       if (notificationToDelete) {
         await adminActivityService.logNotificationAction(
@@ -67,10 +131,17 @@ export function NotificationsView() {
         );
       }
       
-      setNotifications(notificationController.getAllNotifications());
+      await loadData();
       toast({
         title: 'Notification Deleted',
         description: 'Notification has been permanently deleted',
+        variant: 'destructive',
+      });
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete notification',
         variant: 'destructive',
       });
     }
@@ -86,31 +157,51 @@ export function NotificationsView() {
       return;
     }
 
-    const notification = await notificationController.createNotification({
-      ...newNotification,
-      read: false,
-    });
+    setSending(true);
+    try {
+      // Get recipient name if specific employee
+      let recipientName = 'All Employees';
+      if (newNotification.recipientId !== 'all') {
+        const employee = employees.find(e => e.id === newNotification.recipientId);
+        recipientName = employee?.name || 'Unknown';
+      }
 
-    // Log activity
-    const recipientText = newNotification.recipientId === 'all' ? 'all users' : `user ${newNotification.recipientId}`;
-    await adminActivityService.logNotificationAction(
-      'Sent Notification',
-      notification.id,
-      `Sent ${newNotification.type} notification to ${recipientText}: "${newNotification.message.substring(0, 50)}${newNotification.message.length > 50 ? '...' : ''}"`
-    );
+      const notificationId = await notificationService.createNotification({
+        ...newNotification,
+        recipientName,
+        read: false,
+      });
 
-    setNotifications(notificationController.getAllNotifications());
-    setNewNotification({
-      message: '',
-      recipientId: 'all',
-      type: 'info',
-      priority: 'medium',
-    });
+      // Log activity
+      const recipientText = newNotification.recipientId === 'all' ? 'all employees' : `employee ${recipientName}`;
+      await adminActivityService.logNotificationAction(
+        'Sent Notification',
+        notificationId,
+        `Sent ${newNotification.type} notification to ${recipientText}: "${newNotification.message.substring(0, 50)}${newNotification.message.length > 50 ? '...' : ''}"`
+      );
 
-    toast({
-      title: 'Notification Sent',
-      description: 'Notification has been sent successfully',
-    });
+      await loadData();
+      setNewNotification({
+        message: '',
+        recipientId: 'all',
+        type: 'info',
+        priority: 'medium',
+      });
+
+      toast({
+        title: 'Notification Sent',
+        description: `Notification sent successfully to ${recipientText}`,
+      });
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send notification',
+        variant: 'destructive',
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -249,13 +340,18 @@ export function NotificationsView() {
               <Select
                 value={newNotification.recipientId}
                 onValueChange={(value) => setNewNotification(prev => ({ ...prev, recipientId: value }))}
+                disabled={loading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select recipient" />
+                  <SelectValue placeholder={loading ? "Loading employees..." : "Select recipient"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Users</SelectItem>
-                  <SelectItem value="admin">Admin Only</SelectItem>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {!loading && employees.map(employee => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.name} ({employee.email})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -263,7 +359,7 @@ export function NotificationsView() {
               <Label htmlFor="type">Type</Label>
               <Select
                 value={newNotification.type}
-                onValueChange={(value: any) => setNewNotification(prev => ({ ...prev, type: value }))}
+                onValueChange={(value: 'info' | 'success' | 'warning' | 'error') => setNewNotification(prev => ({ ...prev, type: value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
@@ -280,7 +376,7 @@ export function NotificationsView() {
               <Label htmlFor="priority">Priority</Label>
               <Select
                 value={newNotification.priority}
-                onValueChange={(value: any) => setNewNotification(prev => ({ ...prev, priority: value }))}
+                onValueChange={(value: 'low' | 'medium' | 'high') => setNewNotification(prev => ({ ...prev, priority: value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select priority" />
@@ -303,9 +399,18 @@ export function NotificationsView() {
               rows={3}
             />
           </div>
-          <Button onClick={handleSendNotification} className="w-full md:w-auto">
-            <Send className="mr-2 h-4 w-4" />
-            Send Notification
+          <Button onClick={handleSendNotification} className="w-full md:w-auto" disabled={sending}>
+            {sending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Send Notification
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>

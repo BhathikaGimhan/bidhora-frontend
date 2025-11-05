@@ -10,24 +10,19 @@ import {
   where,
   orderBy,
   onSnapshot,
-  Timestamp
+  Timestamp,
+  or
 } from 'firebase/firestore';
 import { Notification } from '@/features/admin/models/NotificationModel';
 
 export class NotificationService {
   private notificationsCollection = collection(db, 'notifications');
 
-  // Get all notifications for the current admin user
-  async getNotifications(): Promise<Notification[]> {
+  // Get all notifications for admin (to see sent notifications)
+  async getAdminNotifications(): Promise<Notification[]> {
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('User not authenticated');
-      }
-
       const q = query(
         this.notificationsCollection,
-        where('recipientId', 'in', ['all', 'admin', currentUser.uid]),
         orderBy('createdAt', 'desc')
       );
 
@@ -48,6 +43,49 @@ export class NotificationService {
           createdAt: data.createdAt,
           updatedAt: data.updatedAt
         });
+      });
+
+      return notifications;
+    } catch (error) {
+      console.error('Error fetching admin notifications:', error);
+      return [];
+    }
+  }
+
+  // Get notifications for current user (employee or admin)
+  async getNotifications(): Promise<Notification[]> {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Query for notifications sent to 'all' OR to this specific user
+      const q = query(
+        this.notificationsCollection,
+        orderBy('createdAt', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const notifications: Notification[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Filter for 'all' or specific user
+        if (data.recipientId === 'all' || data.recipientId === currentUser.uid) {
+          notifications.push({
+            id: doc.id,
+            message: data.message,
+            recipientId: data.recipientId,
+            recipientName: data.recipientName,
+            type: data.type,
+            read: data.read || false,
+            createdDate: data.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || new Date().toISOString().split('T')[0],
+            priority: data.priority || 'medium',
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt
+          });
+        }
       });
 
       return notifications;
@@ -126,7 +164,7 @@ export class NotificationService {
     }
   }
 
-  // Subscribe to real-time notifications updates
+  // Subscribe to real-time notifications updates for employees
   subscribeToNotifications(callback: (notifications: Notification[]) => void) {
     const currentUser = auth.currentUser;
     if (!currentUser) {
@@ -134,9 +172,46 @@ export class NotificationService {
       return () => {};
     }
 
+    // Query all notifications and filter client-side
+    // This avoids complex Firestore indexes
     const q = query(
       this.notificationsCollection,
-      where('recipientId', 'in', ['all', 'admin', currentUser.uid]),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const notifications: Notification[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        
+        // Filter for notifications meant for this user ('all' or specific user ID)
+        if (data.recipientId === 'all' || data.recipientId === currentUser.uid) {
+          notifications.push({
+            id: doc.id,
+            message: data.message,
+            recipientId: data.recipientId,
+            recipientName: data.recipientName,
+            type: data.type,
+            read: data.read || false,
+            createdDate: data.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || new Date().toISOString().split('T')[0],
+            priority: data.priority || 'medium',
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt
+          });
+        }
+      });
+      callback(notifications);
+    }, (error) => {
+      console.error('Error in notifications subscription:', error);
+    });
+
+    return unsubscribe;
+  }
+  
+  // Subscribe to real-time notifications updates for admin
+  subscribeToAdminNotifications(callback: (notifications: Notification[]) => void) {
+    const q = query(
+      this.notificationsCollection,
       orderBy('createdAt', 'desc')
     );
 
@@ -158,6 +233,8 @@ export class NotificationService {
         });
       });
       callback(notifications);
+    }, (error) => {
+      console.error('Error in admin notifications subscription:', error);
     });
 
     return unsubscribe;
