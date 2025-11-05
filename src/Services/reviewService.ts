@@ -12,6 +12,7 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
+  limit as firestoreLimit,
 } from "firebase/firestore";
 import { auth, db } from "@/firebaseConfig";
 import { Review } from "../types/profile";
@@ -244,6 +245,175 @@ export class ReviewService {
       return allReviews;
     } catch (error) {
       console.error("Error getting all reviews:", error);
+      throw error;
+    }
+  }
+
+  // Migrate existing reviews from projects collection to reviews collection
+  static async migrateProjectReviews(): Promise<{ success: number; skipped: number; errors: number }> {
+    try {
+      console.log('🔄 Starting migration of project reviews...');
+      
+      // Get all projects that have customer reviews
+      const projectsQuery = query(
+        collection(db, "projects"),
+        where("customerRating", "!=", null)
+      );
+
+      const projectsSnapshot = await getDocs(projectsQuery);
+      console.log(`📦 Found ${projectsSnapshot.size} projects with reviews`);
+
+      let success = 0;
+      let skipped = 0;
+      let errors = 0;
+
+      for (const projectDoc of projectsSnapshot.docs) {
+        try {
+          const projectData = projectDoc.data();
+          const projectId = projectDoc.id;
+
+          // Check if review already exists in reviews collection
+          const existingReviewQuery = query(
+            collection(db, "reviews"),
+            where("projectId", "==", projectId)
+          );
+          const existingReviewSnapshot = await getDocs(existingReviewQuery);
+
+          if (!existingReviewSnapshot.empty) {
+            console.log(`⏭️  Review for project ${projectId} already exists, skipping`);
+            skipped++;
+            continue;
+          }
+
+          // Get reviewer info
+          let reviewerName = "Anonymous";
+          let reviewerPhotoURL = "";
+          
+          if (projectData.createdBy) {
+            try {
+              const userDoc = await getDoc(doc(db, "users", projectData.createdBy));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                reviewerName = userData.displayName || userData.email?.split('@')[0] || "Anonymous";
+                reviewerPhotoURL = userData.photoURL || "";
+              }
+            } catch (err) {
+              console.warn(`Could not fetch user data for ${projectData.createdBy}`);
+            }
+          }
+
+          // Create review document
+          const reviewData = {
+            projectId: projectId,
+            projectTitle: projectData.title || "Project",
+            reviewerId: projectData.createdBy || "unknown",
+            reviewerName: reviewerName,
+            reviewerPhotoURL: reviewerPhotoURL,
+            revieweeId: projectData.assignedTo || projectData.serviceProviderId || "system",
+            rating: projectData.customerRating,
+            comment: projectData.customerReview || "",
+            helpfulVotes: [],
+            reactions: {
+              likes: [],
+              dislikes: [],
+            },
+            isVerified: true,
+            createdAt: projectData.customerReviewedAt || Timestamp.now(),
+          };
+
+          await addDoc(collection(db, "reviews"), reviewData);
+          console.log(`✅ Migrated review for project ${projectId}`);
+          success++;
+        } catch (err) {
+          console.error(`❌ Error migrating review for project ${projectDoc.id}:`, err);
+          errors++;
+        }
+      }
+
+      const result = { success, skipped, errors };
+      console.log('🎉 Migration complete:', result);
+      return result;
+    } catch (error) {
+      console.error("Error migrating project reviews:", error);
+      throw error;
+    }
+  }
+
+  // Check if a project has a review in the reviews collection
+  static async checkProjectHasReview(projectId: string): Promise<boolean> {
+    try {
+      const q = query(
+        collection(db, "reviews"),
+        where("projectId", "==", projectId)
+      );
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error("Error checking for review:", error);
+      return false;
+    }
+  }
+
+  // Get reviews created by a specific user (as reviewer)
+  static async getReviewsByReviewer(reviewerId: string, limitCount?: number): Promise<Review[]> {
+    try {
+      let q;
+      if (limitCount) {
+        q = query(
+          collection(db, "reviews"),
+          where("reviewerId", "==", reviewerId),
+          orderBy("createdAt", "desc"),
+          firestoreLimit(limitCount)
+        );
+      } else {
+        q = query(
+          collection(db, "reviews"),
+          where("reviewerId", "==", reviewerId),
+          orderBy("createdAt", "desc")
+        );
+      }
+
+      const querySnapshot = await getDocs(q);
+      const reviews: Review[] = [];
+
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data() as {
+          projectId: string;
+          projectTitle?: string;
+          reviewerId: string;
+          reviewerName: string;
+          reviewerPhotoURL?: string;
+          revieweeId: string;
+          rating: number;
+          comment: string;
+          helpfulVotes?: string[];
+          reactions?: Record<string, string[]>;
+          isVerified: boolean;
+          createdAt: Timestamp | Date;
+          updatedAt?: Timestamp | Date;
+        };
+        
+        reviews.push({
+          id: docSnap.id,
+          projectId: data.projectId,
+          projectTitle: data.projectTitle,
+          reviewerId: data.reviewerId,
+          reviewerName: data.reviewerName,
+          reviewerPhotoURL: data.reviewerPhotoURL,
+          revieweeId: data.revieweeId,
+          rating: data.rating,
+          comment: data.comment,
+          helpfulVotes: data.helpfulVotes || [],
+          reactions: data.reactions || {},
+          isVerified: data.isVerified,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+        } as Review);
+      });
+
+      return reviews;
+    } catch (error) {
+      console.error("Error fetching reviews by reviewer:", error);
       throw error;
     }
   }

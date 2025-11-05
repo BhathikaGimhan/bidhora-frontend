@@ -29,6 +29,7 @@ import {
   XCircle,
   Briefcase,
   Download,
+  Star,
 } from 'lucide-react';
 import { Project } from '@/features/admin/models/ProjectModel';
 
@@ -273,7 +274,10 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Budget</p>
                       <p className="text-lg font-semibold">
-                        ${project.budget.min.toLocaleString()} - ${project.budget.max.toLocaleString()}
+                                              <div>
+                        <span className="font-medium">Budget Range:</span>{" "}
+                        LKR {project.budget.min.toLocaleString()} - LKR {project.budget.max.toLocaleString()}
+                      </div>
                       </p>
                     </div>
                   </div>
@@ -539,6 +543,61 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                 </div>
               </CardContent>
             </Card>
+
+            {/* Customer Review Section */}
+            {project.customerRating && (
+              <Card className="border-yellow-200 dark:border-yellow-800">
+                <CardHeader className="bg-yellow-50 dark:bg-yellow-950">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                    Customer Review
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4">
+                  {/* Star Rating Display */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-5 h-5 ${
+                            star <= (project.customerRating || 0)
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium">
+                      {project.customerRating}.0 out of 5 stars
+                    </span>
+                  </div>
+
+                  {/* Review Text */}
+                  {project.customerReview && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Feedback:</p>
+                      <p className="text-sm leading-relaxed border-l-2 border-yellow-500 pl-3 py-1 bg-muted/50 rounded-r">
+                        "{project.customerReview}"
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Review Date */}
+                  {project.customerReviewedAt && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      Reviewed on{' '}
+                      {new Date(project.customerReviewedAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </ScrollArea>
 

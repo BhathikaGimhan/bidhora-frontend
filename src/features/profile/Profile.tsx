@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { ProfileBio } from "./components/ProfileBio";
 import { ReviewsSection } from "./components/ReviewsSection";
+import { BuyerReviewsSection } from "./components/buyer/BuyerReviewsSection";
 import { BuyerProjects } from "./components/buyer/BuyerProjects";
 import { BuyerNavbar } from "./components/buyer/BuyerNavbar";
 import {
@@ -366,10 +367,12 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
                     onProfileUpdate={handleProfileUpdate}
                     isEditMode={isEditMode}
                   />
-                  <ReviewsSection
-                    userId={profile.uid}
-                    currentUserId={isOwnProfile ? profile.uid : undefined}
-                  />
+                  
+                  {/* Show buyer's own reviews if viewing own profile */}
+                  {isOwnProfile && (
+                    <BuyerReviewsSection userId={profile.uid} />
+                  )}
+                  
                   <div className="bg-card rounded-lg border p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold">
@@ -431,7 +434,7 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
                               {/* Meta Info */}
                               <div className="mt-3 flex flex-wrap gap-3 text-xs">
                                 <span className="px-2 py-1 bg-muted rounded-md">
-                                  💰 Budget: $
+                                  💰 Budget: LKR
                                   {project.budget || project.budgetMin}
                                 </span>
                               </div>

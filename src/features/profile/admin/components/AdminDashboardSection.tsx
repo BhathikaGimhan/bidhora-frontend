@@ -7,8 +7,33 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { adminStatsService, AdminStats } from "@/Services/adminStatsService";
+import LoadingSpinner from "@/components/ui/loading-spinner";
 
 export const AdminDashboardSection = () => {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const adminStats = await adminStatsService.getAdminStats();
+        setStats(adminStats);
+      } catch (err) {
+        console.error("Error fetching admin stats:", err);
+        setError("Failed to load dashboard statistics");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   const dashboardLinks = [
     {
       title: "Dashboard Overview",
@@ -93,28 +118,46 @@ export const AdminDashboardSection = () => {
       <Card className="shadow-sm">
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">0</p>
-              <p className="text-sm text-muted-foreground mt-1">Total Users</p>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner />
             </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">0</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Active Projects
-              </p>
+          ) : error ? (
+            <div className="text-center py-8 text-red-600">
+              <p>{error}</p>
             </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-purple-600">0</p>
-              <p className="text-sm text-muted-foreground mt-1">ProjectX</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">
+                  {stats?.totalUsers || 0}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">Total Users</p>
+              </div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">
+                  {stats?.activeProjects || 0}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Active Projects
+                </p>
+              </div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-purple-600">
+                  {stats?.totalProjects || 0}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">Total Projects</p>
+              </div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-orange-600">
+                  LKR {(stats?.totalRevenue || 0).toLocaleString()}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Total Revenue
+                </p>
+              </div>
             </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-orange-600">$0</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Total Revenue
-              </p>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

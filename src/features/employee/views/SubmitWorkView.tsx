@@ -236,7 +236,8 @@ export function SubmitWorkView() {
             {project.adminPrice && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Project Value</p>
-                <p className="text-sm">${project.adminPrice.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">Project Price</p>
+                <p className="text-sm">LKR {project.adminPrice.toLocaleString()}</p>
               </div>
             )}
             {project.adminDuration && (

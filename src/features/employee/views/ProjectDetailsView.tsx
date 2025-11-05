@@ -452,7 +452,7 @@ export function ProjectDetailsView() {
                 <div>
                   <p className="text-sm font-medium">Project Value</p>
                   <p className="text-sm text-muted-foreground">
-                    ${project.adminPrice.toLocaleString()}
+                    LKR {project.adminPrice.toLocaleString()}
                   </p>
                 </div>
               </div>

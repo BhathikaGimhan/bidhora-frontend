@@ -26,7 +26,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, Area, AreaChart } from 'recharts';
 
 export function DashboardView() {
   const navigate = useNavigate();
@@ -427,46 +427,77 @@ export function DashboardView() {
           </CardHeader>
           <CardContent>
             {performanceData.length > 0 ? (
-              <ChartContainer
-                config={{
-                  assigned: {
-                    label: 'Assigned',
-                    color: 'hsl(var(--chart-1))',
-                  },
-                  completed: {
-                    label: 'Completed',
-                    color: 'hsl(var(--chart-2))',
-                  },
-                }}
-                className="h-48 sm:h-64 w-full"
-              >
-                <BarChart data={performanceData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={performanceData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <defs>
+                    <linearGradient id="colorAssigned" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                      <stop offset="50%" stopColor="#1d4ed8" stopOpacity={0.6}/>
+                      <stop offset="100%" stopColor="#1e40af" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.8}/>
+                      <stop offset="50%" stopColor="#059669" stopOpacity={0.6}/>
+                      <stop offset="100%" stopColor="#047857" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.1"/>
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                   <XAxis 
                     dataKey="month" 
-                    className="text-xs"
+                    fontSize={12}
+                    stroke="hsl(var(--muted-foreground))"
                     tick={{ fill: 'hsl(var(--foreground))' }}
                   />
                   <YAxis 
-                    className="text-xs"
+                    fontSize={12}
+                    stroke="hsl(var(--muted-foreground))"
                     tick={{ fill: 'hsl(var(--foreground))' }}
                   />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar 
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px',
+                      padding: '8px',
+                      color: 'hsl(var(--foreground))'
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ 
+                      paddingTop: '20px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <Area 
+                    type="monotone"
                     dataKey="assigned" 
-                    fill="hsl(var(--chart-1))" 
-                    radius={[4, 4, 0, 0]}
-                    opacity={0.8}
+                    stroke="#1d4ed8"
+                    strokeWidth={3}
+                    fill="url(#colorAssigned)"
+                    filter="url(#shadow)"
+                    dot={{ fill: '#1d4ed8', strokeWidth: 2, r: 5, stroke: '#ffffff' }}
+                    activeDot={{ r: 7, stroke: '#1d4ed8', strokeWidth: 3, fill: '#ffffff' }}
+                    name="Assigned"
                   />
-                  <Bar 
+                  <Area 
+                    type="monotone"
                     dataKey="completed" 
-                    fill="hsl(var(--chart-2))" 
-                    radius={[4, 4, 0, 0]}
+                    stroke="#059669"
+                    strokeWidth={3}
+                    fill="url(#colorCompleted)"
+                    filter="url(#shadow)"
+                    dot={{ fill: '#059669', strokeWidth: 2, r: 5, stroke: '#ffffff' }}
+                    activeDot={{ r: 7, stroke: '#059669', strokeWidth: 3, fill: '#ffffff' }}
+                    name="Completed"
                   />
-                </BarChart>
-              </ChartContainer>
+                </AreaChart>
+              </ResponsiveContainer>
             ) : (
-              <div className="h-48 sm:h-64 flex items-center justify-center text-muted-foreground">
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
                   <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-20" />
                   <p>No performance data yet</p>
@@ -530,7 +561,7 @@ export function DashboardView() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/employee/projects')}
+              onClick={() => navigate('/employee/completed')}
             >
               View All
             </Button>

@@ -165,12 +165,12 @@ export const ProposalItem = ({
       <CardContent className="pt-0 space-y-4">
         {/* Proposal Details */}
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <DollarSign className="w-4 h-4" />
-            <span className="font-medium">
-              ${proposal.biddingPrice?.toLocaleString() || "N/A"}
-            </span>
-          </div>
+                      <div className="flex items-center gap-1.5">
+              <DollarSign className="h-4 w-4 text-emerald-600" />
+              <span className="font-semibold text-emerald-600">
+              LKR {proposal.biddingPrice?.toLocaleString() || "N/A"}
+              </span>
+            </div>
 
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="w-4 h-4" />

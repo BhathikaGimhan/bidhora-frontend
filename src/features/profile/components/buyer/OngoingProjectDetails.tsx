@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,8 +14,12 @@ import {
   Download,
   FileText,
   Tag,
+  Star,
+  MessageSquare,
 } from 'lucide-react';
 import { Project, ProjectDocument } from '@/Services/projectService';
+import { ProjectReviewDialog } from './ProjectReviewDialog';
+import { ReviewService } from '@/Services/reviewService';
 
 interface OngoingProjectDetailsProps {
   project: Project & {
@@ -39,6 +44,30 @@ export const OngoingProjectDetails = ({
   project,
   onBack,
 }: OngoingProjectDetailsProps) => {
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [hasReviewInCollection, setHasReviewInCollection] = useState(false);
+  const [checkingReview, setCheckingReview] = useState(true);
+
+  // Check if review exists in reviews collection
+  useEffect(() => {
+    const checkForReview = async () => {
+      if (project.status === 'completed') {
+        try {
+          setCheckingReview(true);
+          const hasReview = await ReviewService.checkProjectHasReview(project.id);
+          setHasReviewInCollection(hasReview);
+        } catch (error) {
+          console.error('Error checking for review:', error);
+        } finally {
+          setCheckingReview(false);
+        }
+      } else {
+        setCheckingReview(false);
+      }
+    };
+
+    checkForReview();
+  }, [project.id, project.status]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -253,7 +282,7 @@ export const OngoingProjectDetails = ({
                       <div>
                         <p className="text-sm font-medium">Project Value</p>
                         <p className="text-sm text-muted-foreground">
-                          ${project.adminPrice.toLocaleString()}
+                          LKR {project.adminPrice.toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -353,6 +382,80 @@ export const OngoingProjectDetails = ({
                     </Button>
                   </div>
                 ))}
+                
+                {/* Review Button - Show if not yet reviewed */}
+                {!checkingReview && !project.customerRating && !hasReviewInCollection && (
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm text-blue-900 dark:text-blue-100 mb-1">
+                          How was your experience?
+                        </h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                          Share your feedback to help us improve our service.
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsReviewDialogOpen(true)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Star className="w-4 h-4 mr-2" />
+                          Write a Review
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Existing Review Display */}
+          {(project.status as string) === 'completed' && project.customerRating && (
+            <Card className="border-green-200 dark:border-green-800">
+              <CardHeader className="bg-green-50 dark:bg-green-950">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                  Your Review
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                {/* Star Rating Display */}
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-5 h-5 ${
+                          star <= (project.customerRating || 0)
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {project.customerRating} out of 5 stars
+                  </span>
+                </div>
+                
+                {/* Review Text */}
+                {project.customerReview && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Your Feedback:</p>
+                    <p className="text-sm leading-relaxed border-l-2 border-green-500 pl-3">
+                      {project.customerReview}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Review Date */}
+                {project.customerReviewedAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Reviewed on {formatDate(new Date(project.customerReviewedAt))}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
@@ -477,8 +580,8 @@ export const OngoingProjectDetails = ({
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Budget Range</span>
                   <span className="text-sm font-medium">
-                    ${project.budgetMin.toLocaleString()}
-                    {project.budgetMax && ` - $${project.budgetMax.toLocaleString()}`}
+                    LKR {project.budgetMin.toLocaleString()}
+                    {project.budgetMax && ` - LKR ${project.budgetMax.toLocaleString()}`}
                   </span>
                 </div>
               )}
@@ -487,7 +590,7 @@ export const OngoingProjectDetails = ({
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Project Value</span>
                   <span className="text-sm font-medium">
-                    ${project.adminPrice.toLocaleString()}
+                    LKR {project.adminPrice.toLocaleString()}
                   </span>
                 </div>
               )}
@@ -495,6 +598,18 @@ export const OngoingProjectDetails = ({
           </Card>
         </div>
       </div>
+      
+      {/* Review Dialog */}
+      <ProjectReviewDialog
+        projectId={project.id}
+        projectTitle={project.title}
+        isOpen={isReviewDialogOpen}
+        onClose={() => setIsReviewDialogOpen(false)}
+        onReviewSubmitted={() => {
+          // Optionally refresh the project data or show a success state
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

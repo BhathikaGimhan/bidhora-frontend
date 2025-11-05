@@ -1500,6 +1500,89 @@ export const getProjectsReadyForAssignment = async (): Promise<Project[]> => {
 };
 
 /**
+ * Submit a review and rating for a completed project
+ */
+export const submitProjectReview = async (
+  projectId: string,
+  rating: number,
+  review: string
+): Promise<void> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    if (rating < 1 || rating > 5) {
+      throw new Error("Rating must be between 1 and 5 stars");
+    }
+
+    if (!review.trim()) {
+      throw new Error("Review text is required");
+    }
+
+    const projectRef = doc(db, "projects", projectId);
+    const projectDoc = await getDoc(projectRef);
+
+    if (!projectDoc.exists()) {
+      throw new Error("Project not found");
+    }
+
+    const projectData = projectDoc.data();
+
+    // Verify the user is the project owner
+    if (projectData.createdBy !== user.uid) {
+      throw new Error("Only the project owner can submit a review");
+    }
+
+    // Verify the project is completed
+    if (projectData.status !== "completed") {
+      throw new Error("Only completed projects can be reviewed");
+    }
+
+    // Check if already reviewed
+    if (projectData.customerRating) {
+      throw new Error("This project has already been reviewed");
+    }
+
+    const reviewTimestamp = Timestamp.now();
+
+    // Update the project with review data
+    await updateDoc(projectRef, {
+      customerRating: rating,
+      customerReview: review,
+      customerReviewedAt: reviewTimestamp,
+    });
+
+    // Also create a review document in the reviews collection for the Review Center
+    const reviewData = {
+      projectId: projectId,
+      projectTitle: projectData.title || "Project",
+      reviewerId: user.uid,
+      reviewerName: user.displayName || user.email?.split('@')[0] || "Anonymous",
+      reviewerPhotoURL: user.photoURL || "",
+      revieweeId: projectData.assignedTo || projectData.serviceProviderId || "system",
+      rating: rating,
+      comment: review,
+      helpfulVotes: [],
+      reactions: {
+        likes: [],
+        dislikes: [],
+      },
+      isVerified: true,
+      createdAt: reviewTimestamp,
+    };
+
+    await addDoc(collection(db, "reviews"), reviewData);
+
+    console.log(`✅ Review submitted for project ${projectId}: ${rating} stars`);
+  } catch (error) {
+    console.error("Error submitting project review:", error);
+    throw error;
+  }
+};
+
+/**
  * Toggle the urgent status of a project
  */
 export const toggleProjectUrgentStatus = async (
@@ -1527,6 +1610,60 @@ export const toggleProjectUrgentStatus = async (
     console.log(`✅ Project ${projectId} urgent status set to: ${isUrgent}`);
   } catch (error) {
     console.error("Error toggling project urgent status:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get employee projects (projects assigned to a specific employee)
+ */
+export const getEmployeeProjects = async (employeeId: string) => {
+  try {
+    console.log("📊 Fetching projects for employee:", employeeId);
+
+    // Query projects where assignedEmployeeId matches
+    const projectsQuery = query(
+      collection(db, "projects"),
+      where("assignedEmployeeId", "==", employeeId),
+      orderBy("createdAt", "desc")
+    );
+
+    const querySnapshot = await getDocs(projectsQuery);
+    console.log(`✅ Found ${querySnapshot.size} projects for employee`);
+
+    const projects = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.title,
+        description: data.description,
+        budget: data.adminPrice || data.budgetMin || 0,
+        status: data.status,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+        completedAt: data.finalPaymentAt?.toDate ? data.finalPaymentAt.toDate() : (data.finalPaymentAt ? new Date(data.finalPaymentAt) : undefined),
+        rating: data.customerRating || 0,
+        duration: data.adminDuration 
+          ? `${data.adminDuration} ${data.adminDurationUnit || 'days'}` 
+          : undefined,
+      };
+    });
+
+    // Separate into active and completed
+    const activeProjects = projects.filter(
+      (p) => p.status !== "completed" && p.status !== "cancelled"
+    );
+    const completedProjects = projects.filter((p) => p.status === "completed");
+
+    console.log("📊 Active projects:", activeProjects.length);
+    console.log("📊 Completed projects:", completedProjects.length);
+
+    return {
+      all: projects,
+      active: activeProjects,
+      completed: completedProjects,
+    };
+  } catch (error) {
+    console.error("Error fetching employee projects:", error);
     throw error;
   }
 };

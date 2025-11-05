@@ -100,7 +100,6 @@ exports.sendContactEmail = onRequest({ cors: true }, async (req, res) => {
             .field-label { font-weight: 600; color: #374151; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
             .field-value { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; font-size: 15px; }
             .message-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #059669; border-radius: 12px; padding: 20px; }
-            .footer { background: #f8fafc; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; }
           </style>
         </head>
         <body>
@@ -129,11 +128,29 @@ exports.sendContactEmail = onRequest({ cors: true }, async (req, res) => {
                 <div class="message-box">${message.replace(/\n/g, "<br>")}</div>
               </div>
             </div>
-            <div class="footer">
-              <p style="color: #6b7280; font-size: 13px;">
-                Sent via <span style="color: #059669; font-weight: 600;">Bidhora Contact Form</span> on ${getSriLankaTime()}
+            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center;">
+              <div style="font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 12px; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(5, 150, 105, 0.1);">
+                The Bidhora Team
+              </div>
+              <div style="margin: 20px 0;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: #065f46; font-size: 14px; line-height: 1.6; margin-bottom: 10px;">
+                  <span>📧</span>
+                  <a href="mailto:contact@bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">contact@bidhora.com</a>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: #065f46; font-size: 14px; line-height: 1.6; margin-bottom: 10px;">
+                  <span>📞</span>
+                  <span style="font-weight: 500;">074 377 4787</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: #065f46; font-size: 14px; line-height: 1.6;">
+                  <span>🌐</span>
+                  <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a>
+                </div>
+              </div>
+              <p style="color: #6b7280; font-size: 12px; margin-top: 20px; font-style: italic; opacity: 0.8; margin-bottom: 0;">
+                Sent via Bidhora Contact Form on ${getSriLankaTime()}
               </p>
             </div>
+
           </div>
         </body>
       </html>
@@ -167,12 +184,13 @@ exports.sendContactEmail = onRequest({ cors: true }, async (req, res) => {
             .cta-title { font-size: 20px; font-weight: 600; margin-bottom: 10px; }
             .response-time { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 8px 16px; display: inline-block; font-weight: 600; margin-bottom: 15px; }
             .explore-text { font-size: 16px; margin: 20px 0; }
-            .footer { background: #f8fafc; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; }
-
-            .contact-info { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 20px; }
-            .contact-item { display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 14px; }
-            .website { color: #059669; font-weight: 600; text-decoration: none; }
-            .brand-signature { font-weight: 600; color: #059669; font-size: 18px; margin-bottom: 10px; }
+            .footer { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center; }
+            .brand-signature { font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 12px; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(5, 150, 105, 0.1); }
+            .contact-info { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 20px 0; }
+            .contact-item { display: inline-flex; align-items: center; gap: 8px; color: #065f46; font-size: 14px; line-height: 1.6; }
+            .contact-link { color: #059669; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+            .contact-link:hover { color: #047857; text-decoration: underline; }
+            .footer-timestamp { color: #6b7280; font-size: 12px; margin-top: 20px; font-style: italic; opacity: 0.8; }
           </style>
         </head>
         <body>
@@ -207,14 +225,29 @@ exports.sendContactEmail = onRequest({ cors: true }, async (req, res) => {
               </div>
               <div class="explore-text">In the meantime, feel free to explore our platform and discover how <strong>Bidhora</strong> can help bring your projects to life!</div>
             </div>
-            <div class="footer">
-              <div class="brand-signature">The Bidhora Team</div>
-              <div class="contact-info">
-                <div class="contact-item">📧 <a href="mailto:contact@bidhora.com" style="color: #6b7280; text-decoration: none;">contact@bidhora.com</a></div>
-                <div class="contact-item">📞 074 377 4787</div>
-                <div class="contact-item">🌐 <a href="https://www.bidhora.com" class="website">www.bidhora.com</a></div>
-              </div>
-            </div>
+ <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center;">
+  <div style="font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 16px; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(5, 150, 105, 0.1);">
+    The Bidhora Team
+  </div>
+
+  <div style="color: #065f46; font-size: 14px; line-height: 1.8;">
+    <div style="margin-bottom: 8px;">
+      📧 <a href="mailto:contact@bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">contact@bidhora.com</a>
+    </div>
+    <div style="margin-bottom: 8px;">
+      📞 <span style="font-weight: 500;">074 377 4787</span>
+    </div>
+    <div>
+      🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a>
+    </div>
+  </div>
+
+  <p style="color: #6b7280; font-size: 12px; margin-top: 24px; font-style: italic; opacity: 0.8; margin-bottom: 0;">
+    Sent on ${getSriLankaTime()}
+  </p>
+</div>
+
+
           </div>
         </body>
       </html>
@@ -319,7 +352,6 @@ exports.sendProjectPriceNotification = onRequest(
             .payment-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 20px -3px rgba(59, 130, 246, 0.4); }
             .cta-section { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0; }
             .cta-title { font-size: 20px; font-weight: 600; margin-bottom: 15px; }
-            .footer { background: #f8fafc; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; }
             .project-id { background: #e5e7eb; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-family: monospace; }
             .highlight { color: #3b82f6; font-weight: 600; }
           </style>
@@ -338,7 +370,7 @@ exports.sendProjectPriceNotification = onRequest(
 
               <div class="price-box">
                 <div class="price-label">Total Project Price</div>
-                <div class="price-amount">$${project_price}</div>
+                <div class="price-amount">LKR ${project_price}</div>
                 <div class="project-title">${project_title}</div>
               </div>
 
@@ -359,7 +391,7 @@ exports.sendProjectPriceNotification = onRequest(
                 }
                 <div class="detail-row">
                   <span class="detail-label">Total Price:</span>
-                  <span class="detail-value">$${project_price}</span>
+                  <span class="detail-value">LKR ${project_price}</span>
                 </div>
               </div>
 
@@ -383,7 +415,7 @@ exports.sendProjectPriceNotification = onRequest(
               <div class="payment-section">
                 <div style="font-size: 32px; margin-bottom: 15px;">💳</div>
                 <div class="deposit-label">Initial Deposit Required</div>
-                <div class="deposit-amount">$${deposit_amount}</div>
+                <div class="deposit-amount">LKR ${deposit_amount}</div>
                 <div class="deposit-note">
                   To proceed with your project, we require a <span class="highlight">10% deposit</span> of the total project price.<br>
                   This secures your project slot and allows us to assign an employee to start working on it.
@@ -407,7 +439,11 @@ exports.sendProjectPriceNotification = onRequest(
                   }
                 </div>
                 <div style="font-size: 14px; opacity: 0.8;">
-                  ${payment_link ? "Click the button above to make your payment securely." : "Login to your Bidhora account to make your decision."}
+                  ${
+                    payment_link
+                      ? "Click the button above to make your payment securely."
+                      : "Login to your Bidhora account to make your decision."
+                  }
                 </div>
               </div>
 
@@ -416,17 +452,29 @@ exports.sendProjectPriceNotification = onRequest(
               </div>
             </div>
 
-            <div class="footer">
-              <div style="font-weight: 600; color: #059669; font-size: 18px; margin-bottom: 10px;">The Bidhora Team</div>
-              <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; color: #6b7280; font-size: 14px;">
-                <div>📧 <a href="mailto:contact@bidhora.com" style="color: #6b7280; text-decoration: none;">contact@bidhora.com</a></div>
-                <div>📞 074 377 4787</div>
-                <div>🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a></div>
-              </div>
-              <p style="color: #6b7280; font-size: 12px; margin-top: 15px;">
-                Sent on ${getSriLankaTime()}
-              </p>
-            </div>
+<div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center;">
+  <div style="font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 16px; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(5, 150, 105, 0.1);">
+    The Bidhora Team
+  </div>
+
+  <div style="color: #065f46; font-size: 14px; line-height: 1.8;">
+    <div style="margin-bottom: 8px;">
+      📧 <a href="mailto:contact@bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">contact@bidhora.com</a>
+    </div>
+    <div style="margin-bottom: 8px;">
+      📞 <span style="font-weight: 500;">074 377 4787</span>
+    </div>
+    <div>
+      🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a>
+    </div>
+  </div>
+
+  <p style="color: #6b7280; font-size: 12px; margin-top: 24px; font-style: italic; opacity: 0.8; margin-bottom: 0;">
+    Sent on ${getSriLankaTime()}
+  </p>
+</div>
+
+
           </div>
         </body>
       </html>
@@ -539,8 +587,6 @@ exports.sendEmployeeAssignmentNotification = onRequest(
               .action-title { font-size: 20px; font-weight: 600; margin-bottom: 15px; }
               .action-button { background: white; color: #059669; padding: 14px 32px; border-radius: 8px; text-decoration: none; display: inline-block; font-weight: 600; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
               .action-button:hover { background: #f0fdf4; }
-              .footer { background: #f8fafc; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; }
-              .brand-signature { font-weight: 600; color: #059669; font-size: 18px; margin-bottom: 10px; }
               .project-id { color: #059669; font-weight: 600; font-family: monospace; }
               .alert-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0; display: flex; align-items: center; gap: 10px; }
             </style>
@@ -566,7 +612,7 @@ exports.sendEmployeeAssignmentNotification = onRequest(
                     <div class="detail-row">
                       <span class="detail-label">💰 Project Value:</span>
                       <span class="detail-value">
-                        <span class="price-badge">$${project_price.toFixed(
+                        <span class="price-badge">LKR ${project_price.toFixed(
                           2
                         )}</span>
                       </span>
@@ -625,17 +671,29 @@ exports.sendEmployeeAssignmentNotification = onRequest(
                 </div>
               </div>
 
-              <div class="footer">
-                <div class="brand-signature">The Bidhora Team</div>
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; color: #6b7280; font-size: 14px;">
-                  <div>📧 <a href="mailto:contact@bidhora.com" style="color: #6b7280; text-decoration: none;">contact@bidhora.com</a></div>
-                  <div>📞 074 377 4787</div>
-                  <div>🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a></div>
-                </div>
-                <p style="color: #6b7280; font-size: 12px; margin-top: 15px;">
-                  Sent on ${getSriLankaTime()}
-                </p>
-              </div>
+   <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center;">
+  <div style="font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 16px; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(5, 150, 105, 0.1);">
+    The Bidhora Team
+  </div>
+
+  <div style="color: #065f46; font-size: 14px; line-height: 1.8;">
+    <div style="margin-bottom: 8px;">
+      📧 <a href="mailto:contact@bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">contact@bidhora.com</a>
+    </div>
+    <div style="margin-bottom: 8px;">
+      📞 <span style="font-weight: 500;">074 377 4787</span>
+    </div>
+    <div>
+      🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a>
+    </div>
+  </div>
+
+  <p style="color: #6b7280; font-size: 12px; margin-top: 24px; font-style: italic; opacity: 0.8; margin-bottom: 0;">
+    Sent on ${getSriLankaTime()}
+  </p>
+</div>
+
+
             </div>
           </body>
         </html>
@@ -756,10 +814,6 @@ exports.sendFinalPaymentNotification = onRequest(
             .info-text { color: #4b5563; font-size: 15px; line-height: 1.7; }
             .security-badge { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 10px; padding: 18px; margin-top: 25px; text-align: center; }
             .security-text { font-weight: 700; color: #92400e; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
-            .footer { background: #f8fafc; padding: 35px; border-top: 2px solid #e5e7eb; text-align: center; }
-            .brand-signature { font-weight: 700; color: #059669; font-size: 20px; margin-bottom: 12px; }
-            .contact-info { display: flex; flex-direction: column; align-items: center; gap: 10px; color: #6b7280; font-size: 15px; margin-top: 15px; }
-            .contact-link { color: #059669; font-weight: 600; text-decoration: none; }
           </style>
         </head>
         <body>
@@ -826,21 +880,30 @@ exports.sendFinalPaymentNotification = onRequest(
                 </div>
               </div>
             </div>
+<div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center;">
+  <div style="font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 16px; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(5, 150, 105, 0.1);">
+    The Bidhora Team
+  </div>
 
-            <div class="footer">
-              <div class="brand-signature">The Bidhora Team</div>
-              <div style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">
-                We're committed to delivering quality work that exceeds your expectations
-              </div>
-              <div class="contact-info">
-                <div>📧 <a href="mailto:contact@bidhora.com" class="contact-link">contact@bidhora.com</a></div>
-                <div>📞 074 377 4787</div>
-                <div>🌐 <a href="https://www.bidhora.com" class="contact-link">www.bidhora.com</a></div>
-              </div>
-              <p style="color: #9ca3af; font-size: 13px; margin-top: 18px;">
-                📅 Sent on ${getSriLankaTime()}
-              </p>
-            </div>
+  <div style="color: #065f46; font-size: 14px; line-height: 1.8;">
+    <div style="margin-bottom: 8px;">
+      📧 <a href="mailto:contact@bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">contact@bidhora.com</a>
+    </div>
+    <div style="margin-bottom: 8px;">
+      📞 <span style="font-weight: 500;">074 377 4787</span>
+    </div>
+    <div>
+      🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a>
+    </div>
+  </div>
+
+  <p style="color: #6b7280; font-size: 12px; margin-top: 24px; font-style: italic; opacity: 0.8; margin-bottom: 0;">
+    Sent on ${getSriLankaTime()}
+  </p>
+</div>
+
+
+
           </div>
         </body>
       </html>

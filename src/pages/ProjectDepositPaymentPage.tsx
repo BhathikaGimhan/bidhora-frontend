@@ -156,10 +156,8 @@ export default function ProjectDepositPaymentPage() {
         console.log("✅ User authenticated, fetching project info");
         fetchProjectInfo();
       } else {
-        console.log("❌ No user authenticated, redirecting to login");
-        // Redirect to auth page with return URL
-        const returnUrl = encodeURIComponent(window.location.pathname);
-        navigate(`/auth?redirect=${returnUrl}`);
+        console.log("❌ No user authenticated");
+        setError("Please sign in to access this payment page");
         setLoading(false);
       }
     });
@@ -329,24 +327,48 @@ export default function ProjectDepositPaymentPage() {
   }
 
   if (error) {
+    const isAuthError = error.includes("sign in") || error.includes("Authentication");
+    
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <div className="flex items-center space-x-2 text-destructive">
               <AlertCircle className="h-6 w-6" />
-              <CardTitle>Error</CardTitle>
+              <CardTitle>{isAuthError ? "Authentication Required" : "Error"}</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-            <div className="mt-6">
-              <Button variant="outline" onClick={() => navigate("/")}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Go to Home
-              </Button>
+            <div className="mt-6 flex gap-3">
+              {isAuthError ? (
+                <>
+                  <Button 
+                    onClick={() => {
+                      const returnUrl = encodeURIComponent(window.location.pathname);
+                      navigate(`/auth?redirect=${returnUrl}`);
+                    }}
+                    className="flex-1"
+                  >
+                    Sign In
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate("/")}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Go Home
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onClick={() => navigate("/")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Go to Home
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -396,7 +418,7 @@ export default function ProjectDepositPaymentPage() {
                 <div>
                   <p className="font-medium">Deposit Paid</p>
                   <p className="text-lg font-semibold text-emerald-600">
-                    ${project.initialPaymentAmount?.toFixed(2)}
+                    LKR {project.initialPaymentAmount?.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -455,7 +477,7 @@ export default function ProjectDepositPaymentPage() {
               <div className="flex-1">
                 <p className="font-medium">Total Project Price</p>
                 <p className="text-lg font-semibold">
-                  ${project.adminPrice?.toFixed(2)}
+                  LKR {project.adminPrice?.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -497,7 +519,7 @@ export default function ProjectDepositPaymentPage() {
                 Initial Deposit (10%)
               </p>
               <p className="text-4xl font-bold text-blue-900">
-                ${project.initialPaymentAmount?.toFixed(2)}
+                LKR {project.initialPaymentAmount?.toFixed(2)}
               </p>
               <p className="text-sm text-blue-600">
                 This secures your project slot and enables employee assignment
@@ -531,7 +553,7 @@ export default function ProjectDepositPaymentPage() {
             ) : (
               <>
                 <Lock className="mr-2 h-5 w-5" />
-                {USE_MOCK_PAYMENT ? "Test Payment" : `Pay $${project.initialPaymentAmount?.toFixed(2)} Now`}
+                {USE_MOCK_PAYMENT ? "Test Payment" : `Pay LKR ${project.initialPaymentAmount?.toFixed(2)} Now`}
               </>
             )}
           </Button>
@@ -590,7 +612,7 @@ export default function ProjectDepositPaymentPage() {
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-slate-600">Amount:</span>
                 <span className="text-lg font-bold text-blue-600">
-                  ${project?.initialPaymentAmount?.toFixed(2)}
+                  LKR {project?.initialPaymentAmount?.toFixed(2)}
                 </span>
               </div>
               <Separator />
