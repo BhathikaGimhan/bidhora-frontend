@@ -17,16 +17,10 @@ import {
   CheckCircle,
   ArrowRight,
   Phone,
+  Loader2,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-
-interface FAQ {
-  id: string;
-  category: string;
-  question: string;
-  answer: string;
-  tags: string[];
-}
+import { faqService, FAQ } from "@/Services/faqService";
 
 const HelpCenter: React.FC = () => {
   const navigate = useNavigate();
@@ -35,78 +29,26 @@ const HelpCenter: React.FC = () => {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [filteredFaqs, setFilteredFaqs] = useState<FAQ[]>([]);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Mock data - in real app this would come from API
+  // Fetch FAQs from Firestore
   useEffect(() => {
-    const mockFaqs: FAQ[] = [
-      {
-        id: "1",
-        category: "account",
-        question: "How do I create an account?",
-        answer:
-          "To create an account, click on the 'Sign Up' button in the top right corner. Fill in your details including name, email, and password. You'll receive a confirmation email to verify your account.",
-        tags: ["registration", "signup", "account"],
-      },
-      {
-        id: "2",
-        category: "account",
-        question: "How do I reset my password?",
-        answer:
-          "Click on 'Forgot Password' on the login page. Enter your email address and we'll send you a reset link. Follow the instructions in the email to create a new password.",
-        tags: ["password", "reset", "login"],
-      },
-      {
-        id: "3",
-        category: "services",
-        question: "What services does Bidhora offer?",
-        answer:
-          "Bidhora provides professional document processing, data entry, formatting, and digital solutions. Our expert team handles all your business documentation needs with precision and quality assurance. We specialize in converting physical documents to digital formats, data extraction from various sources, and ensuring compliance with industry standards. Our services include PDF conversion, Excel data processing, document formatting, and custom digital solutions tailored to your business requirements. Whether you need bulk document scanning, data migration, or specialized formatting for legal or financial documents, our team is equipped to deliver high-quality results efficiently and securely.",
-        tags: ["services", "document", "processing"],
-      },
-      {
-        id: "4",
-        category: "services",
-        question: "How long does service delivery take?",
-        answer:
-          "Delivery times vary based on the complexity and volume of work. Simple tasks may take 24-48 hours, while complex projects can take 3-7 business days. You'll receive regular updates on your project status.",
-        tags: ["delivery", "timeline", "timeframe"],
-      },
-      {
-        id: "5",
-        category: "payment",
-        question: "What payment methods do you accept?",
-        answer:
-          "We accept payments through major credit cards, debit cards, and bank transfers. All payments are processed securely through our payment gateway with industry-standard encryption.",
-        tags: ["payment", "credit card", "bank transfer"],
-      },
-      {
-        id: "6",
-        category: "payment",
-        question: "Can I get a refund?",
-        answer:
-          "Refunds are available under certain conditions as outlined in our Refund Policy. Generally, refunds are considered if we fail to deliver the service within the agreed timeframe or if the work doesn't meet the specified requirements.",
-        tags: ["refund", "money back", "cancellation"],
-      },
-      {
-        id: "7",
-        category: "technical",
-        question: "How do I upload files for processing?",
-        answer:
-          "After placing an order, you'll see an upload section in your dashboard. Click 'Upload Files' and select your documents. Supported formats include PDF, Word, Excel, and image files up to 50MB each.",
-        tags: ["upload", "files", "documents"],
-      },
-      {
-        id: "8",
-        category: "technical",
-        question: "I'm having trouble accessing my account",
-        answer:
-          "Try clearing your browser cache and cookies, or try a different browser. If the problem persists, contact our support team with your account email and a description of the issue.",
-        tags: ["login", "access", "technical issue"],
-      },
-    ];
-    setFaqs(mockFaqs);
-    setFilteredFaqs(mockFaqs);
+    fetchFAQs();
   }, []);
+
+  const fetchFAQs = async () => {
+    setLoading(true);
+    try {
+      const fetchedFaqs = await faqService.getAllFAQs();
+      setFaqs(fetchedFaqs);
+      setFilteredFaqs(fetchedFaqs);
+    } catch (error) {
+      console.error("Error fetching FAQs:", error);
+      // Silently fail and show empty state
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = [
     {
@@ -271,7 +213,17 @@ const HelpCenter: React.FC = () => {
 
         {/* FAQ List with Enhanced Cards */}
         <div className="space-y-6 mb-12">
-          {filteredFaqs.length === 0 ? (
+          {loading ? (
+            <Card className="text-center py-16 bg-card/50 backdrop-blur-sm">
+              <CardContent>
+                <Loader2 className="h-16 w-16 text-brand-primary mx-auto mb-4 animate-spin" />
+                <h3 className="text-2xl font-semibold mb-3">Loading FAQs...</h3>
+                <p className="text-muted-foreground text-lg">
+                  Please wait while we fetch the latest help articles.
+                </p>
+              </CardContent>
+            </Card>
+          ) : filteredFaqs.length === 0 ? (
             <Card className="text-center py-16 bg-card/50 backdrop-blur-sm border-dashed">
               <CardContent>
                 <div className="relative mb-6">
