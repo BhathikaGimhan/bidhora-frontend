@@ -34,6 +34,7 @@ const HelpCenter: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [filteredFaqs, setFilteredFaqs] = useState<FAQ[]>([]);
+  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
 
   // Mock data - in real app this would come from API
   useEffect(() => {
@@ -59,7 +60,7 @@ const HelpCenter: React.FC = () => {
         category: "services",
         question: "What services does Bidhora offer?",
         answer:
-          "Bidhora provides professional document processing, data entry, formatting, and digital solutions. Our expert team handles all your business documentation needs with precision and quality assurance.",
+          "Bidhora provides professional document processing, data entry, formatting, and digital solutions. Our expert team handles all your business documentation needs with precision and quality assurance. We specialize in converting physical documents to digital formats, data extraction from various sources, and ensuring compliance with industry standards. Our services include PDF conversion, Excel data processing, document formatting, and custom digital solutions tailored to your business requirements. Whether you need bulk document scanning, data migration, or specialized formatting for legal or financial documents, our team is equipped to deliver high-quality results efficiently and securely.",
         tags: ["services", "document", "processing"],
       },
       {
@@ -342,7 +343,14 @@ const HelpCenter: React.FC = () => {
                     </CardHeader>
                     <CardContent className="pt-0">
                       <p className="text-muted-foreground leading-relaxed mb-4 text-base">
-                        {faq.answer}
+                        {(() => {
+                          const isExpanded = expandedFaq === faq.id;
+                          const shouldTruncate = faq.answer.length > 150;
+                          const displayAnswer = isExpanded || !shouldTruncate
+                            ? faq.answer
+                            : faq.answer.substring(0, 150) + '...';
+                          return displayAnswer;
+                        })()}
                       </p>
                       <div className="flex flex-wrap gap-2 mb-4">
                         {faq.tags.map((tag) => (
@@ -363,9 +371,11 @@ const HelpCenter: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-brand-primary hover:text-brand-primary/80 p-0 h-auto"
+                          onClick={() => setExpandedFaq(expandedFaq === faq.id ? null : faq.id)}
+                          className="text-brand-primary hover:bg-brand-primary hover:text-white px-2 py-1 h-auto transition-colors"
                         >
-                          Read more <ArrowRight className="h-3 w-3 ml-1" />
+                          {expandedFaq === faq.id ? 'Read less' : 'Read more'}{' '}
+                          <ArrowRight className={`h-3 w-3 ml-1 transition-transform ${expandedFaq === faq.id ? 'rotate-90' : ''}`} />
                         </Button>
                       </div>
                     </CardContent>
