@@ -4,14 +4,100 @@ import {
   Shield, 
   User,
   Calendar,
+  Loader2,
+  Users,
+  FileText,
+  MessageCircle,
+  Bell,
+  CreditCard,
+  Settings,
+  HelpCircle,
 } from "lucide-react";
 import { UserProfile } from "../../types/profile";
+import { useState, useEffect } from "react";
+import { adminActivityService, AdminActivity } from "@/Services/adminActivityService";
 
 interface AdminProfileSectionProps {
   profile: UserProfile;
 }
 
 export const AdminProfileSection = ({ profile }: AdminProfileSectionProps) => {
+  const [activities, setActivities] = useState<AdminActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchActivities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.uid]);
+
+  const fetchActivities = async () => {
+    setLoading(true);
+    try {
+      const recentActivities = await adminActivityService.getAdminActivities(profile.uid, 10);
+      setActivities(recentActivities);
+    } catch (error) {
+      console.error("Error fetching admin activities:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getActivityIcon = (actionType: AdminActivity['actionType']) => {
+    switch (actionType) {
+      case 'user':
+        return <Users className="w-4 h-4" />;
+      case 'project':
+        return <FileText className="w-4 h-4" />;
+      case 'faq':
+        return <HelpCircle className="w-4 h-4" />;
+      case 'review':
+        return <MessageCircle className="w-4 h-4" />;
+      case 'notification':
+        return <Bell className="w-4 h-4" />;
+      case 'transaction':
+        return <CreditCard className="w-4 h-4" />;
+      case 'system':
+        return <Settings className="w-4 h-4" />;
+      default:
+        return <Calendar className="w-4 h-4" />;
+    }
+  };
+
+  const getActivityColor = (actionType: AdminActivity['actionType']) => {
+    switch (actionType) {
+      case 'user':
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+      case 'project':
+        return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+      case 'faq':
+        return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+      case 'review':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'notification':
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
+      case 'transaction':
+        return 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300';
+      case 'system':
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300';
+    }
+  };
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
+
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-300">
       {/* Admin Information Grid */}
@@ -84,10 +170,53 @@ export const AdminProfileSection = ({ profile }: AdminProfileSectionProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No recent activity to display</p>
-            <p className="text-sm mt-2">Admin activities will appear here</p>
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            </div>
+          ) : activities.length > 0 ? (
+            <div className="space-y-3">
+              {activities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                >
+                  <div className={`p-2 rounded-lg ${getActivityColor(activity.actionType)}`}>
+                    {getActivityIcon(activity.actionType)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{activity.action}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {activity.description}
+                        </p>
+                        {activity.targetName && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Target: <span className="font-medium">{activity.targetName}</span>
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatTimeAgo(activity.timestamp)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="outline" className="text-xs">
+                        {activity.actionType}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="font-medium">No recent activity</p>
+              <p className="text-sm mt-2">Your admin activities will appear here</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

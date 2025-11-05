@@ -36,6 +36,7 @@ import { ProjectDetailsModal } from "@/features/admin/components/ProjectDetailsM
 import { getAllUsers } from "@/Services/authService";
 import { assignEmployeeToProject } from "@/Services/projectService";
 import { emailService } from "@/Services/emailService";
+import { adminActivityService } from "@/Services/adminActivityService";
 
 export function ProjectReviewView() {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -199,6 +200,14 @@ export function ProjectReviewView() {
       );
 
       if (result.success) {
+        // Log activity
+        await adminActivityService.logProjectAction(
+          'Reviewed Project',
+          selectedProject.id,
+          selectedProject.title,
+          `Set price to LKR ${price.toFixed(2)}${duration ? `, duration: ${duration} ${adminDurationUnit}` : ''}`
+        );
+        
         toast({
           title: "Project Reviewed",
           description: result.message,
@@ -265,6 +274,14 @@ export function ProjectReviewView() {
         selectedEmployeeId,
         selectedEmployee.name,
         selectedEmployee.email
+      );
+      
+      // Log activity
+      await adminActivityService.logProjectAction(
+        'Assigned Employee',
+        selectedProject.id,
+        selectedProject.title,
+        `Assigned ${selectedEmployee.name} (${selectedEmployee.email}) to project`
       );
       
       // Send email notification to employee

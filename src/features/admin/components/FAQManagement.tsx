@@ -23,6 +23,7 @@ import { Plus, Edit, Trash2, Search, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { faqService, FAQ } from "@/Services/faqService";
 import { useToast } from "@/hooks/use-toast";
+import { adminActivityService } from "@/Services/adminActivityService";
 
 const FAQManagement: React.FC = () => {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
@@ -99,12 +100,30 @@ const FAQManagement: React.FC = () => {
 
       if (editingFaq) {
         await faqService.updateFAQ(editingFaq.id, faqData);
+        
+        // Log activity
+        await adminActivityService.logFAQAction(
+          'Updated FAQ',
+          editingFaq.id,
+          faqData.question,
+          `Updated FAQ in ${faqData.category} category`
+        );
+        
         toast({
           title: "Success",
           description: "FAQ updated successfully!",
         });
       } else {
-        await faqService.addFAQ(faqData);
+        const newFaqId = await faqService.addFAQ(faqData);
+        
+        // Log activity
+        await adminActivityService.logFAQAction(
+          'Created FAQ',
+          newFaqId,
+          faqData.question,
+          `Created new FAQ in ${faqData.category} category`
+        );
+        
         toast({
           title: "Success",
           description: "FAQ added successfully!",
@@ -138,12 +157,24 @@ const FAQManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    const faqToDelete = faqs.find(f => f.id === id);
     if (!confirm("Are you sure you want to delete this FAQ?")) {
       return;
     }
 
     try {
       await faqService.deleteFAQ(id);
+      
+      // Log activity
+      if (faqToDelete) {
+        await adminActivityService.logFAQAction(
+          'Deleted FAQ',
+          id,
+          faqToDelete.question,
+          `Deleted FAQ from ${faqToDelete.category} category`
+        );
+      }
+      
       toast({
         title: "Success",
         description: "FAQ deleted successfully!",

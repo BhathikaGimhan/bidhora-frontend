@@ -31,6 +31,7 @@ import { getAllUsers, banUser, unbanUser, deleteUser, updateUserRole } from '@/S
 import  LoadingSpinner  from '@/components/ui/loading-spinner';
 import { auth } from '@/firebaseConfig';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { adminActivityService } from '@/Services/adminActivityService';
 
 type ActionType = 'ban' | 'unban' | 'delete' | null;
 
@@ -156,6 +157,15 @@ export function UsersView() {
     try {
       setActionLoading(true);
       await updateUserRole({ role: newRole, targetUserId: user.uid });
+      
+      // Log activity
+      await adminActivityService.logUserAction(
+        'Changed User Role',
+        user.uid,
+        user.name,
+        `Changed ${user.name}'s role from ${user.role} to ${newRole}`
+      );
+      
       toast({
         title: 'Role Updated',
         description: `${user.name}'s role has been changed to ${newRole}`,
@@ -180,6 +190,15 @@ export function UsersView() {
       switch (actionType) {
         case 'ban':
           await banUser(selectedUser.id);
+          
+          // Log activity
+          await adminActivityService.logUserAction(
+            'Banned User',
+            selectedUser.uid,
+            selectedUser.name,
+            `Banned user ${selectedUser.name} (${selectedUser.email}) from the platform`
+          );
+          
           toast({
             title: 'User Banned',
             description: `${selectedUser.name} has been banned from the platform`,
@@ -188,6 +207,15 @@ export function UsersView() {
           break;
         case 'unban':
           await unbanUser(selectedUser.id);
+          
+          // Log activity
+          await adminActivityService.logUserAction(
+            'Unbanned User',
+            selectedUser.uid,
+            selectedUser.name,
+            `Unbanned user ${selectedUser.name} (${selectedUser.email}), restored platform access`
+          );
+          
           toast({
             title: 'User Unbanned',
             description: `${selectedUser.name} has been unbanned and can access the platform`,
@@ -195,6 +223,15 @@ export function UsersView() {
           break;
         case 'delete':
           await deleteUser(selectedUser.id);
+          
+          // Log activity
+          await adminActivityService.logUserAction(
+            'Deleted User',
+            selectedUser.uid,
+            selectedUser.name,
+            `Permanently deleted user ${selectedUser.name} (${selectedUser.email}) from the system`
+          );
+          
           toast({
             title: 'User Deleted',
             description: `${selectedUser.name} has been permanently deleted`,

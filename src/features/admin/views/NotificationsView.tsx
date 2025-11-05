@@ -23,6 +23,7 @@ import { MoreHorizontal, Eye, Check, Trash2, Send } from 'lucide-react';
 import { notificationController } from '@/features/admin/controllers/notificationController';
 import { Notification } from '@/features/admin/models/NotificationModel';
 import { useToast } from '@/hooks/use-toast';
+import { adminActivityService } from '@/Services/adminActivityService';
 
 export function NotificationsView() {
   const [notifications, setNotifications] = useState(notificationController.getAllNotifications());
@@ -53,9 +54,19 @@ export function NotificationsView() {
     }
   };
 
-  const handleDeleteNotification = (notificationId: string) => {
+  const handleDeleteNotification = async (notificationId: string) => {
+    const notificationToDelete = notifications.find(n => n.id === notificationId);
     const success = notificationController.deleteNotification(notificationId);
     if (success) {
+      // Log activity
+      if (notificationToDelete) {
+        await adminActivityService.logNotificationAction(
+          'Deleted Notification',
+          notificationId,
+          `Deleted ${notificationToDelete.type} notification`
+        );
+      }
+      
       setNotifications(notificationController.getAllNotifications());
       toast({
         title: 'Notification Deleted',
@@ -65,7 +76,7 @@ export function NotificationsView() {
     }
   };
 
-  const handleSendNotification = () => {
+  const handleSendNotification = async () => {
     if (!newNotification.message.trim()) {
       toast({
         title: 'Error',
@@ -75,10 +86,18 @@ export function NotificationsView() {
       return;
     }
 
-    const notification = notificationController.createNotification({
+    const notification = await notificationController.createNotification({
       ...newNotification,
       read: false,
     });
+
+    // Log activity
+    const recipientText = newNotification.recipientId === 'all' ? 'all users' : `user ${newNotification.recipientId}`;
+    await adminActivityService.logNotificationAction(
+      'Sent Notification',
+      notification.id,
+      `Sent ${newNotification.type} notification to ${recipientText}: "${newNotification.message.substring(0, 50)}${newNotification.message.length > 50 ? '...' : ''}"`
+    );
 
     setNotifications(notificationController.getAllNotifications());
     setNewNotification({

@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Save, Mail, Bell, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { adminActivityService } from '@/Services/adminActivityService';
 
 export function SettingsView() {
   const [settings, setSettings] = useState({
@@ -35,9 +36,31 @@ export function SettingsView() {
   });
 
   const { toast } = useToast();
+  const [initialSettings] = useState(settings);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Save settings logic would go here
+    
+    // Track what changed
+    const changes: string[] = [];
+    Object.keys(settings).forEach((key) => {
+      if (settings[key as keyof typeof settings] !== initialSettings[key as keyof typeof initialSettings]) {
+        changes.push(key);
+      }
+    });
+
+    // Log activity
+    if (changes.length > 0) {
+      await adminActivityService.logSystemAction(
+        'Updated Settings',
+        `Modified platform settings: ${changes.join(', ')}`,
+        {
+          changedFields: changes.length,
+          maintenanceMode: settings.maintenanceMode
+        }
+      );
+    }
+    
     toast({
       title: 'Settings Saved',
       description: 'Your settings have been updated successfully.',
