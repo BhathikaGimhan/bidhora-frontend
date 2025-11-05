@@ -8,7 +8,6 @@ import DeadlineLocationFields from "@/features/postProject/components/DeadlineLo
 import SkillsInput from "@/features/postProject/components/SkillsInput";
 import UrgentCheckbox from "@/features/postProject/components/UrgentCheckbox";
 import FormActions from "@/features/postProject/components/FormActions";
-import ImageUpload from "@/features/postProject/components/ImageUpload";
 import MultipleFileUpload from "@/features/postProject/components/MultipleFileUpload";
 
 interface Props {
@@ -117,12 +116,6 @@ const ProjectForm: React.FC<Props> = ({ formData, setFormData, onSubmit, isSubmi
         checked={formData.isUrgent}
         onChange={(value) => handleInputChange("isUrgent", value)}
       />
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground">
-          Project Image (Optional)
-        </label>
-        <ImageUpload onFileSelect={(file) => handleInputChange("projectImage", file)} />
-      </div>
       <div className="space-y-2">
         <label className="block text-sm font-medium text-foreground">
           Additional Files (Optional)
