@@ -28,6 +28,7 @@ export interface EmployeeAssignmentNotificationData {
   projectPrice: number;
   projectId: string;
   buyerEmail: string;
+  projectLink?: string; // Custom link for employee to access the project
   isUrgent?: boolean;
 }
 
@@ -151,6 +152,7 @@ class EmailService {
           project_price: notificationData.projectPrice,
           project_id: notificationData.projectId,
           buyer_email: notificationData.buyerEmail,
+          project_link: notificationData.projectLink,
           is_urgent: notificationData.isUrgent || false,
         },
         {

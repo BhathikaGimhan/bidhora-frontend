@@ -293,6 +293,7 @@ export function ProjectReviewView() {
         projectPrice: (selectedProject as any).adminPrice || 0,
         projectId: selectedProject.id,
         buyerEmail: (selectedProject as any).buyerEmail || "",
+        projectLink: `${window.location.origin}/employee/projects`, // Link to employee's projects page
       });
 
       if (!emailResult.success) {
