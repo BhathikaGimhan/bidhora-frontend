@@ -540,6 +540,7 @@ exports.sendEmployeeAssignmentNotification = onRequest(
         project_price,
         project_id,
         buyer_email,
+        project_link,
       } = req.body;
 
       // Validate required fields
@@ -657,7 +658,7 @@ exports.sendEmployeeAssignmentNotification = onRequest(
                   <div style="opacity: 0.9; margin-bottom: 10px;">
                     Login to your Bidhora account to view full project details and begin work.
                   </div>
-                  <a href="https://www.bidhora.com/dashboard" class="action-button">
+                  <a href="${project_link || 'https://www.bidhora.com/dashboard'}" class="action-button">
                     View Project Details →
                   </a>
                 </div>

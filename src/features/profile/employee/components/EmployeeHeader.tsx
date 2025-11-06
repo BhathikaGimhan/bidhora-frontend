@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,12 +9,12 @@ import {
   Calendar,
   Settings,
   User,
-  Star,
 } from "lucide-react";
 import { UserProfile } from "../../types/profile";
 import { signOut } from "firebase/auth";
 import { auth } from "@/firebaseConfig";
 import { useNavigate } from "react-router-dom";
+import { collection, query, where, getFirestore, onSnapshot } from 'firebase/firestore';
 
 interface EmployeeHeaderProps {
   profile: UserProfile;
@@ -24,6 +24,44 @@ interface EmployeeHeaderProps {
 export const EmployeeHeader = ({ profile, isOwnProfile }: EmployeeHeaderProps) => {
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [workStats, setWorkStats] = useState({
+    completed: 0,
+  });
+
+  useEffect(() => {
+    if (!profile.uid) return;
+
+    const db = getFirestore();
+    const projectsRef = collection(db, 'projects');
+    
+    // Query projects assigned to this employee
+    const q = query(
+      projectsRef,
+      where('assignedEmployeeId', '==', profile.uid)
+    );
+    
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let completed = 0;
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const status = data.status || 'assigned';
+        
+        // Count completed projects
+        if (status === 'completed' || status === 'completed_by_employee') {
+          completed++;
+        }
+      });
+      
+      // Update work statistics
+      setWorkStats({
+        completed,
+      });
+    });
+
+    return () => unsubscribe();
+  }, [profile.uid]);
 
   const handleLogout = async () => {
     try {
@@ -116,15 +154,8 @@ export const EmployeeHeader = ({ profile, isOwnProfile }: EmployeeHeaderProps) =
               <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="w-4 h-4" />
                 <span>
-                  {Array.isArray(profile.completedProjects)
-                    ? profile.completedProjects.length
-                    : profile.completedProjects || 0}{" "}
-                  Projects Completed
+                  {workStats.completed} Projects Completed
                 </span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span>{profile.rating || 0}/5.0 Rating</span>
               </div>
             </div>
           </div>
