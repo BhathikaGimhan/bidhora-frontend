@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, User as UserIcon, LogOut, Settings, Menu, ArrowLeft } from 'lucide-react';
+import { Bell, LogOut, Menu, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -70,9 +70,13 @@ export function AdminTopbar({ onMobileMenuToggle }: TopbarProps) {
     return unsubscribe;
   }, []);
 
-  const handleLogout = () => {
-    // Handle logout logic
-    console.log('Logging out...');
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   const handleBackToProfile = () => {
@@ -152,16 +156,8 @@ export function AdminTopbar({ onMobileMenuToggle }: TopbarProps) {
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 <span>Back to Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <UserIcon className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

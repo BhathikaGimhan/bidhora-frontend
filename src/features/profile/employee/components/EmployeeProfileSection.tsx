@@ -1,24 +1,153 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Briefcase, 
   User,
   Calendar,
-  Award,
   FileText,
   CheckCircle,
   Clock,
+  Activity,
 } from "lucide-react";
 import { UserProfile } from "../../types/profile";
+import { collection, query, where, getFirestore, onSnapshot } from 'firebase/firestore';
 
 interface EmployeeProfileSectionProps {
   profile: UserProfile;
 }
 
 export const EmployeeProfileSection = ({ profile }: EmployeeProfileSectionProps) => {
-  const completedCount = Array.isArray(profile.completedProjects)
-    ? profile.completedProjects.length
-    : profile.completedProjects || 0;
+  const [recentActivity, setRecentActivity] = useState<Array<{ 
+    id: string; 
+    type: string; 
+    message: string; 
+    timestamp: Date; 
+    color: string 
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [workStats, setWorkStats] = useState({
+    completed: 0,
+    inProgress: 0,
+    totalSubmissions: 0,
+    needsRevision: 0,
+  });
+
+  useEffect(() => {
+    if (!profile.uid) return;
+
+    const db = getFirestore();
+    const projectsRef = collection(db, 'projects');
+    
+    // Query projects assigned to this employee
+    const q = query(
+      projectsRef,
+      where('assignedEmployeeId', '==', profile.uid)
+    );
+    
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const activityLog: Array<{ id: string; type: string; message: string; timestamp: Date; color: string }> = [];
+      
+      let completed = 0;
+      let inProgress = 0;
+      let totalSubmissions = 0;
+      let needsRevision = 0;
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const projectTitle = data.title || '';
+        const status = data.status || 'assigned';
+        
+        // Count project statuses
+        if (status === 'completed' || status === 'completed_by_employee') {
+          completed++;
+          totalSubmissions++;
+        } else if (status === 'in_progress' || status === 'assigned') {
+          inProgress++;
+        } else if (status === 'needs_revision') {
+          needsRevision++;
+          inProgress++; // Count as in progress too
+        }
+        
+        // Count submitted work
+        if (data.submittedToAdminAt) {
+          totalSubmissions++;
+        }
+        
+        // Generate activity log
+        if (data.assignedAt) {
+          const assignedDate = data.assignedAt.toDate();
+          if (Date.now() - assignedDate.getTime() < 7 * 24 * 60 * 60 * 1000) { // Last 7 days
+            activityLog.push({
+              id: `${doc.id}-assigned`,
+              type: 'assigned',
+              message: `New project assigned: ${projectTitle}`,
+              timestamp: assignedDate,
+              color: 'green'
+            });
+          }
+        }
+        
+        if (data.submittedToAdminAt) {
+          const submittedDate = data.submittedToAdminAt.toDate();
+          if (Date.now() - submittedDate.getTime() < 7 * 24 * 60 * 60 * 1000) { // Last 7 days
+            activityLog.push({
+              id: `${doc.id}-submitted`,
+              type: 'submitted',
+              message: `Work submitted: ${projectTitle}`,
+              timestamp: submittedDate,
+              color: 'blue'
+            });
+          }
+        }
+        
+        if (status === 'completed') {
+          const createdDate = data.createdAt?.toDate();
+          if (createdDate && Date.now() - createdDate.getTime() < 7 * 24 * 60 * 60 * 1000) { // Last 7 days
+            activityLog.push({
+              id: `${doc.id}-completed`,
+              type: 'completed',
+              message: `Project approved: ${projectTitle}`,
+              timestamp: createdDate,
+              color: 'yellow'
+            });
+          }
+        }
+      });
+      
+      // Update work statistics
+      setWorkStats({
+        completed,
+        inProgress,
+        totalSubmissions,
+        needsRevision,
+      });
+      
+      // Sort activity log by timestamp (most recent first)
+      activityLog.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      setRecentActivity(activityLog.slice(0, 5));
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [profile.uid]);
+
+  const getTimeAgo = (timestamp: Date) => {
+    const now = Date.now();
+    const diff = now - timestamp.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    
+    return timestamp.toLocaleDateString();
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-300">
@@ -69,7 +198,7 @@ export const EmployeeProfileSection = ({ profile }: EmployeeProfileSectionProps)
                 Completed Projects
               </span>
               <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                {completedCount}
+                {workStats.completed}
               </Badge>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
@@ -78,16 +207,7 @@ export const EmployeeProfileSection = ({ profile }: EmployeeProfileSectionProps)
                 Active Projects
               </span>
               <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
-                0
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-sm text-muted-foreground flex items-center gap-2">
-                <Award className="w-4 h-4 text-yellow-500" />
-                Rating
-              </span>
-              <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
-                {profile.rating || 0}/5.0
+                {workStats.inProgress}
               </Badge>
             </div>
             <div className="flex items-center justify-between py-2">
@@ -96,53 +216,54 @@ export const EmployeeProfileSection = ({ profile }: EmployeeProfileSectionProps)
                 Total Submissions
               </span>
               <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                {completedCount}
+                {workStats.totalSubmissions}
               </Badge>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Skills & Expertise (Optional - can be populated from profile) */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-blue-600" />
-            Skills & Expertise
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {profile.skills && profile.skills.length > 0 ? (
-              profile.skills.map((skill, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                >
-                  {skill}
-                </Badge>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No skills added yet</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Recent Activity */}
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
+            <Activity className="w-5 h-5 text-blue-600" />
             Recent Activity
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No recent activity to display</p>
-            <p className="text-sm mt-2">Your work activities will appear here</p>
-          </div>
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Loading activities...</p>
+            </div>
+          ) : recentActivity.length > 0 ? (
+            <div className="space-y-4">
+              {recentActivity.map((activity) => (
+                <div key={activity.id} className="flex items-start space-x-3">
+                  <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${
+                    activity.color === 'green' ? 'bg-green-500' :
+                    activity.color === 'blue' ? 'bg-blue-500' :
+                    activity.color === 'yellow' ? 'bg-yellow-500' :
+                    'bg-gray-500'
+                  }`}></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">
+                      {activity.message}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      {getTimeAgo(activity.timestamp)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="h-12 w-12 mx-auto mb-2 opacity-20" />
+              <p>No recent activity</p>
+              <p className="text-sm mt-2">Your work activities from the last 7 days will appear here</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
