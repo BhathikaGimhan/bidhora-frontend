@@ -7,6 +7,7 @@ export interface BaseUser {
   photoURL?: string;
   coverImage?: string;
   role: 'buyer' | 'employee' | 'admin';
+  designation?: string; // Job designation for employees
   isVerified: boolean;
   createdAt: Date | { toDate(): Date }; // Allow Firestore Timestamp
   updatedAt: Date | { toDate(): Date }; // Allow Firestore Timestamp

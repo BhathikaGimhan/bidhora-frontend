@@ -37,6 +37,16 @@ interface UpdateRoleResponse {
   role: string;
 }
 
+interface UpdateDesignationRequest {
+  designation: string;
+  targetUserId: string;
+}
+
+interface UpdateDesignationResponse {
+  message: string;
+  designation: string;
+}
+
 interface Project {
   id: string;
   title: string;
@@ -74,6 +84,7 @@ interface AllUsersResponse {
     name: string;
     email: string;
     role: "buyer" | "employee" | "admin";
+    designation?: string;
     status: "active" | "inactive" | "banned";
     avatar: string;
     joinedDate: string;
@@ -201,6 +212,50 @@ export const updateUserRole = async (
   }
 };
 
+export const updateUserDesignation = async (
+  designationData: UpdateDesignationRequest
+): Promise<UpdateDesignationResponse> => {
+  try {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error("No authenticated user found");
+    }
+
+    // Check if current user is admin
+    const currentUserDoc = await getDoc(doc(db, "users", currentUser.uid));
+    if (!currentUserDoc.exists() || currentUserDoc.data().role !== "admin") {
+      throw new Error("Unauthorized: Only admins can update employee designations");
+    }
+
+    const userRef = doc(db, "users", designationData.targetUserId);
+    
+    // Verify target user exists and is an employee
+    const targetUserDoc = await getDoc(userRef);
+    if (!targetUserDoc.exists()) {
+      throw new Error("User not found");
+    }
+    
+    if (targetUserDoc.data().role !== "employee") {
+      throw new Error("Designation can only be set for employees");
+    }
+
+    await updateDoc(userRef, {
+      designation: designationData.designation,
+      updatedAt: Timestamp.now(),
+    });
+
+    return {
+      message: "Designation updated successfully",
+      designation: designationData.designation,
+    };
+  } catch (error: unknown) {
+    console.error("Designation update error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to update designation";
+    throw new Error(errorMessage);
+  }
+};
+
 export const getAllUsers = async (): Promise<AllUsersResponse> => {
   try {
     const currentUser = auth.currentUser;
@@ -228,6 +283,7 @@ export const getAllUsers = async (): Promise<AllUsersResponse> => {
         name: userData.displayName || "Anonymous User",
         email: userData.email,
         role: userData.role || "buyer",
+        designation: userData.designation,
         status: userData.status || "active",
         avatar: userData.photoURL || "",
         joinedDate:

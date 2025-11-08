@@ -138,22 +138,13 @@ const PrivacyPolicy: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-semibold text-foreground dark:text-gray-100 mb-4">
-                5. Data Security
+                5. Refund Policy
               </h2>
               <p className="text-muted-foreground dark:text-gray-400 leading-relaxed mb-4">
-                We implement appropriate technical and organizational measures
-                to protect your data:
+                The 10% fee paid by the customer to approve the service is never refunded. This fee covers the initial project evaluation, employee assignment, and platform service costs incurred during the project setup process.
               </p>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground dark:text-gray-400 ml-4">
-                <li>Encryption of data in transit and at rest</li>
-                <li>Regular security assessments and updates</li>
-                <li>Access controls and authentication measures</li>
-                <li>Employee training on data protection</li>
-                <li>Incident response procedures</li>
-              </ul>
-              <p className="text-muted-foreground dark:text-gray-400 leading-relaxed mt-4">
-                However, no method of transmission over the internet is 100%
-                secure. We cannot guarantee absolute security of your data.
+              <p className="text-muted-foreground dark:text-gray-400 leading-relaxed">
+                Once a project is approved and an employee is assigned, the deposit becomes non-refundable to ensure commitment from both parties and to compensate for the resources allocated to the project.
               </p>
             </section>
 
@@ -202,7 +193,7 @@ const PrivacyPolicy: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-semibold text-foreground dark:text-gray-100 mb-4">
-                7. Cookies and Tracking Technologies
+                6. Cookies and Tracking Technologies
               </h2>
               <p className="text-muted-foreground dark:text-gray-400 leading-relaxed mb-4">
                 We use cookies and similar tracking technologies to:
@@ -223,7 +214,7 @@ const PrivacyPolicy: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-semibold text-foreground dark:text-gray-100 mb-4">
-                8. Data Retention
+                7. Data Retention
               </h2>
               <p className="text-muted-foreground dark:text-gray-400 leading-relaxed">
                 We retain your personal information for as long as necessary to
@@ -238,7 +229,7 @@ const PrivacyPolicy: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-semibold text-foreground dark:text-gray-100 mb-4">
-                9. International Data Transfers
+                8. International Data Transfers
               </h2>
               <p className="text-muted-foreground dark:text-gray-400 leading-relaxed">
                 Your information may be transferred to and processed in
@@ -252,7 +243,7 @@ const PrivacyPolicy: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-semibold text-foreground dark:text-gray-100 mb-4">
-                10. Children's Privacy
+                9. Children's Privacy
               </h2>
               <p className="text-muted-foreground dark:text-gray-400 leading-relaxed">
                 Our website and services are not intended for users under the
@@ -266,7 +257,7 @@ const PrivacyPolicy: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-semibold text-foreground dark:text-gray-100 mb-4">
-                11. Changes to This Policy
+                10. Changes to This Policy
               </h2>
               <p className="text-muted-foreground dark:text-gray-400 leading-relaxed">
                 We may update this Privacy Policy from time to time. We will
@@ -280,7 +271,7 @@ const PrivacyPolicy: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-semibold text-foreground dark:text-gray-100 mb-4">
-                12. Contact Us
+                11. Contact Us
               </h2>
               <p className="text-muted-foreground dark:text-gray-400 leading-relaxed mb-4">
                 If you have any questions or concerns about this Privacy Policy

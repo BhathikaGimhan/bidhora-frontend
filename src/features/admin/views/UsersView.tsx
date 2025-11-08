@@ -15,6 +15,14 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -24,14 +32,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Ban, Trash2, CheckCircle, AlertCircle, UserCog, RefreshCw } from 'lucide-react';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { MoreHorizontal, Ban, Trash2, CheckCircle, AlertCircle, UserCog, RefreshCw, Briefcase, Check, ChevronsUpDown } from 'lucide-react';
 import { User } from '@/features/admin/models/UserModel';
 import { useToast } from '@/hooks/use-toast';
-import { getAllUsers, banUser, unbanUser, deleteUser, updateUserRole } from '@/Services/authService';
+import { getAllUsers, banUser, unbanUser, deleteUser, updateUserRole, updateUserDesignation } from '@/Services/authService';
 import  LoadingSpinner  from '@/components/ui/loading-spinner';
 import { auth } from '@/firebaseConfig';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { adminActivityService } from '@/Services/adminActivityService';
+import { SERVICE_CATEGORIES } from '@/constants/serviceCategories';
+import { cn } from '@/lib/utils';
 
 type ActionType = 'ban' | 'unban' | 'delete' | null;
 
@@ -46,6 +68,9 @@ export function UsersView() {
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [authError, setAuthError] = useState(false);
+  const [designationDialogOpen, setDesignationDialogOpen] = useState(false);
+  const [selectedDesignation, setSelectedDesignation] = useState<string>('');
+  const [designationPopoverOpen, setDesignationPopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = useCallback(async () => {
@@ -182,6 +207,57 @@ export function UsersView() {
     }
   };
 
+  const openDesignationDialog = (user: User) => {
+    setSelectedUser(user);
+    setSelectedDesignation(user.designation || '');
+    setDesignationDialogOpen(true);
+  };
+
+  const handleUpdateDesignation = async () => {
+    if (!selectedUser || !selectedDesignation) {
+      toast({
+        title: 'Error',
+        description: 'Please select a designation',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await updateUserDesignation({ 
+        designation: selectedDesignation, 
+        targetUserId: selectedUser.uid || selectedUser.id 
+      });
+      
+      // Log activity
+      await adminActivityService.logUserAction(
+        'Updated Employee Designation',
+        selectedUser.uid || selectedUser.id,
+        selectedUser.name,
+        `Set ${selectedUser.name}'s designation to ${selectedDesignation}`
+      );
+      
+      toast({
+        title: 'Designation Updated',
+        description: `${selectedUser.name}'s designation has been set to ${selectedDesignation}`,
+      });
+      
+      setDesignationDialogOpen(false);
+      setSelectedUser(null);
+      setSelectedDesignation('');
+      await fetchUsers(); // Refresh the data
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update designation',
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleAction = async () => {
     if (!selectedUser || !actionType) return;
 
@@ -298,21 +374,29 @@ export function UsersView() {
       key: 'role',
       title: 'Role',
       sortable: true,
-      render: (value: string) => (
-        <Badge 
-          variant={
-            value === 'admin' ? 'default' : 
-            value === 'employee' ? 'outline' : 
-            'secondary'
-          }
-          className={
-            value === 'employee' 
-              ? 'bg-blue-50 text-blue-700 border-blue-200' 
-              : ''
-          }
-        >
-          {value}
-        </Badge>
+      render: (value: string, user: User) => (
+        <div className="space-y-1">
+          <Badge 
+            variant={
+              value === 'admin' ? 'default' : 
+              value === 'employee' ? 'outline' : 
+              'secondary'
+            }
+            className={
+              value === 'employee' 
+                ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                : ''
+            }
+          >
+            {value}
+          </Badge>
+          {value === 'employee' && user.designation && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <Briefcase className="h-3 w-3" />
+              {user.designation}
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -378,6 +462,20 @@ export function UsersView() {
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+
+        {/* Set Designation for Employees */}
+        {user.role === 'employee' && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => openDesignationDialog(user)}
+              disabled={actionLoading}
+            >
+              <Briefcase className="mr-2 h-4 w-4" />
+              {user.designation ? 'Change Designation' : 'Set Designation'}
+            </DropdownMenuItem>
+          </>
+        )}
 
         <DropdownMenuSeparator />
 
@@ -525,6 +623,74 @@ export function UsersView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Designation Dialog */}
+      <Dialog open={designationDialogOpen} onOpenChange={setDesignationDialogOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Set Employee Designation</DialogTitle>
+            <DialogDescription>
+              Choose a job designation for {selectedUser?.name}. This will help identify their area of expertise.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Popover open={designationPopoverOpen} onOpenChange={setDesignationPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={designationPopoverOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedDesignation || "Select designation..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search designations..." />
+                  <CommandEmpty>No designation found.</CommandEmpty>
+                  <CommandGroup className="max-h-[300px] overflow-auto">
+                    {SERVICE_CATEGORIES.map((category) => (
+                      <CommandItem
+                        key={category}
+                        value={category}
+                        onSelect={(currentValue) => {
+                          setSelectedDesignation(currentValue === selectedDesignation ? '' : category);
+                          setDesignationPopoverOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedDesignation === category ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {category}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDesignationDialogOpen(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateDesignation}
+              disabled={actionLoading || !selectedDesignation}
+            >
+              {actionLoading ? 'Updating...' : 'Update Designation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

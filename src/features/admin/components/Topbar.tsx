@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, LogOut, Menu, ArrowLeft } from 'lucide-react';
+import { LogOut, Menu, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,9 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import ThemeToggle from '@/layouts/ThemeToggle';
-import { notificationController } from '@/features/admin/controllers/notificationController';
 import { auth } from '@/firebaseConfig';
 import { userProfileService } from '@/Services/userProfileService';
 import { UserProfile } from '@/features/profile/types/profile';
@@ -28,7 +26,6 @@ export function AdminTopbar({ onMobileMenuToggle }: TopbarProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -58,16 +55,6 @@ export function AdminTopbar({ onMobileMenuToggle }: TopbarProps) {
     });
     
     return () => unsubscribe();
-  }, []);
-
-  // Subscribe to notification updates
-  useEffect(() => {
-    const unsubscribe = notificationController.subscribe((notifications) => {
-      const unread = notifications.filter(n => !n.read).length;
-      setUnreadCount(unread);
-    });
-
-    return unsubscribe;
   }, []);
 
   const handleLogout = async () => {
@@ -108,19 +95,6 @@ export function AdminTopbar({ onMobileMenuToggle }: TopbarProps) {
         <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Theme Toggle */}
           <ThemeToggle />
-
-          {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative h-9 w-9">
-            <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-            {unreadCount > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-xs p-0"
-              >
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Badge>
-            )}
-          </Button>
 
           {/* Profile Dropdown */}
           <DropdownMenu>
