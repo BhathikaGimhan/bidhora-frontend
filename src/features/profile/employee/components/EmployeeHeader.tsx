@@ -132,6 +132,12 @@ export const EmployeeHeader = ({ profile, isOwnProfile }: EmployeeHeaderProps) =
               <h1 className="text-4xl font-bold text-foreground">
                 {profile.displayName || "Employee"}
               </h1>
+              {profile.designation && (
+                <p className="text-lg font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2 mt-1">
+                  <Briefcase className="w-5 h-5" />
+                  {profile.designation}
+                </p>
+              )}
               <p className="text-muted-foreground flex items-center gap-2 mt-2 text-lg">
                 <Mail className="w-4 h-4" />
                 {profile.email}

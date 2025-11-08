@@ -4,6 +4,7 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'buyer' | 'employee';
+  designation?: string; // Job designation for employees
   status: 'active' | 'inactive' | 'banned';
   avatar?: string;
   joinedDate: string;

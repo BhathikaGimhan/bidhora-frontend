@@ -57,6 +57,7 @@ export function ProjectReviewView() {
     name: string;
     email: string;
     role: string;
+    designation?: string;
   }>>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [assigningEmployee, setAssigningEmployee] = useState(false);
@@ -766,6 +767,11 @@ export function ProjectReviewView() {
                           <SelectItem key={employee.uid} value={employee.uid}>
                             <div className="flex items-center gap-2">
                               <span>{employee.name}</span>
+                              {employee.designation && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {employee.designation}
+                                </Badge>
+                              )}
                               <span className="text-xs text-muted-foreground">
                                 ({employee.email})
                               </span>
