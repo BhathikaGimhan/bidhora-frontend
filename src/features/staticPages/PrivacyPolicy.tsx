@@ -138,13 +138,22 @@ const PrivacyPolicy: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-semibold text-foreground dark:text-gray-100 mb-4">
-                5. Refund Policy
+                5. Data Security
               </h2>
               <p className="text-muted-foreground dark:text-gray-400 leading-relaxed mb-4">
-                The 10% fee paid by the customer to approve the service is never refunded. This fee covers the initial project evaluation, employee assignment, and platform service costs incurred during the project setup process.
+                We implement appropriate technical and organizational measures
+                to protect your data:
               </p>
-              <p className="text-muted-foreground dark:text-gray-400 leading-relaxed">
-                Once a project is approved and an employee is assigned, the deposit becomes non-refundable to ensure commitment from both parties and to compensate for the resources allocated to the project.
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground dark:text-gray-400 ml-4">
+                <li>Encryption of data in transit and at rest</li>
+                <li>Regular security assessments and updates</li>
+                <li>Access controls and authentication measures</li>
+                <li>Employee training on data protection</li>
+                <li>Incident response procedures</li>
+              </ul>
+              <p className="text-muted-foreground dark:text-gray-400 leading-relaxed mt-4">
+                However, no method of transmission over the internet is 100%
+                secure. We cannot guarantee absolute security of your data.
               </p>
             </section>
 
