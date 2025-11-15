@@ -52,7 +52,7 @@ import  LoadingSpinner  from '@/components/ui/loading-spinner';
 import { auth } from '@/firebaseConfig';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { adminActivityService } from '@/Services/adminActivityService';
-import { SERVICE_CATEGORIES } from '@/constants/serviceCategories';
+import { EMPLOYEE_DESIGNATIONS } from '@/constants/employeeDesignations';
 import { cn } from '@/lib/utils';
 
 type ActionType = 'ban' | 'unban' | 'delete' | null;
@@ -646,30 +646,44 @@ export function UsersView() {
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
-                <Command>
+              <PopoverContent 
+                className="w-[--radix-popover-trigger-width] p-0" 
+                align="start"
+                side="bottom"
+                sideOffset={4}
+                avoidCollisions={false}
+              >
+                <Command className="max-h-[min(300px,calc(100vh-120px))]">
                   <CommandInput placeholder="Search designations..." />
                   <CommandEmpty>No designation found.</CommandEmpty>
-                  <CommandGroup className="max-h-[300px] overflow-auto">
-                    {SERVICE_CATEGORIES.map((category) => (
-                      <CommandItem
-                        key={category}
-                        value={category}
-                        onSelect={(currentValue) => {
-                          setSelectedDesignation(currentValue === selectedDesignation ? '' : category);
-                          setDesignationPopoverOpen(false);
-                        }}
+                  <div className="overflow-auto max-h-[min(250px,calc(100vh-170px))]">
+                    {EMPLOYEE_DESIGNATIONS.map((designationGroup) => (
+                      <CommandGroup 
+                        key={designationGroup.category} 
+                        heading={designationGroup.category}
+                        className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-sm [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-primary"
                       >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedDesignation === category ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {category}
-                      </CommandItem>
+                        {designationGroup.levels.map((level) => (
+                          <CommandItem
+                            key={level}
+                            value={level}
+                            onSelect={(currentValue) => {
+                              setSelectedDesignation(currentValue === selectedDesignation ? '' : level);
+                              setDesignationPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedDesignation === level ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {level}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
                     ))}
-                  </CommandGroup>
+                  </div>
                 </Command>
               </PopoverContent>
             </Popover>

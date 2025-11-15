@@ -227,6 +227,18 @@ export const profileEditUtils = {
         }
         break;
       
+      case 'phoneNumber':
+        if (value && typeof value === 'string') {
+          // Remove spaces, dashes, parentheses for validation
+          const cleanedPhone = value.replace(/[\s\-()]/g, '');
+          // Check if it contains only digits and optional + at the start
+          const phoneRegex = /^\+?[0-9]{7,15}$/;
+          if (!phoneRegex.test(cleanedPhone)) {
+            return 'Please enter a valid phone number (7-15 digits)';
+          }
+        }
+        break;
+      
       case 'skills':
         if (Array.isArray(value)) {
           if (value.length > 20) {

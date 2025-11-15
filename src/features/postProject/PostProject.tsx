@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import HeroSection from "./components/HeroSection";
 import ProjectForm from "./components/ProjectForm";
 import { auth, db } from "@/firebaseConfig";
+import { User } from "firebase/auth";
 import {
   getStorage,
   ref as storageRef,
@@ -22,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { CheckCircle, ArrowRight } from "lucide-react";
 import { updateUserProfileForProject } from "../../Services/projectService";
+import { PhoneNumberModal } from "./components/PhoneNumberModal";
+import { userProfileService } from "@/Services/userProfileService";
 
 export interface FormData {
   title: string;
@@ -43,6 +46,7 @@ const PostProject = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPostAnotherModal, setShowPostAnotherModal] = useState(false);
+  const [showPhoneNumberModal, setShowPhoneNumberModal] = useState(false);
 
   const initialFormData: FormData = {
     title: "",
@@ -133,6 +137,7 @@ const PostProject = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // First, validate the form
     const error = validateForm();
     if (error) {
       toast({
@@ -156,6 +161,76 @@ const PostProject = () => {
         return;
       }
 
+      // Check if user has a phone number
+      const userProfile = await userProfileService.getProfile();
+      if (!userProfile.user.phoneNumber || userProfile.user.phoneNumber.trim() === "") {
+        // Show phone number modal
+        setIsSubmitting(false);
+        setShowPhoneNumberModal(true);
+        return;
+      }
+
+      // Continue with project submission
+      await submitProject(user);
+    } catch (error: unknown) {
+      console.error("Submission error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast({
+        title: "Submission Failed",
+        description:
+          errorMessage || "An error occurred while posting the project.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePhoneNumberAdded = async () => {
+    // After phone number is added, retry the submission
+    setIsSubmitting(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to post a project.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Verify phone number was added
+      const userProfile = await userProfileService.getProfile();
+      if (!userProfile.user.phoneNumber || userProfile.user.phoneNumber.trim() === "") {
+        toast({
+          title: "Phone Number Required",
+          description: "Please add your phone number to continue.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Continue with project submission
+      await submitProject(user);
+    } catch (error: unknown) {
+      console.error("Submission error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast({
+        title: "Submission Failed",
+        description:
+          errorMessage || "An error occurred while posting the project.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitProject = async (user: User) => {
+    try {
       let imageUrl = null;
       const documents: Array<{
         url: string;
@@ -286,6 +361,7 @@ const PostProject = () => {
           errorMessage || "An error occurred while posting the project.",
         variant: "destructive",
       });
+      throw error; // Re-throw to be caught by caller
     } finally {
       setIsSubmitting(false);
     }
@@ -382,6 +458,13 @@ const PostProject = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Phone Number Modal */}
+      <PhoneNumberModal
+        open={showPhoneNumberModal}
+        onOpenChange={setShowPhoneNumberModal}
+        onPhoneNumberAdded={handlePhoneNumberAdded}
+      />
     </div>
   );
 };
