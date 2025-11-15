@@ -149,6 +149,9 @@ const RefundPolicy: React.FC = () => {
                   Processing or administrative fees may be deducted in
                   accordance with the payment provider's policy.
                 </li>
+                <li>
+                  <strong>Deposit and Service Fee Policy:</strong> The 10% fee paid by the customer to approve the service is never refunded. This fee covers the initial project evaluation, employee assignment, and platform service costs incurred during the project setup process. Once a project is approved and an employee is assigned, the deposit becomes non-refundable to ensure commitment from both parties and to compensate for the resources allocated to the project.
+                </li>
               </ol>
             </section>
 
