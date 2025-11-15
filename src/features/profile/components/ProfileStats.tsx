@@ -1,4 +1,4 @@
-import { Star, Clock } from "lucide-react";
+import { Star, Clock, Phone, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { UserProfile } from "../types/profile";
 import { BuyerProject } from "@/Services/projectService";
@@ -107,6 +107,38 @@ export const ProfileStats = ({
                 : "No mcn"}
             </span>
           </div>
+
+          {/* 📱 Phone Number - Inline Editable for buyers */}
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Phone className="w-4 h-4 flex-shrink-0" />
+            {isOwnProfile && isEditMode ? (
+              <InlineEditField
+                fieldName="phoneNumber"
+                value={inlineEdit.getFieldValue('phoneNumber') as string || ''}
+                isEditing={inlineEdit.isEditing('phoneNumber')}
+                isSaving={inlineEdit.isSaving('phoneNumber')}
+                onStartEdit={() => inlineEdit.startEditing('phoneNumber')}
+                onSave={() => inlineEdit.saveField('phoneNumber')}
+                onCancel={() => inlineEdit.cancelEditing('phoneNumber')}
+                onValueChange={(value) => inlineEdit.updateFieldValue('phoneNumber', value)}
+                displayClassName="text-xs sm:text-sm"
+                placeholder="Add phone number"
+                showEditIcon={true}
+              />
+            ) : (
+              <span className="text-xs sm:text-sm">
+                {profile.phoneNumber || 'No phone number'}
+              </span>
+            )}
+          </div>
+
+          {/* 📍 Location */}
+          {profile.location && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <MapPin className="w-4 h-4" />
+              <span className="text-xs sm:text-sm">{profile.location}</span>
+            </div>
+          )}
         </>
       )}
     </div>
