@@ -29,7 +29,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MoreHorizontal, RefreshCw, AlertCircle, UserCheck, Eye, DollarSign, CheckCircle, FolderOpen, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { MoreHorizontal, RefreshCw, AlertCircle, UserCheck, Eye, DollarSign, CheckCircle, FolderOpen, Clock, CheckCircle2, Loader2, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectDetailsModal } from "@/features/admin/components/ProjectDetailsModal";
 import LoadingSpinner from "@/components/ui/loading-spinner";
@@ -54,10 +66,12 @@ export function UrgentProjectsView() {
     name: string;
     email: string;
     role: string;
+    designation?: string;
   }>>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [assigningEmployee, setAssigningEmployee] = useState(false);
   const [submittingPrice, setSubmittingPrice] = useState(false);
+  const [employeePopoverOpen, setEmployeePopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchEmployees = async () => {
@@ -75,6 +89,14 @@ export function UrgentProjectsView() {
         variant: "destructive",
       });
     }
+  };
+
+  const getSelectedEmployeeDisplay = () => {
+    const selectedEmployee = employees.find(emp => emp.uid === selectedEmployeeId);
+    if (selectedEmployee) {
+      return `${selectedEmployee.name}${selectedEmployee.designation ? ` (${selectedEmployee.designation})` : ''}`;
+    }
+    return "Select an employee";
   };
 
   useEffect(() => {
@@ -244,6 +266,7 @@ export function UrgentProjectsView() {
     setIsAssignModalOpen(false);
     setSelectedProject(null);
     setSelectedEmployeeId("");
+    setEmployeePopoverOpen(false);
   };
 
   const handleAssignEmployee = async () => {
@@ -758,27 +781,55 @@ export function UrgentProjectsView() {
               <Label htmlFor="employee">
                 Select Employee
               </Label>
-              <Select
-                value={selectedEmployeeId}
-                onValueChange={setSelectedEmployeeId}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select an employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.length === 0 ? (
-                    <SelectItem value="no-employees" disabled>
-                      No employees available
-                    </SelectItem>
-                  ) : (
-                    employees.map((employee) => (
-                      <SelectItem key={employee.uid} value={employee.uid}>
-                        {employee.name} ({employee.email})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <Popover open={employeePopoverOpen} onOpenChange={setEmployeePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={employeePopoverOpen}
+                    className="w-full justify-between"
+                  >
+                    {getSelectedEmployeeDisplay()}
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search employees..." />
+                    <CommandEmpty>No employees found.</CommandEmpty>
+                    <CommandGroup>
+                      {employees.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          No employees available
+                        </div>
+                      ) : (
+                        employees.map((employee) => (
+                          <CommandItem
+                            key={employee.uid}
+                            value={`${employee.name} ${employee.email} ${employee.designation || ''}`}
+                            onSelect={() => {
+                              setSelectedEmployeeId(employee.uid);
+                              setEmployeePopoverOpen(false);
+                            }}
+                          >
+                            <div className="flex flex-col w-full gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{employee.name}</span>
+                                {employee.designation && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {employee.designation}
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground">{employee.email}</span>
+                            </div>
+                          </CommandItem>
+                        ))
+                      )}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             {selectedProject && (
               <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">

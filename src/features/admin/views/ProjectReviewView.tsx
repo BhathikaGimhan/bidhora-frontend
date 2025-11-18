@@ -27,7 +27,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MoreHorizontal, Eye, DollarSign, CheckCircle, X, UserCheck, FolderOpen, Clock, CheckCircle2, RefreshCw, Loader2 } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { MoreHorizontal, Eye, DollarSign, CheckCircle, X, UserCheck, FolderOpen, Clock, CheckCircle2, RefreshCw, Loader2, ChevronDown } from "lucide-react";
 import { Project } from "@/features/admin/models/ProjectModel";
 import { useToast } from "@/hooks/use-toast";
 import { projectController } from "@/features/admin/controllers/projectController";
@@ -62,6 +74,7 @@ export function ProjectReviewView() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [assigningEmployee, setAssigningEmployee] = useState(false);
   const [submittingPrice, setSubmittingPrice] = useState(false);
+  const [employeePopoverOpen, setEmployeePopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchProjects = async () => {
@@ -131,6 +144,14 @@ export function ProjectReviewView() {
         variant: "destructive",
       });
     }
+  };
+
+  const getSelectedEmployeeDisplay = () => {
+    const selectedEmployee = employees.find(emp => emp.uid === selectedEmployeeId);
+    if (selectedEmployee) {
+      return `${selectedEmployee.name}${selectedEmployee.designation ? ` (${selectedEmployee.designation})` : ''}`;
+    }
+    return "Choose an employee...";
   };
 
   useEffect(() => {
@@ -245,6 +266,7 @@ export function ProjectReviewView() {
     setIsAssignModalOpen(false);
     setSelectedProject(null);
     setSelectedEmployeeId("");
+    setEmployeePopoverOpen(false);
   };
 
   const handleAssignEmployee = async () => {
@@ -750,37 +772,55 @@ export function ProjectReviewView() {
 
                 <div className="space-y-2">
                   <Label htmlFor="employee">Select Employee</Label>
-                  <Select
-                    value={selectedEmployeeId}
-                    onValueChange={setSelectedEmployeeId}
-                  >
-                    <SelectTrigger id="employee">
-                      <SelectValue placeholder="Choose an employee..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees.length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground text-center">
-                          No employees available
-                        </div>
-                      ) : (
-                        employees.map((employee) => (
-                          <SelectItem key={employee.uid} value={employee.uid}>
-                            <div className="flex items-center gap-2">
-                              <span>{employee.name}</span>
-                              {employee.designation && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {employee.designation}
-                                </Badge>
-                              )}
-                              <span className="text-xs text-muted-foreground">
-                                ({employee.email})
-                              </span>
+                  <Popover open={employeePopoverOpen} onOpenChange={setEmployeePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={employeePopoverOpen}
+                        className="w-full justify-between"
+                      >
+                        {getSelectedEmployeeDisplay()}
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search employees..." />
+                        <CommandEmpty>No employees found.</CommandEmpty>
+                        <CommandGroup>
+                          {employees.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              No employees available
                             </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                          ) : (
+                            employees.map((employee) => (
+                              <CommandItem
+                                key={employee.uid}
+                                value={`${employee.name} ${employee.email} ${employee.designation || ''}`}
+                                onSelect={() => {
+                                  setSelectedEmployeeId(employee.uid);
+                                  setEmployeePopoverOpen(false);
+                                }}
+                              >
+                                <div className="flex flex-col w-full gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{employee.name}</span>
+                                    {employee.designation && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {employee.designation}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">{employee.email}</span>
+                                </div>
+                              </CommandItem>
+                            ))
+                          )}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <p className="text-xs text-muted-foreground">
                     The selected employee will receive an email notification with project details.
                   </p>
