@@ -43,6 +43,7 @@ import LoadingSpinner from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 import { auth } from "@/firebaseConfig";
 import { useToast } from "@/hooks/use-toast";
+import { SERVICE_CATEGORIES } from "@/constants/serviceCategories";
 
 const ReviewCenter = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -123,92 +124,16 @@ const ReviewCenter = () => {
     }
   };
 
-  const categories = [
-    "all",
-    // Writing & Translation
-    "Articles & Blog Posts",
-    "Copywriting",
-    "Translation",
-    "Proofreading",
-    "Resume Writing",
-    "Business Names & Slogans",
-    // Academic Services
-    "Report Writing",
-    "Assignments",
-    "Presentations",
-    "Research Papers",
-    "Thesis & Dissertation Assistance",
-    // Finance & Accounting
-    "Bookkeeping",
-    "Business Valuation",
-    "Financial Forecasting",
-    // Consulting & Career
-    "Business Consulting",
-    "Resume Review",
-    "Career Coaching",
-    // Business
-    "Business Plans",
-    "Market Research",
-    "Virtual Assistance",
-    "Branding Services",
-    // Digital Marketing
-    "SEO",
-    "Social Media Marketing",
-    "Email Marketing",
-    "Marketing Strategy",
-    // Programming & Tech
-    "Website & App Development",
-    "Game Development",
-    "Chatbot & Automation",
-    "Software Development",
-    "AI Tools Setup",
-    // Graphics & Design
-    "Logo Design",
-    "Illustrations",
-    "Web Design",
-    "Product & Packaging Design",
-    "3D Models",
-    // Music & Audio
-    "Voice Overs",
-    "Mixing & Mastering",
-    "Podcast Editing",
-    "Music Production",
-    // AI Services
-    "AI Image Generation",
-    "AI Voiceover",
-    "AI Video",
-    // Lifestyle
-    "Life Coaching",
-    "Fitness & Diet Plans",
-    "Online Lessons",
-    // Video & Animation
-    "Video Editing",
-    "Explainer Videos",
-    "3D Animation",
-    "Logo Animation",
-    "Product & Ad Videos",
-    // Writing & Research Support
-    "Ghostwriting",
-    "Proofreading & Editing",
-    "Citation & Referencing Help",
-    "Literature Review Assistance",
-    "Study Notes & Summaries",
-    // Marketing & Branding Support
-    "Brand Identity Consulting",
-    "Campaign Strategy Support",
-    "Press Release Writing",
-    "Market Analysis Reports",
-    "Social Media Content Planning",
-  ];
+  const categories = ["all", ...SERVICE_CATEGORIES];
 
   const filteredReviews =
     selectedCategory === "all"
       ? reviews
       : reviews.filter((review) => {
-          // Filter by exact category match in project title or category field
-          const title = review.projectTitle.toLowerCase();
+          // Filter by checking if project title contains the selected category
+          const projectTitle = review.projectTitle.toLowerCase();
           const category = selectedCategory.toLowerCase();
-          return title.includes(category);
+          return projectTitle.includes(category);
         });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
