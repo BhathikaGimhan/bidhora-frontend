@@ -424,6 +424,12 @@ export function ProjectReviewView() {
       },
     },
     {
+      key: "assignedEmployeeName",
+      title: "Assigned Employee",
+      sortable: true,
+      render: (value: string) => value || <span className="text-muted-foreground">Not assigned</span>,
+    },
+    {
       key: "status",
       title: "Status",
       sortable: true,
@@ -465,7 +471,7 @@ export function ProjectReviewView() {
           </DropdownMenuItem>
         )}
         {project.status === "ready_to_assign" && 
-         !(project as any).assignedEmployeeId && (
+         !project.assignedEmployeeId && (
           <DropdownMenuItem onClick={() => handleOpenAssignModal(project)}>
             <UserCheck className="mr-2 h-4 w-4" />
             Assign Employee
