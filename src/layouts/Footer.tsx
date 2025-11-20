@@ -16,13 +16,13 @@ const Footer = () => {
             </p>
           </div>
 
-          <div className="text-left z-[99]">
+          <div className="text-left">
             <h4 className="font-semibold text-brand-white mb-4">Quick Links</h4>
             <ul className="space-y-2">
               <li>
                 <Link
                   to="/"
-                  className="text-gray-400 hover:text-brand-primary transition-colors z-[99] duration-300"
+                  className="text-gray-400 hover:text-brand-primary transition-colors duration-300"
                 >
                   Home
                 </Link>
@@ -30,7 +30,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/learn-more"
-                  className="text-gray-400 hover:text-brand-primary transition-colors z-[99] duration-300"
+                  className="text-gray-400 hover:text-brand-primary transition-colors duration-300"
                 >
                   Learn More
                 </Link>
@@ -38,13 +38,13 @@ const Footer = () => {
             </ul>
           </div>
 
-          <div className="text-left z-[99]">
+          <div className="text-left">
             <h4 className="font-semibold text-brand-white mb-4">Support</h4>
             <ul className="space-y-2">
               <li>
                 <Link
                   to="/help-center"
-                  className="text-gray-400 hover:text-brand-primary transition-colors z-[99] duration-300"
+                  className="text-gray-400 hover:text-brand-primary transition-colors duration-300"
                 >
                   Help Center
                 </Link>
@@ -52,7 +52,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/refund-policy"
-                  className="text-gray-400 hover:text-brand-primary transition-colors z-[99] duration-300"
+                  className="text-gray-400 hover:text-brand-primary transition-colors duration-300"
                 >
                   Refund Policy
                 </Link>
@@ -60,7 +60,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/terms"
-                  className="text-gray-400 hover:text-brand-primary transition-colors z-[99] duration-300"
+                  className="text-gray-400 hover:text-brand-primary transition-colors duration-300"
                 >
                   Terms of Service
                 </Link>
@@ -68,7 +68,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/privacy"
-                  className="text-gray-400 hover:text-brand-primary transition-colors z-[99] duration-300"
+                  className="text-gray-400 hover:text-brand-primary transition-colors duration-300"
                 >
                   Privacy Policy
                 </Link>
@@ -84,7 +84,7 @@ const Footer = () => {
                 href="https://www.tiktok.com/@bidhora.pvt.ltd"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-brand-primary transition-colors duration-300 p-2 rounded-lg z-[99] hover:bg-brand-primary/10"
+                className="text-gray-400 hover:text-brand-primary transition-colors duration-300 p-2 rounded-lg hover:bg-brand-primary/10"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -101,7 +101,7 @@ const Footer = () => {
                 href="https://www.linkedin.com/company/bidhora"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-brand-primary transition-colors duration-300 p-2 rounded-lg z-[99] hover:bg-brand-primary/10"
+                className="text-gray-400 hover:text-brand-primary transition-colors duration-300 p-2 rounded-lg hover:bg-brand-primary/10"
               >
                 <Linkedin className="w-5 h-5" />
               </a>
@@ -109,7 +109,7 @@ const Footer = () => {
                 href="https://web.facebook.com/profile.php?id=61580203743171"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-brand-primary transition-colors duration-300 p-2 rounded-lg z-[99] hover:bg-brand-primary/10"
+                className="text-gray-400 hover:text-brand-primary transition-colors duration-300 p-2 rounded-lg hover:bg-brand-primary/10"
               >
                 <Facebook className="w-5 h-5" />
               </a>
