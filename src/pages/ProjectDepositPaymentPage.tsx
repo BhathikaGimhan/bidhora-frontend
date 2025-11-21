@@ -440,8 +440,8 @@ export default function ProjectDepositPaymentPage() {
             </div>
 
             <div className="pt-4">
-              <Button onClick={() => navigate("/dashboard")} className="w-full">
-                Go to Dashboard
+              <Button onClick={() => navigate(`/profile/${auth.currentUser?.uid}`)} className="w-full">
+                Go to Profile
               </Button>
             </div>
           </CardContent>
