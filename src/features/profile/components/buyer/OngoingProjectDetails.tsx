@@ -158,6 +158,7 @@ export const OngoingProjectDetails = ({
       'ready_to_assign': 'Ready to Assign',
       'assigned': 'Assigned to Employee',
       'completed_by_employee': 'Completed - Awaiting Approval',
+      'awaiting_final_payment': 'Awaiting Final Payment',
       'completed': 'Completed',
       'priced': 'Priced - Awaiting Approval',
       'admin_review': 'Under Admin Review',
@@ -172,6 +173,7 @@ export const OngoingProjectDetails = ({
       'ready_to_assign': 'bg-indigo-100 text-indigo-800 border-indigo-200',
       'assigned': 'bg-blue-100 text-blue-800 border-blue-200',
       'completed_by_employee': 'bg-teal-100 text-teal-800 border-teal-200',
+      'awaiting_final_payment': 'bg-amber-100 text-amber-800 border-amber-200',
       'completed': 'bg-green-100 text-green-800 border-green-200',
       'priced': 'bg-purple-100 text-purple-800 border-purple-200',
     };
@@ -330,6 +332,49 @@ export const OngoingProjectDetails = ({
                     </div>
                   </>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Awaiting Final Payment Section - Show when admin approved but payment not made */}
+          {(project.status as string) === 'awaiting_final_payment' && (
+            <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                  <AlertCircle className="w-5 h-5" />
+                  Final Payment Required
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    Great news! Your project has been completed and approved by our admin team.
+                  </p>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    To access and download your completed work files, please complete the final payment.
+                  </p>
+                </div>
+                
+                <div className="p-4 bg-white dark:bg-blue-900 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <span className="font-medium text-blue-900 dark:text-blue-100">
+                      Payment Details
+                    </span>
+                  </div>
+                  {project.adminPrice && (
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Final Payment Amount: <span className="font-semibold">LKR {project.adminPrice.toLocaleString()}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-amber-800 dark:text-amber-200">
+                    Your completed project files will be available for download immediately after payment confirmation.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )}

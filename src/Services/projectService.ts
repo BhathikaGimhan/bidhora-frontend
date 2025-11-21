@@ -58,6 +58,7 @@ export interface Project {
     | "pending"
     | "admin_review"
     | "priced"
+    | "ready_to_assign"
     | "customer_approved"
     | "approved"
     | "assigned"

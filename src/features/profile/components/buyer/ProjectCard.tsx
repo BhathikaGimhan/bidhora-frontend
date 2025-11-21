@@ -32,6 +32,8 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed_by_employee':
         return 'bg-teal-100 text-teal-800 border-teal-200';
+      case 'awaiting_final_payment':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       case 'ongoing':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed':
@@ -61,6 +63,8 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
         return 'In Progress';
       case 'completed_by_employee':
         return 'Submitted - Under Review';
+      case 'awaiting_final_payment':
+        return 'Awaiting Final Payment';
       case 'ongoing':
         return 'Ongoing';
       case 'completed':

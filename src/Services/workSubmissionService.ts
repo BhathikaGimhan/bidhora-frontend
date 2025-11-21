@@ -380,7 +380,7 @@ export const updateWorkSubmissionStatus = async (
         adminReviewedAt: Timestamp.now(),
         adminReviewedBy: user.uid,
         adminReviewNotes: reviewNotes || null,
-        status: status === "approved" ? "completed" : "needs_revision",
+        status: status === "approved" ? "awaiting_final_payment" : "needs_revision",
       });
 
       // If approved, trigger final payment email to buyer

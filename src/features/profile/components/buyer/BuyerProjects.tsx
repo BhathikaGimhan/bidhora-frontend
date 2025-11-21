@@ -48,6 +48,7 @@ const buyerProjectToProject = (buyerProject: BuyerProject): Omit<Project, 'statu
     | "ready_to_assign" 
     | "assigned" 
     | "completed_by_employee" 
+    | "awaiting_final_payment"
     | "completed" 
     | "cancelled"
     | "ongoing" // Legacy status
@@ -223,7 +224,7 @@ export const BuyerProjects = ({
       setCurrentTab("open");
     } else if (project?.status === "ongoing") {
       setCurrentTab("ongoing");
-    } else if (project?.status === "completed") {
+    } else if (project?.status === "completed" || (project?.status as string) === "awaiting_final_payment") {
       setCurrentTab("completed");
     }
     setCurrentView("details");
@@ -316,8 +317,8 @@ export const BuyerProjects = ({
           projectStatus === "completed_by_employee"
         );
       } else if (status === "completed") {
-        // "Completed" tab: completed only
-        return projectStatus === "completed";
+        // "Completed" tab: awaiting_final_payment and completed
+        return projectStatus === "completed" || projectStatus === "awaiting_final_payment";
       }
       return projectStatus === status;
     });

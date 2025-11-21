@@ -90,7 +90,16 @@ class ProjectController {
         skillsRequired: project.skills || [],
         featured: false, // Default to false since not in Firestore data
         isUrgent: project.isUrgent || false, // Include isUrgent field
-        documents: project.documents || [], // Include buyer's uploaded documents
+        assignedEmployeeId: project.assignedEmployeeId,
+        assignedEmployeeName: project.assignedEmployeeName,
+        assignedEmployeeEmail: project.assignedEmployeeEmail,
+        assignedAt: project.assignedAt && project.assignedAt instanceof Date 
+          ? project.assignedAt.toISOString() 
+          : undefined,
+        documents: project.documents?.map(doc => ({
+          ...doc,
+          uploadedAt: doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : doc.uploadedAt
+        })) || [], // Include buyer's uploaded documents with proper type conversion
       }));
 
       this.isLoaded = true;
@@ -162,7 +171,7 @@ class ProjectController {
     status: Project["status"]
   ): Promise<boolean> {
     try {
-      await updateProjectStatus(id, status);
+      await updateProjectStatus(id, status as any);
       // Reload projects to get updated data
       await this.loadProjects();
       return true;

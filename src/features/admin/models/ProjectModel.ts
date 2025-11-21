@@ -28,6 +28,10 @@ export interface Project {
   skillsRequired: string[];
   featured: boolean;
   isUrgent?: boolean;
+  assignedEmployeeId?: string;
+  assignedEmployeeName?: string;
+  assignedEmployeeEmail?: string;
+  assignedAt?: string;
   documents?: ProjectDocument[]; // Buyer's uploaded documents
 }
 

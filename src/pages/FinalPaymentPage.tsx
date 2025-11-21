@@ -116,7 +116,7 @@ export default function FinalPaymentPage() {
             description: 'The requested project could not be found',
             variant: 'destructive',
           });
-          navigate('/dashboard');
+          navigate(`/profile/${auth.currentUser?.uid}`);
           return;
         }
 
@@ -192,7 +192,7 @@ export default function FinalPaymentPage() {
             description: 'You do not have permission to access this payment page. Please contact support if you believe this is an error.',
             variant: 'destructive',
           });
-          navigate('/dashboard');
+          navigate(`/profile/${auth.currentUser?.uid}`);
           return;
         }
 
@@ -210,7 +210,7 @@ export default function FinalPaymentPage() {
             description: 'The project work has not been approved by admin yet',
             variant: 'default',
           });
-          navigate('/dashboard');
+          navigate(`/profile/${auth.currentUser?.uid}`);
           return;
         }
 
@@ -223,7 +223,7 @@ export default function FinalPaymentPage() {
           description: 'Failed to load payment details. Please try again.',
           variant: 'destructive',
         });
-        navigate('/dashboard');
+        navigate(`/profile/${auth.currentUser?.uid}`);
       } finally {
         setLoading(false);
       }
@@ -672,8 +672,8 @@ export default function FinalPaymentPage() {
             )}
 
             <div className="pt-4">
-              <Button onClick={() => navigate("/dashboard")} className="w-full">
-                Go to Dashboard
+              <Button onClick={() => navigate(`/profile/${auth.currentUser?.uid}`)} className="w-full">
+                Go to Profile
               </Button>
             </div>
           </CardContent>
@@ -786,11 +786,11 @@ export default function FinalPaymentPage() {
           <div className="pt-4">
             <Button
               variant="ghost"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(`/profile/${auth.currentUser?.uid}`)}
               disabled={processing}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              Back to Profile
             </Button>
           </div>
         </CardContent>
