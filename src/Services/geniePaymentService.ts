@@ -35,87 +35,98 @@ export interface PaymentResult {
 }
 
 export interface GeniePaymentResponse {
-  status: string;
+  success?: boolean;
+  status?: string;
   paymentId: string;
+  transactionId?: string;
   orderId: string;
   amount: string;
   currency: string;
+  state?: string;
   redirectUrl?: string;
+  shortUrl?: string;
+  expires?: string;
 }
 
 class GeniePaymentService {
-  private merchantId: string;
+  private applicationId: string;
   private apiKey: string;
-  private baseUrl: string;
-  private isSandbox: boolean;
+  private publicKey: string;
+  private cloudFunctionUrl: string;
 
   constructor() {
     // Genie Payment Gateway credentials
-    this.merchantId = import.meta.env.VITE_GENIE_MERCHANT_ID || '';
+    this.applicationId = import.meta.env.VITE_GENIE_APPLICATION_ID || '';
     this.apiKey = import.meta.env.VITE_GENIE_API_KEY || '';
-    this.isSandbox = import.meta.env.VITE_GENIE_SANDBOX === 'true' || true;
-    this.baseUrl = this.isSandbox 
-      ? 'https://test-payment.geniebiz.lk/api'
-      : 'https://payment.geniebiz.lk/api';
+    this.publicKey = import.meta.env.VITE_GENIE_PUBLIC_KEY || '';
+    // Cloud Function URL for proxying Genie API calls (bypasses CORS)
+    this.cloudFunctionUrl = import.meta.env.VITE_GENIE_CLOUD_FUNCTION_URL || 
+      'https://geniepayment-e7fpchtlna-uc.a.run.app';
   }
 
   /**
-   * Initiate payment with Genie
+   * Initiate payment with Genie via Cloud Function
+   * @param config Payment configuration
+   * @param environment 'production' or 'uat' - defaults to 'production'
    */
-  async initiatePayment(config: GeniePaymentConfig): Promise<GeniePaymentResponse> {
+  async initiatePayment(
+    config: GeniePaymentConfig, 
+    environment: 'production' | 'uat' = 'production'
+  ): Promise<GeniePaymentResponse> {
     try {
       console.log('🚀 Initiating Genie payment:', {
         orderId: config.orderId,
         amount: config.amount,
         currency: config.currency,
-        merchantId: this.merchantId,
-        sandbox: this.isSandbox
+        applicationId: this.applicationId,
+        environment,
       });
 
-      const paymentData = {
-        merchant_id: this.merchantId,
-        api_key: this.apiKey,
-        order_id: config.orderId,
-        amount: config.amount,
-        currency: config.currency,
-        description: config.description,
-        customer_email: config.customerEmail,
-        customer_name: config.customerName,
-        customer_phone: config.customerPhone || '',
-        return_url: config.returnUrl,
-        cancel_url: config.cancelUrl,
-        notify_url: config.notifyUrl,
-      };
-
-      const response = await fetch(`${this.baseUrl}/payment/initiate`, {
+      // Call Cloud Function instead of Genie API directly (bypasses CORS)
+      const response = await fetch(this.cloudFunctionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(paymentData),
+        body: JSON.stringify({
+          action: 'initiate',
+          environment,
+          paymentData: {
+            amount: config.amount,
+            currency: config.currency,
+            orderId: config.orderId,
+            description: config.description,
+            customerEmail: config.customerEmail,
+            customerName: config.customerName,
+            customerPhone: config.customerPhone,
+            returnUrl: config.returnUrl,
+            cancelUrl: config.cancelUrl,
+            notifyUrl: config.notifyUrl,
+          },
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Payment initiation failed');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Cloud Function Error:', errorData);
+        throw new Error(errorData.error || errorData.message || `Payment initiation failed: ${response.statusText}`);
       }
 
       const result = await response.json();
       
       console.log('✅ Genie payment initiated:', {
-        paymentId: result.payment_id,
-        orderId: result.order_id,
-        redirectUrl: result.redirect_url
+        paymentId: result.paymentId,
+        orderId: result.orderId,
+        redirectUrl: result.redirectUrl
       });
 
       return {
-        status: result.status,
-        paymentId: result.payment_id,
-        orderId: result.order_id,
+        status: result.status || 'pending',
+        paymentId: result.paymentId,
+        orderId: result.orderId,
         amount: result.amount,
         currency: result.currency,
-        redirectUrl: result.redirect_url,
+        redirectUrl: result.redirectUrl,
       };
     } catch (error) {
       console.error('❌ Genie payment error:', error);
@@ -124,35 +135,45 @@ class GeniePaymentService {
   }
 
   /**
-   * Verify payment status
+   * Verify payment status via Cloud Function
+   * @param paymentId Transaction/Payment ID to verify
+   * @param environment 'production' or 'uat' - defaults to 'production'
    */
-  async verifyPayment(paymentId: string): Promise<{ status: string; orderId: string }> {
+  async verifyPayment(
+    paymentId: string, 
+    environment: 'production' | 'uat' = 'production'
+  ): Promise<{ status: string; orderId: string }> {
     try {
-      console.log('🔍 Verifying payment:', paymentId);
+      console.log('🔍 Verifying payment:', { paymentId, environment });
 
-      const response = await fetch(`${this.baseUrl}/payment/verify/${paymentId}`, {
-        method: 'GET',
+      const response = await fetch(this.cloudFunctionUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
         },
+        body: JSON.stringify({
+          action: 'verify',
+          environment,
+          paymentId: paymentId,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Payment verification failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Payment verification failed');
       }
 
       const result = await response.json();
       
       console.log('✅ Payment verified:', {
-        paymentId: result.payment_id,
+        paymentId: paymentId,
         status: result.status,
-        orderId: result.order_id
+        orderId: result.orderId
       });
 
       return {
         status: result.status,
-        orderId: result.order_id,
+        orderId: result.orderId,
       };
     } catch (error) {
       console.error('❌ Payment verification error:', error);
@@ -161,9 +182,9 @@ class GeniePaymentService {
   }
 
   /**
-   * Get sandbox test credentials
+   * Get test credentials for development
    */
-  getSandboxTestCredentials() {
+  getTestCredentials() {
     return {
       testCard: {
         number: '4111111111111111',
@@ -179,10 +200,10 @@ class GeniePaymentService {
   }
 
   /**
-   * Check if running in sandbox mode
+   * Check if credentials are configured
    */
-  isSandboxMode(): boolean {
-    return this.isSandbox;
+  isConfigured(): boolean {
+    return !!(this.applicationId && this.apiKey);
   }
 
   // ============================================
@@ -285,42 +306,89 @@ class GeniePaymentService {
   }
 
   /**
-   * Process final payment (Testing/Sandbox Mode)
-   * This simulates payment processing for the remaining 90%
+   * Process final payment
+   * @param paymentData Final payment data
+   * @param environment 'production' or 'uat' - defaults to 'production'
+   * @param useMock Use mock payment for testing (default: true)
    */
-  async processFinalPayment(paymentData: FinalPaymentData): Promise<PaymentResult> {
+  async processFinalPayment(
+    paymentData: FinalPaymentData,
+    environment: 'production' | 'uat' = 'production',
+    useMock: boolean = true
+  ): Promise<PaymentResult> {
     try {
-      console.log('💳 Processing final payment (Testing Mode):', {
+      console.log('💳 Processing final payment:', {
         projectId: paymentData.projectId,
         amount: paymentData.amount,
         buyer: paymentData.buyerEmail,
+        environment,
+        useMock,
       });
 
-      // Simulate payment processing delay (2 seconds)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (useMock) {
+        // Mock payment for testing
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const transactionId = `TEST_FINAL_${Date.now()}_${Math.random().toString(36).substring(7).toUpperCase()}`;
 
-      // Generate a mock transaction ID for testing
-      const transactionId = `TEST_FINAL_${Date.now()}_${Math.random().toString(36).substring(7).toUpperCase()}`;
+        const projectRef = doc(db, 'projects', paymentData.projectId);
+        await updateDoc(projectRef, {
+          finalPaymentStatus: 'paid',
+          finalPaymentId: transactionId,
+          finalPaymentAt: serverTimestamp(),
+          status: 'completed',
+        });
 
-      // Update project with payment completion
-      const projectRef = doc(db, 'projects', paymentData.projectId);
-      await updateDoc(projectRef, {
-        finalPaymentStatus: 'paid',
-        finalPaymentId: transactionId,
-        finalPaymentAt: serverTimestamp(),
-        status: 'completed',
-      });
+        console.log('✅ Final payment processed successfully (Mock):', {
+          transactionId,
+          projectId: paymentData.projectId,
+        });
 
-      console.log('✅ Final payment processed successfully:', {
-        transactionId,
-        projectId: paymentData.projectId,
-      });
+        return {
+          success: true,
+          message: 'Payment processed successfully (Testing Mode)',
+          transactionId,
+        };
+      } else {
+        // Real Genie payment
+        const order_id = `FINAL_${paymentData.projectId}_${Date.now()}`;
+        const baseUrl = window.location.origin;
 
-      return {
-        success: true,
-        message: 'Payment processed successfully (Testing Mode)',
-        transactionId,
-      };
+        const paymentConfig: GeniePaymentConfig = {
+          merchantId: '',
+          apiKey: '',
+          orderId: order_id,
+          amount: paymentData.amount.toFixed(2),
+          currency: 'LKR',
+          description: `Final Payment - ${paymentData.projectTitle}`,
+          customerEmail: paymentData.buyerEmail,
+          customerName: paymentData.buyerName,
+          customerPhone: '',
+          returnUrl: `${baseUrl}/payment/final/${paymentData.projectId}?status=success`,
+          cancelUrl: `${baseUrl}/payment/final/${paymentData.projectId}?status=cancelled`,
+          notifyUrl: `https://api-e7fpchtlna-uc.a.run.app/genie/notify`,
+        };
+
+        console.log('💳 Initiating Genie payment for final payment:', {
+          order_id,
+          amount: paymentConfig.amount,
+          environment,
+        });
+
+        const result = await this.initiatePayment(paymentConfig, environment);
+
+        console.log('✅ Genie payment initiated:', result);
+
+        // Redirect to payment page
+        if (result.redirectUrl) {
+          window.location.href = result.redirectUrl;
+        }
+
+        return {
+          success: true,
+          message: 'Redirecting to payment gateway...',
+          transactionId: result.paymentId,
+        };
+      }
     } catch (error) {
       console.error('❌ Error processing final payment:', error);
       return {

@@ -9,6 +9,7 @@
 
 const { setGlobalOptions } = require("firebase-functions");
 const { onRequest } = require("firebase-functions/https");
+const functions = require("firebase-functions");
 const logger = require("firebase-functions/logger");
 const nodemailer = require("nodemailer");
 
@@ -936,6 +937,207 @@ exports.sendFinalPaymentNotification = onRequest(
         success: false,
         message:
           "Failed to send final payment notification. Please try again later.",
+      });
+    }
+  }
+);
+
+/**
+ * Genie Payment Gateway Proxy
+ * Handles payment initiation and verification through Genie API
+ */
+exports.geniePayment = onRequest(
+  { cors: true, maxInstances: 10 },
+  async (req, res) => {
+    // Only allow POST requests
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const { action, paymentData, paymentId, environment } = req.body;
+
+    // Determine API base URL based on environment
+    const isUAT = environment === 'uat' || environment === 'test';
+    const GENIE_API_BASE = isUAT 
+      ? 'https://api.uat.geniebiz.lk' 
+      : 'https://api.geniebiz.lk';
+
+    logger.info("Genie environment", { 
+      environment: isUAT ? 'UAT' : 'Production',
+      baseUrl: GENIE_API_BASE 
+    });
+
+    // Get Genie credentials from environment variables (Firebase Functions v2)
+    // Use separate credentials for UAT and Production
+    const GENIE_APPLICATION_ID = isUAT
+      ? (process.env.GENIE_UAT_APPLICATION_ID || "36bafce7-a201-429b-a9e2-c5b78546677c")
+      : (process.env.GENIE_APPLICATION_ID || "e6092ac4-3dba-466c-b0a7-137566fd81af");
+    const GENIE_API_KEY = isUAT
+      ? (process.env.GENIE_UAT_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjM2YmFmY2U3LWEyMDEtNDI5Yi1hOWUyLWM1Yjc4NTQ2Njc3YyIsImNvbXBhbnlJZCI6IjYzOTdmMzlkZjA3ZmJhMDAwODQyYTkwYiIsImlhdCI6MTY3MDkwMjY4NSwiZXhwIjo0ODI2NTc2Mjg1fQ.fy12dgFhA3iB_RCjD7y8j5HClNRZUiBZgAg-QzFpxaE")
+      : (process.env.GENIE_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6ImU2MDkyYWM0LTNkYmEtNDY2Yy1iMGE3LTEzNzU2NmZkODFhZiIsImNvbXBhbnlJZCI6IjY5MWFmNTFiOTVhNDRhODY2MzkzYTgzNCIsImlhdCI6MTc2Mzc4Njg0MSwiZXhwIjo0OTE5NDYwNDQxfQ.CBoQW3aJauu9wtfFgPdVQCAqV9ZbS2YB93nFjw0kb40");
+
+    logger.info("Genie credentials loaded", {
+      environment: isUAT ? 'UAT' : 'Production',
+      appIdLength: GENIE_APPLICATION_ID?.length || 0,
+      apiKeyLength: GENIE_API_KEY?.length || 0,
+      appIdPrefix: GENIE_APPLICATION_ID?.substring(0, 8) || 'missing'
+    });
+
+    if (!GENIE_APPLICATION_ID || !GENIE_API_KEY) {
+      logger.error("Genie credentials not configured", {
+        appId: GENIE_APPLICATION_ID ? 'present' : 'missing',
+        apiKey: GENIE_API_KEY ? 'present' : 'missing'
+      });
+      res.status(500).json({ error: "Payment gateway not configured" });
+      return;
+    }
+
+    try {
+      if (action === "initiate") {
+        // Initiate payment
+        logger.info("Initiating Genie payment", { 
+          paymentData,
+          apiKeyPrefix: GENIE_API_KEY.substring(0, 20) + "..."
+        });
+
+        // Prepare request body for Genie API v2
+        const genieRequestBody = {
+          amount: parseFloat(paymentData.amount) * 100, // Convert to cents
+          currency: paymentData.currency,
+          localId: paymentData.orderId,
+          customerReference: paymentData.orderId,
+          redirectUrl: paymentData.returnUrl,
+          webhook: paymentData.notifyUrl,
+          customer: {
+            name: paymentData.customerName,
+            email: paymentData.customerEmail,
+            billingEmail: paymentData.customerEmail,
+            billingAddress1: "N/A",
+            billingCity: "Colombo",
+            billingCountry: "LK",
+            billingPostCode: "00000",
+            currency: paymentData.currency
+          }
+        };
+
+        const apiUrl = `${GENIE_API_BASE}/public/v2/transactions`;
+
+        logger.info("Sending to Genie API", { 
+          environment: isUAT ? 'UAT' : 'Production',
+          url: apiUrl,
+          requestBody: genieRequestBody,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `${GENIE_API_KEY.substring(0, 30)}...`
+          }
+        });
+
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: GENIE_API_KEY,
+          },
+          body: JSON.stringify(genieRequestBody),
+        });
+
+        logger.info("Genie API Response", {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorData = {};
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { message: errorText };
+          }
+          
+          logger.error("Genie API Error", {
+            status: response.status,
+            statusText: response.statusText,
+            errorData: errorData,
+            requestBody: {
+              amount: parseFloat(paymentData.amount),
+              currency: paymentData.currency,
+              reference: paymentData.orderId,
+            }
+          });
+          
+          res.status(response.status).json({
+            error: errorData.message || "Payment initiation failed",
+            details: errorData,
+          });
+          return;
+        }
+
+        const result = await response.json();
+        logger.info("Genie payment initiated successfully", { 
+          transactionId: result.id,
+          state: result.state,
+          url: result.url,
+          shortUrl: result.shortUrl
+        });
+
+        res.status(200).json({
+          success: true,
+          paymentId: result.id,
+          transactionId: result.id,
+          orderId: result.localId || result.customerReference || paymentData.orderId,
+          amount: result.amountAsDecimal || (result.amount / 100).toFixed(2),
+          currency: result.currency,
+          state: result.state,
+          redirectUrl: result.url,
+          shortUrl: result.shortUrl,
+          expires: result.expires
+        });
+      } else if (action === "verify") {
+        // Verify payment
+        logger.info("Verifying Genie payment", { 
+          paymentId,
+          environment: isUAT ? 'UAT' : 'Production'
+        });
+
+        const verifyUrl = `${GENIE_API_BASE}/public/v2/transactions/${paymentId}`;
+
+        const response = await fetch(verifyUrl, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: GENIE_API_KEY,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          logger.error("Genie verification error", errorData);
+          res.status(response.status).json({
+            error: errorData.message || "Payment verification failed",
+            details: errorData,
+          });
+          return;
+        }
+
+        const result = await response.json();
+        logger.info("Genie payment verified", { result });
+
+        res.status(200).json({
+          status: result.status,
+          orderId: result.reference || result.order_id,
+        });
+      } else {
+        res.status(400).json({ error: "Invalid action" });
+      }
+    } catch (error) {
+      logger.error("Genie payment error", error);
+      res.status(500).json({
+        error: "Payment processing failed",
+        message: error.message,
       });
     }
   }

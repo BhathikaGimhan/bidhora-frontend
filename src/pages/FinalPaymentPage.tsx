@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,12 +35,16 @@ import { geniePaymentService } from '@/Services/geniePaymentService';
 import { auth } from '@/firebaseConfig';
 import { submitProjectReview } from '@/Services/projectService';
 
-// Testing mode flag
-const USE_MOCK_PAYMENT = true; // Set to false for real payment
+// Payment mode - using real Genie payment gateway
+const USE_MOCK_PAYMENT = false; // Changed to false - using real payments
+
+// UAT Testing mode - set to true for testing with UAT API
+const USE_UAT_ENVIRONMENT = true; // Changed to true - using UAT for testing
 
 export default function FinalPaymentPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -51,6 +55,7 @@ export default function FinalPaymentPage() {
   const [hoveredRating, setHoveredRating] = useState(0);
   const [reviewFeedback, setReviewFeedback] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [useUATMode, setUseUATMode] = useState(USE_UAT_ENVIRONMENT);
 
   useEffect(() => {
     const loadPaymentDetails = async () => {
@@ -232,35 +237,97 @@ export default function FinalPaymentPage() {
     loadPaymentDetails();
   }, [projectId, navigate, toast]);
 
+  // Handle payment callback from Genie
+  useEffect(() => {
+    const handlePaymentCallback = async () => {
+      const status = searchParams.get('status');
+      
+      if (!status || !projectId) return;
+
+      console.log('💳 Final payment callback received:', { status, projectId });
+
+      if (status === 'success') {
+        try {
+          console.log('✅ Final payment successful, updating project status...');
+          
+          const { doc: firestoreDoc, updateDoc, Timestamp } = await import('firebase/firestore');
+          const { db } = await import('@/firebaseConfig');
+          
+          const order_id = `FINAL_${projectId}_`;
+          
+          const projectRef = firestoreDoc(db, 'projects', projectId);
+          await updateDoc(projectRef, {
+            finalPaymentStatus: 'paid',
+            finalPaymentId: order_id + Date.now(),
+            finalPaymentAt: Timestamp.now(),
+            status: 'completed',
+            updatedAt: Timestamp.now(),
+          });
+
+          console.log('✅ Final payment status updated successfully');
+          setPaymentCompleted(true);
+          
+          toast({
+            title: 'Payment Successful!',
+            description: 'Your final payment has been processed. You can now download your files.',
+          });
+          
+          // Clear URL params and reload
+          navigate(`/payment/final/${projectId}`, { replace: true });
+          
+          // Reload payment details
+          const updatedDetails = await geniePaymentService.getProjectPaymentDetails(projectId);
+          setPaymentDetails(updatedDetails);
+          
+        } catch (error) {
+          console.error('❌ Error updating final payment status:', error);
+          toast({
+            title: 'Error',
+            description: 'Payment was successful but failed to update status. Please contact support.',
+            variant: 'destructive',
+          });
+        }
+      } else if (status === 'cancelled') {
+        console.log('⚠️ Final payment was cancelled by user');
+        toast({
+          title: 'Payment Cancelled',
+          description: 'Payment was cancelled. You can try again when ready.',
+          variant: 'destructive',
+        });
+        
+        // Clear URL params
+        navigate(`/payment/final/${projectId}`, { replace: true });
+      }
+    };
+
+    if (projectId && paymentDetails) {
+      handlePaymentCallback();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, projectId, paymentDetails]);
+
   const handlePayment = async () => {
     if (!paymentDetails) return;
 
-    // Use mock payment for testing
-    if (USE_MOCK_PAYMENT) {
-      setShowMockPaymentModal(true);
-      return;
-    }
-
+    // Proceed with real Genie payment
     setProcessing(true);
     try {
-      const result = await geniePaymentService.processFinalPayment({
-        projectId: projectId!,
-        amount: paymentDetails.finalPayment,
-        buyerEmail: paymentDetails.buyerEmail,
-        buyerName: auth.currentUser?.displayName || 'Customer',
-        projectTitle: paymentDetails.projectTitle,
-      });
+      const result = await geniePaymentService.processFinalPayment(
+        {
+          projectId: projectId!,
+          amount: paymentDetails.finalPayment,
+          buyerEmail: paymentDetails.buyerEmail,
+          buyerName: auth.currentUser?.displayName || 'Customer',
+          projectTitle: paymentDetails.projectTitle,
+        },
+        useUATMode ? 'uat' : 'production',
+        false // Use real payment, not mock
+      );
 
       if (result.success) {
-        setPaymentCompleted(true);
-        toast({
-          title: 'Payment Successful!',
-          description: `Transaction ID: ${result.transactionId}`,
-        });
-
-        // Reload payment details to get updated status
-        const updatedDetails = await geniePaymentService.getProjectPaymentDetails(projectId!);
-        setPaymentDetails(updatedDetails);
+        // Don't set paymentCompleted here - wait for callback
+        // The page will redirect to Genie payment gateway
+        console.log('✅ Redirecting to Genie payment gateway...');
       } else {
         toast({
           title: 'Payment Failed',
@@ -295,13 +362,17 @@ export default function FinalPaymentPage() {
       // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const result = await geniePaymentService.processFinalPayment({
-        projectId: projectId!,
-        amount: paymentDetails.finalPayment,
-        buyerEmail: paymentDetails.buyerEmail,
-        buyerName: auth.currentUser?.displayName || 'Customer',
-        projectTitle: paymentDetails.projectTitle,
-      });
+      const result = await geniePaymentService.processFinalPayment(
+        {
+          projectId: projectId!,
+          amount: paymentDetails.finalPayment,
+          buyerEmail: paymentDetails.buyerEmail,
+          buyerName: auth.currentUser?.displayName || 'Customer',
+          projectTitle: paymentDetails.projectTitle,
+        },
+        useUATMode ? 'uat' : 'production',
+        true // Always use mock for the mock payment modal
+      );
 
       if (result.success) {
         setPaymentCompleted(true);
@@ -742,11 +813,40 @@ export default function FinalPaymentPage() {
             </div>
           </div>
 
+          {/* UAT Testing Toggle - Always visible for testing */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm font-medium text-yellow-900">
+                  Payment Environment
+                </span>
+              </div>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <span className="text-sm text-yellow-700">
+                  {useUATMode ? 'UAT/Testing' : 'Production'}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={useUATMode}
+                  onChange={(e) => setUseUATMode(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+              </label>
+            </div>
+            <p className="text-xs text-yellow-700 mt-2">
+              {useUATMode 
+                ? '⚠️ Using UAT/Testing API (api.uat.geniebiz.lk) - Safe for testing'
+                : '✓ Using Production API (api.geniebiz.lk) - Real payments'
+              }
+            </p>
+          </div>
+
           {/* Security Badge */}
           <div className="flex items-center justify-center space-x-2 text-muted-foreground">
             <Shield className="h-4 w-4" />
             <span className="text-sm">
-              {USE_MOCK_PAYMENT ? "Test Mode - No Real Payment" : "Secured by Genie Payment Gateway"}
+              Secured by Genie Payment Gateway
             </span>
           </div>
 
@@ -754,10 +854,7 @@ export default function FinalPaymentPage() {
           <Button
             onClick={handlePayment}
             disabled={processing}
-            className={`w-full ${USE_MOCK_PAYMENT 
-              ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700" 
-              : "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
-            }`}
+            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
             size="lg"
           >
             {processing ? (
@@ -768,7 +865,7 @@ export default function FinalPaymentPage() {
             ) : (
               <>
                 <Lock className="mr-2 h-5 w-5" />
-                {USE_MOCK_PAYMENT ? "Test Payment" : `Pay LKR ${paymentDetails.finalPayment?.toFixed(2)} Now`}
+                Pay LKR {paymentDetails.finalPayment?.toFixed(2)} Now
               </>
             )}
           </Button>
