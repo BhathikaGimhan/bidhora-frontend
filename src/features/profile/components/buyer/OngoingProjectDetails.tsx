@@ -181,23 +181,28 @@ export const OngoingProjectDetails = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={onBack}>
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-col gap-3">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onBack}
+                className="self-start"
+              >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Projects
               </Button>
-              <div>
-                <CardTitle className="text-xl">{project.title}</CardTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className={getStatusColor(project.status)}>
+              <div className="space-y-2">
+                <CardTitle className="text-lg sm:text-xl break-words pr-2">{project.title}</CardTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <Badge variant="outline" className={`${getStatusColor(project.status)} self-start`}>
                     {getStatusLabel(project.status)}
                   </Badge>
-                  <span className={`text-sm font-medium ${deadlineStatus.color}`}>
+                  <span className={`text-xs sm:text-sm font-medium ${deadlineStatus.color}`}>
                     {deadlineStatus.status}
                   </span>
                 </div>
@@ -207,15 +212,15 @@ export const OngoingProjectDetails = ({
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Project Details */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Project Info */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Project Details</CardTitle>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Project Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4 sm:p-6">
               <div className="prose max-w-none">
                 <p className="text-sm text-muted-foreground">
                   {project.description}
@@ -382,25 +387,25 @@ export const OngoingProjectDetails = ({
           {/* Completed Documents Section - Show when project is completed */}
           {(project.status as string) === 'completed' && project.documents && project.documents.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                   Completed Work Documents
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground mb-4">
+              <CardContent className="space-y-3 p-4 sm:p-6">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                   Download your completed work files below
                 </p>
                 {project.documents.map((doc: ProjectDocument, index: number) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                   >
-                    <div className="flex items-center gap-3 flex-1">
-                      <FileText className="w-5 h-5 text-muted-foreground" />
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                        <p className="text-xs sm:text-sm font-medium truncate">
                           {doc.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -420,7 +425,7 @@ export const OngoingProjectDetails = ({
                         link.click();
                         document.body.removeChild(link);
                       }}
-                      className="flex items-center gap-2"
+                      className="flex items-center justify-center gap-2 w-full sm:w-auto"
                     >
                       <Download className="w-4 h-4" />
                       Download

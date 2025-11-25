@@ -163,45 +163,45 @@ export const AdminProfileSection = ({ profile }: AdminProfileSectionProps) => {
 
       {/* Recent Activity */}
       <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-purple-600" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
             Recent Admin Activity
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-purple-600" />
             </div>
           ) : activities.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {activities.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                  className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors"
                 >
-                  <div className={`p-2 rounded-lg ${getActivityColor(activity.actionType)}`}>
+                  <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${getActivityColor(activity.actionType)}`}>
                     {getActivityIcon(activity.actionType)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{activity.action}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs sm:text-sm break-words">{activity.action}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">
                           {activity.description}
                         </p>
                         {activity.targetName && (
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-muted-foreground mt-1 break-words">
                             Target: <span className="font-medium">{activity.targetName}</span>
                           </p>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap self-start">
                         {formatTimeAgo(activity.timestamp)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-1 sm:mt-2">
                       <Badge variant="outline" className="text-xs">
                         {activity.actionType}
                       </Badge>
@@ -212,9 +212,9 @@ export const AdminProfileSection = ({ profile }: AdminProfileSectionProps) => {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="font-medium">No recent activity</p>
-              <p className="text-sm mt-2">Your admin activities will appear here</p>
+              <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
+              <p className="font-medium text-sm sm:text-base">No recent activity</p>
+              <p className="text-xs sm:text-sm mt-2">Your admin activities will appear here</p>
             </div>
           )}
         </CardContent>
