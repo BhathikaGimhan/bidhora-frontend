@@ -648,14 +648,14 @@ export default function ProjectDepositPaymentPage() {
           </Alert>
 
           {/* Back Button */}
-          <div className="pt-4">
+          <div className="pt-4 rounded-lg">
             <Button
               variant="ghost"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(`/profile/${auth.currentUser?.uid}`)}
               disabled={processingPayment}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              Back to Profile
             </Button>
           </div>
         </CardContent>

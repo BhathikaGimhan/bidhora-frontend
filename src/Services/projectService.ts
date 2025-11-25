@@ -923,8 +923,8 @@ export const adminReviewProject = async (
     // Calculate 10% deposit amount
     const depositAmount = parseFloat((adminPrice * 0.1).toFixed(2));
 
-    // Generate payment link
-    const baseUrl = window.location.origin;
+    // Generate payment link - use production domain
+    const baseUrl = 'https://bidhora.com';
     const paymentLink = `${baseUrl}/payment/project/${projectId}`;
 
     // Update project with admin review
