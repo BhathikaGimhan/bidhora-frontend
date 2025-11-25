@@ -19,6 +19,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { MoreHorizontal, Eye, Check, Trash2, Send, Loader2 } from 'lucide-react';
 import { Notification } from '@/features/admin/models/NotificationModel';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +38,8 @@ export function NotificationsView() {
   const [employees, setEmployees] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newNotification, setNewNotification] = useState<{
     message: string;
     recipientId: string;
@@ -305,7 +314,10 @@ export function NotificationsView() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => console.log('View notification', notification.id)}>
+        <DropdownMenuItem onClick={() => {
+          setSelectedNotification(notification);
+          setIsDialogOpen(true);
+        }}>
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
@@ -424,6 +436,114 @@ export function NotificationsView() {
         onSearch={handleSearch}
         actions={actions}
       />
+
+      {/* Notification Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-2xl font-semibold">Notification Details</DialogTitle>
+            <DialogDescription className="text-base">
+              View complete notification information
+            </DialogDescription>
+          </DialogHeader>
+          {selectedNotification && (
+            <div className="space-y-6 pt-4">
+              {/* Info Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Type</Label>
+                  <div>
+                    <Badge variant={getTypeColor(selectedNotification.type)} className="px-3 py-1 text-sm rounded-md">
+                      {selectedNotification.type.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Priority</Label>
+                  <div>
+                    <Badge className={getPriorityColor(selectedNotification.priority) + " px-3 py-1 text-sm rounded-md"}>
+                      {selectedNotification.priority.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</Label>
+                  <div>
+                    <Badge 
+                      variant={selectedNotification.read ? 'default' : 'secondary'} 
+                      className="px-3 py-1 text-sm rounded-md"
+                    >
+                      {selectedNotification.read ? 'READ' : 'UNREAD'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recipient</Label>
+                  <p className="text-sm font-medium">
+                    {selectedNotification.recipientId === 'all' 
+                      ? 'All Users' 
+                      : selectedNotification.recipientName || 'User'}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Message Section */}
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Message</Label>
+                <div className="mt-2 p-4 bg-muted/50 border border-border rounded-md">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedNotification.message}</p>
+                </div>
+              </div>
+              
+              {/* Dates Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Created Date</Label>
+                  <p className="text-sm font-medium">
+                    {new Date(selectedNotification.createdDate).toLocaleString()}
+                  </p>
+                </div>
+                {selectedNotification.read && selectedNotification.readDate && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Read Date</Label>
+                    <p className="text-sm font-medium">
+                      {new Date(selectedNotification.readDate).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3 pt-6 border-t">
+                {!selectedNotification.read && (
+                  <Button 
+                    onClick={() => {
+                      handleMarkAsRead(selectedNotification.id);
+                      setIsDialogOpen(false);
+                    }}
+                    variant="outline"
+                    className="rounded-md"
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Mark as Read
+                  </Button>
+                )}
+                <Button 
+                  onClick={() => {
+                    handleDeleteNotification(selectedNotification.id);
+                    setIsDialogOpen(false);
+                  }}
+                  variant="destructive"
+                  className="rounded-md"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Notification
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

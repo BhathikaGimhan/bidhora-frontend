@@ -121,7 +121,7 @@ const Footer = () => {
 
       <div
         style={{ width: "100%", height: "100%" }}
-        className="absolute bottom-0 left-0"
+        className="absolute bottom-0 left-0 pointer-events-none"
       >
         <Lightning hue={120} xOffset={0} speed={2} intensity={0.6} size={1.2} />
       </div>
