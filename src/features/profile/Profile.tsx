@@ -280,7 +280,11 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
         </>
       ) : profile.role === "employee" ? (
         <>
-          <EmployeeHeader profile={profile} isOwnProfile={isOwnProfile} />
+          <EmployeeHeader 
+            profile={profile} 
+            isOwnProfile={isOwnProfile} 
+            onProfileUpdate={handleProfileUpdate}
+          />
           <br />
         </>
       ) : (

@@ -2,31 +2,45 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import {
   Briefcase,
   LogOut,
   Mail,
   Calendar,
-  Settings,
   User,
+  Edit3,
+  Check,
+  X,
 } from "lucide-react";
 import { UserProfile } from "../../types/profile";
 import { signOut } from "firebase/auth";
 import { auth } from "@/firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import { collection, query, where, getFirestore, onSnapshot } from 'firebase/firestore';
+import { userProfileService } from '@/Services/userProfileService';
 
 interface EmployeeHeaderProps {
   profile: UserProfile;
   isOwnProfile: boolean;
+  onProfileUpdate?: (updatedProfile: Partial<UserProfile>) => void;
 }
 
-export const EmployeeHeader = ({ profile, isOwnProfile }: EmployeeHeaderProps) => {
+export const EmployeeHeader = ({ profile, isOwnProfile, onProfileUpdate }: EmployeeHeaderProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [displayName, setDisplayName] = useState(profile.displayName || "");
+  const [isSaving, setIsSaving] = useState(false);
   const [workStats, setWorkStats] = useState({
     completed: 0,
   });
+
+  // Update local displayName when profile changes
+  useEffect(() => {
+    setDisplayName(profile.displayName || "");
+  }, [profile.displayName]);
 
   useEffect(() => {
     if (!profile.uid) return;
@@ -73,6 +87,48 @@ export const EmployeeHeader = ({ profile, isOwnProfile }: EmployeeHeaderProps) =
     } finally {
       setLoggingOut(false);
     }
+  };
+
+  const handleSaveDisplayName = async () => {
+    if (!displayName.trim() || displayName === profile.displayName) {
+      setIsEditingName(false);
+      setDisplayName(profile.displayName || "");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await userProfileService.updateDisplayName(displayName.trim());
+      
+      // Update parent component's profile state
+      if (onProfileUpdate) {
+        onProfileUpdate({ displayName: displayName.trim() });
+      }
+      
+      toast({
+        title: "Success",
+        description: "Display name updated successfully",
+      });
+      
+      setIsEditingName(false);
+    } catch (error) {
+      console.error("Error updating display name:", error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to update display name. Please try again.",
+        variant: "destructive",
+      });
+      
+      setDisplayName(profile.displayName || "");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+    setDisplayName(profile.displayName || "");
   };
 
   const formatDate = (date: string | Date | { toDate(): Date } | undefined) => {
@@ -129,9 +185,57 @@ export const EmployeeHeader = ({ profile, isOwnProfile }: EmployeeHeaderProps) =
           {/* Profile Info */}
           <div className="flex-1 space-y-3">
             <div>
-              <h1 className="text-4xl font-bold text-foreground">
-                {profile.displayName || "Employee"}
-              </h1>
+              {isOwnProfile && isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveDisplayName();
+                      if (e.key === 'Escape') handleCancelEdit();
+                    }}
+                    className="text-4xl font-bold text-foreground bg-background border border-border rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter display name"
+                    disabled={isSaving}
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleSaveDisplayName}
+                    disabled={isSaving}
+                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                  >
+                    <Check className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h1 className="text-4xl font-bold text-foreground">
+                    {profile.displayName || "Employee"}
+                  </h1>
+                  {isOwnProfile && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsEditingName(true)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
               {profile.designation && (
                 <p className="text-lg font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2 mt-1">
                   <Briefcase className="w-5 h-5" />
@@ -169,14 +273,6 @@ export const EmployeeHeader = ({ profile, isOwnProfile }: EmployeeHeaderProps) =
           {/* Actions */}
           {isOwnProfile && (
             <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                onClick={() => navigate("/employee/settings")}
-                className="w-full md:w-auto"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
               <Button
                 variant="destructive"
                 onClick={handleLogout}

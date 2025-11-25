@@ -11,7 +11,6 @@ import {
   LayoutDashboard,
   FolderOpen,
   Bell,
-  Settings as SettingsIcon,
 } from "lucide-react";
 import { UserProfile } from "../../types/profile";
 import { useState, useEffect } from "react";
@@ -130,14 +129,6 @@ export const EmployeeDashboardSection = ({
       href: "/employee/notifications",
       color: "text-orange-600",
       bgColor: "bg-orange-100 dark:bg-orange-900/20",
-    },
-    {
-      title: "Settings",
-      description: "Manage your account settings",
-      icon: SettingsIcon,
-      href: "/employee/settings",
-      color: "text-red-600",
-      bgColor: "bg-red-100 dark:bg-red-900/20",
     },
   ];
 
