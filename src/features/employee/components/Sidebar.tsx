@@ -6,7 +6,6 @@ import {
   Upload,
   CheckCircle,
   Bell,
-  Settings,
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
@@ -20,7 +19,6 @@ const sidebarItems = [
   { title: "My Projects", url: "/employee/projects", icon: FolderOpen },
   { title: "Completed", url: "/employee/completed", icon: CheckCircle },
   { title: "Notifications", url: "/employee/notifications", icon: Bell },
-  { title: "Settings", url: "/employee/settings", icon: Settings },
 ];
 
 interface SidebarProps {

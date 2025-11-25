@@ -14,6 +14,7 @@ import TermsOfService from "./features/staticPages/TermsOfService";
 import PrivacyPolicy from "./features/staticPages/PrivacyPolicy";
 import RefundPolicy from "./features/staticPages/RefundPolicy";
 import HelpCenter from "@/features/helpCenter/HelpCenter";
+import { MaintenanceGuard } from "@/components/MaintenanceGuard";
 
 // Wrapper component to force Profile re-render when URL params change
 const ProfileWrapper = () => {
@@ -34,7 +35,11 @@ import { ProtectedEmployeeRoute } from "@/components/ProtectedEmployeeRoute";
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <MainLayout />,
+    element: (
+      <MaintenanceGuard>
+        <MainLayout />
+      </MaintenanceGuard>
+    ),
     children: [
       {
         index: true,

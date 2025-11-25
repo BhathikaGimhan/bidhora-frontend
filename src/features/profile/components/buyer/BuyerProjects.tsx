@@ -348,17 +348,17 @@ export const BuyerProjects = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <FolderOpen className="w-5 h-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div className="flex-1">
+              <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5" />
                 {isOwnProfile ? "My Projects" : "Posted Projects"}
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 {isOwnProfile
                   ? "Manage your posted projects and track their progress"
                   : "View projects posted by this buyer"}
@@ -367,7 +367,7 @@ export const BuyerProjects = ({
             {isOwnProfile && (
               <Button
                 onClick={() => navigate("/post-project")}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <Plus className="w-4 h-4" />
                 Post New Project

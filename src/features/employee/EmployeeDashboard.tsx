@@ -62,7 +62,6 @@ export default function EmployeePanel() {
             <Route path="/projects/:projectId" element={<ProjectDetailsView />} />
             <Route path="/completed" element={<CompletedView />} />
             <Route path="/notifications" element={<EmployeeNotificationsView />} />
-            <Route path="/settings" element={<div>Settings View (Coming Soon)</div>} />
             <Route path="*" element={<Navigate to="/employee" replace />} />
           </Routes>
         </main>

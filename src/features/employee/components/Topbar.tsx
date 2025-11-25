@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, User as UserIcon, LogOut, Settings, Menu } from 'lucide-react';
+import { Bell, User as UserIcon, LogOut, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -173,10 +173,6 @@ export function EmployeeTopbar({ onMobileMenuToggle }: TopbarProps) {
             <DropdownMenuItem onClick={() => navigate(`/profile/${currentUser?.uid}`)}>
               <UserIcon className="mr-2 h-4 w-4" />
               <span>My Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/employee/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive">

@@ -95,41 +95,41 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
 
   return (
     <Card className="hover:shadow-md transition-shadow duration-200">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start gap-4">
+      <CardHeader className="pb-3 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
           <div className="flex-1">
-            <h3 className="font-semibold text-lg text-foreground line-clamp-1">
+            <h3 className="font-semibold text-base sm:text-lg text-foreground line-clamp-2">
               {project.title}
             </h3>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">
               {project.description}
             </p>
           </div>
           <Badge 
             variant="outline" 
-            className={`text-xs font-medium whitespace-nowrap ${getStatusColor(project.status || 'pending')}`}
+            className={`text-xs font-medium whitespace-nowrap self-start ${getStatusColor(project.status || 'pending')}`}
           >
             {getStatusLabel(project.status || 'pending')}
           </Badge>
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0 space-y-4">
+      <CardContent className="pt-0 space-y-3 sm:space-y-4 px-4 sm:px-6">
         {/* Project Details */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <DollarSign className="w-4 h-4" />
-            <span>{formatBudget(project.budgetMin, project.budgetMax)}</span>
+            <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="truncate">{formatBudget(project.budgetMin, project.budgetMax)}</span>
           </div>
           
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="w-4 h-4" />
-            <span>{formatDate(project.deadline)}</span>
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="truncate">{formatDate(project.deadline)}</span>
           </div>
           
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="w-4 h-4" />
-            <span>Posted: {formatDate(project.createdAt)}</span>
+          <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="truncate">Posted: {formatDate(project.createdAt)}</span>
           </div>
         </div>
 
@@ -180,65 +180,65 @@ export const ProjectCard = ({ project, onViewProject, onDeleteProject, onViewDet
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-2 border-t">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
           {/* View Details for ongoing projects */}
           {onViewDetails && (
             (project.status as string) === 'assigned' || 
             (project.status as string) === 'completed_by_employee' ||
             (project.status as string) === 'customer_approved' ||
             (project.status as string) === 'ready_to_assign'
-          ) && (
+          ) ? (
             <Button
               variant="default"
               size="sm"
               onClick={() => onViewDetails(project.id)}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <Activity className="w-4 h-4" />
               View Progress
             </Button>
-          )}
+          ) : null}
 
           {/* View completed project */}
-          {onViewProject && project.status === 'completed' && (
+          {onViewProject && project.status === 'completed' ? (
             <Button
               variant="outline"
               size="sm"
               onClick={() => onViewProject(project.id)}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <Eye className="w-4 h-4" />
               View Completed Project
             </Button>
-          )}
+          ) : null}
 
           {/* View priced project (awaiting customer decision) */}
-          {onViewProject && (project.status as string) === 'priced' && (
+          {onViewProject && (project.status as string) === 'priced' ? (
             <Button
               variant="outline"
               size="sm"
               onClick={() => onViewProject(project.id)}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <Eye className="w-4 h-4" />
               View Price & Details
             </Button>
-          )}
+          ) : null}
           
           {/* Delete only pending projects */}
           {onDeleteProject && canDelete && (
             project.status === 'pending' || 
             (project.status as string) === 'admin_review'
-          ) && (
+          ) ? (
             <Button
               variant="destructive"
               size="sm"
               onClick={() => onDeleteProject(project.id)}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               🗑️ Delete
             </Button>
-          )}
+          ) : null}
         </div>
       </CardContent>
     </Card>

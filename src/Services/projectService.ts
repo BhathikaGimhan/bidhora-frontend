@@ -258,7 +258,9 @@ export const getProjectsWithUserDetails = async (): Promise<Project[]> => {
     const enhancedProjects = await Promise.all(
       projectsSnapshot.docs.map(async (doc) => {
         const projectData = doc.data();
-        const poster = await getUserDetails(projectData.createdBy);
+        const poster = projectData.createdBy
+          ? await getUserDetails(projectData.createdBy)
+          : null;
         return {
           ...projectData,
           id: doc.id,
@@ -434,7 +436,9 @@ export const getProposalsForProject = async (
     const proposals = await Promise.all(
       proposalsSnapshot.docs.map(async (doc) => {
         const proposalData = doc.data();
-        const sender = await getUserDetails(proposalData.proposalSenderId);
+        const sender = proposalData.proposalSenderId
+          ? await getUserDetails(proposalData.proposalSenderId)
+          : null;
 
         return {
           id: doc.id,
@@ -658,9 +662,9 @@ export const getProjectProposals = async (
     const proposals = await Promise.all(
       proposalsSnapshot.docs.map(async (doc): Promise<BuyerProposal> => {
         const proposalData = doc.data();
-        const serviceProvider = await getUserDetails(
-          proposalData.proposalSenderId
-        );
+        const serviceProvider = proposalData.proposalSenderId
+          ? await getUserDetails(proposalData.proposalSenderId)
+          : null;
 
         return {
           id: doc.id,
@@ -751,7 +755,9 @@ export const approveProposal = async (
     }
 
     // Get service provider details
-    const serviceProvider = await getUserDetails(proposalData.proposalSenderId);
+    const serviceProvider = proposalData.proposalSenderId
+      ? await getUserDetails(proposalData.proposalSenderId)
+      : null;
     if (!serviceProvider) {
       throw new Error("Service provider not found");
     }
@@ -917,7 +923,9 @@ export const adminReviewProject = async (
     }
 
     // Get user details for email
-    const userDetails = await getUserDetails(projectData.createdBy);
+    const userDetails = projectData.createdBy
+      ? await getUserDetails(projectData.createdBy)
+      : null;
     const clientEmail = userDetails?.email || projectData.buyerEmail;
 
     // Calculate 10% deposit amount
@@ -1034,7 +1042,9 @@ export const getPendingAdminReviewProjects = async (): Promise<Project[]> => {
     const enhancedProjects = await Promise.all(
       projectsSnapshot.docs.map(async (doc) => {
         const projectData = doc.data();
-        const poster = await getUserDetails(projectData.createdBy);
+        const poster = projectData.createdBy
+          ? await getUserDetails(projectData.createdBy)
+          : null;
         return {
           ...projectData,
           id: doc.id,
@@ -1080,7 +1090,9 @@ export const getPricedProjects = async (): Promise<Project[]> => {
     const enhancedProjects = await Promise.all(
       projectsSnapshot.docs.map(async (doc) => {
         const projectData = doc.data();
-        const poster = await getUserDetails(projectData.createdBy);
+        const poster = projectData.createdBy
+          ? await getUserDetails(projectData.createdBy)
+          : null;
         return {
           ...projectData,
           id: doc.id,
@@ -1218,7 +1230,9 @@ export const getPricedProjectsForCustomer = async (): Promise<Project[]> => {
     const enhancedProjects = await Promise.all(
       projectsSnapshot.docs.map(async (doc) => {
         const projectData = doc.data();
-        const poster = await getUserDetails(projectData.createdBy);
+        const poster = projectData.createdBy
+          ? await getUserDetails(projectData.createdBy)
+          : null;
         return {
           ...projectData,
           id: doc.id,
