@@ -32,20 +32,6 @@ export const SERVICE_CATEGORIES = [
   "3D Product Mockups",
   "Brand Style Guides",
   
-  // Video Editing
-  "YouTube Video Editing",
-  "Short Form Content (TikTok / Reels) Editing",
-  "Promotional / Advertisement Video Editing",
-  "Wedding / Event Video Editing",
-  "Color Grading & Correction",
-  "Subtitle / Caption Adding",
-  "Green Screen Editing",
-  "VFX / Motion Graphics",
-  "Slideshow / Photo-to-Video",
-  "Intro / Outro Creation",
-  "Music Video Editing",
-  "Podcast Video Editing",
-  
   // Academic Writing & Note Writing
   "Essay Writing",
   "Research Paper Writing",
