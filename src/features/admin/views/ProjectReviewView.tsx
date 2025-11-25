@@ -522,7 +522,7 @@ export function ProjectReviewView() {
             <Clock className="h-4 w-4" />
             <span>Pending</span>
             {pendingProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md hover:from-orange-600 hover:to-orange-700 transition-all">
                 {pendingProjects.length}
               </Badge>
             )}
@@ -541,7 +541,7 @@ export function ProjectReviewView() {
             <FolderOpen className="h-4 w-4" />
             <span>Assigned</span>
             {assignedProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md hover:from-purple-600 hover:to-purple-700 transition-all">
                 {assignedProjects.length}
               </Badge>
             )}
@@ -550,7 +550,7 @@ export function ProjectReviewView() {
             <CheckCircle2 className="h-4 w-4" />
             <span>Completed</span>
             {completedProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md hover:from-green-600 hover:to-green-700 transition-all">
                 {completedProjects.length}
               </Badge>
             )}

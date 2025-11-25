@@ -551,7 +551,7 @@ export function UrgentProjectsView() {
             <span className="hidden sm:inline">Pending Review</span>
             <span className="sm:hidden">Pending</span>
             {pendingProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md hover:from-orange-600 hover:to-orange-700 transition-all">
                 {pendingProjects.length}
               </Badge>
             )}
@@ -560,7 +560,7 @@ export function UrgentProjectsView() {
             <DollarSign className="h-4 w-4" />
             <span>Priced</span>
             {pricedProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md hover:from-blue-600 hover:to-blue-700 transition-all">
                 {pricedProjects.length}
               </Badge>
             )}
@@ -570,7 +570,7 @@ export function UrgentProjectsView() {
             <span className="hidden sm:inline">Ready to Assign</span>
             <span className="sm:hidden">Ready</span>
             {readyToAssignProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md hover:from-emerald-600 hover:to-emerald-700 transition-all">
                 {readyToAssignProjects.length}
               </Badge>
             )}
@@ -579,7 +579,7 @@ export function UrgentProjectsView() {
             <UserCheck className="h-4 w-4" />
             <span>Assigned</span>
             {assignedProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md hover:from-purple-600 hover:to-purple-700 transition-all">
                 {assignedProjects.length}
               </Badge>
             )}
@@ -589,7 +589,7 @@ export function UrgentProjectsView() {
             <span className="hidden sm:inline">In Progress</span>
             <span className="sm:hidden">Progress</span>
             {inProgressProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md hover:from-yellow-600 hover:to-yellow-700 transition-all">
                 {inProgressProjects.length}
               </Badge>
             )}
@@ -598,7 +598,7 @@ export function UrgentProjectsView() {
             <CheckCircle2 className="h-4 w-4" />
             <span>Completed</span>
             {completedProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md hover:from-green-600 hover:to-green-700 transition-all">
                 {completedProjects.length}
               </Badge>
             )}
