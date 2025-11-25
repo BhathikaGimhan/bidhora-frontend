@@ -242,13 +242,11 @@ const Header = () => {
               </Button>
             )
           ) : (
-            <>
-              <Link to="/auth">
-                <Button variant="outline" size="sm" className="text-sm px-3">
-                  Sign In
-                </Button>
-              </Link>
-            </>
+            <Link to="/auth">
+              <Button variant="outline" size="sm" className="text-sm px-3">
+                Sign In
+              </Button>
+            </Link>
           )}
         </div>
       </div>
@@ -364,26 +362,15 @@ const Header = () => {
                   </Link>
                 )
               ) : (
-                <>
-                  <Link to="/auth/signup" onClick={toggleMobileMenu}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-32 text-sm"
-                    >
-                      Sign Up
-                    </Button>
-                  </Link>
-                  <Link to="/auth" onClick={toggleMobileMenu}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-32 text-sm"
-                    >
-                      Sign In
-                    </Button>
-                  </Link>
-                </>
+                <Link to="/auth" onClick={toggleMobileMenu}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-32 text-sm"
+                  >
+                    Sign In
+                  </Button>
+                </Link>
               )}
             </div>
           </nav>
