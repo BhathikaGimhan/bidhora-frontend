@@ -516,37 +516,39 @@ export function ProjectReviewView() {
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="pending" className="flex items-center gap-2">
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="inline-flex w-auto min-w-full">
+          <TabsTrigger value="pending" className="flex items-center gap-2 whitespace-nowrap">
             <Clock className="h-4 w-4" />
-            Pending
+            <span>Pending</span>
             {pendingProjects.length > 0 && (
               <Badge variant="secondary" className="ml-1">
                 {pendingProjects.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="ready" className="flex items-center gap-2">
+          <TabsTrigger value="ready" className="flex items-center gap-2 whitespace-nowrap">
             <UserCheck className="h-4 w-4" />
-            Ready to Assign
+            <span className="hidden sm:inline">Ready to Assign</span>
+            <span className="sm:hidden">Ready</span>
             {readyToAssignProjects.length > 0 && (
               <Badge variant="default" className="ml-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md hover:from-emerald-600 hover:to-emerald-700 transition-all">
                 {readyToAssignProjects.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="assigned" className="flex items-center gap-2">
+          <TabsTrigger value="assigned" className="flex items-center gap-2 whitespace-nowrap">
             <FolderOpen className="h-4 w-4" />
-            Assigned
+            <span>Assigned</span>
             {assignedProjects.length > 0 && (
               <Badge variant="secondary" className="ml-1">
                 {assignedProjects.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
+          <TabsTrigger value="completed" className="flex items-center gap-2 whitespace-nowrap">
             <CheckCircle2 className="h-4 w-4" />
-            Completed
+            <span>Completed</span>
             {completedProjects.length > 0 && (
               <Badge variant="secondary" className="ml-1">
                 {completedProjects.length}
@@ -554,6 +556,7 @@ export function ProjectReviewView() {
             )}
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="pending" className="mt-6">
           <div className="flex justify-end mb-4">

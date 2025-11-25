@@ -97,7 +97,7 @@ export function DataTable({
         </div>
       </CardHeader>
       <CardContent className="p-0 sm:p-6">
-        <div className="rounded-md border overflow-hidden">
+        <div className="rounded-md border">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -106,7 +106,7 @@ export function DataTable({
                     <TableHead
                       key={column.key}
                       className={cn(
-                        'whitespace-nowrap px-2 sm:px-4',
+                        'whitespace-nowrap px-3 sm:px-4',
                         column.sortable ? 'cursor-pointer hover:bg-muted/50' : ''
                       )}
                       onClick={() => column.sortable && handleSort(column.key)}
@@ -121,7 +121,7 @@ export function DataTable({
                       </div>
                     </TableHead>
                   ))}
-                  {actions && <TableHead className="whitespace-nowrap px-2 sm:px-4">Actions</TableHead>}
+                  {actions && <TableHead className="whitespace-nowrap px-3 sm:px-4">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -129,8 +129,8 @@ export function DataTable({
                   paginatedData.map((item, index) => (
                     <TableRow key={item.id || index}>
                       {columns.map((column) => (
-                        <TableCell key={column.key} className="px-2 sm:px-4">
-                          <div className="max-w-[200px] sm:max-w-none truncate">
+                        <TableCell key={column.key} className="px-3 sm:px-4">
+                          <div className="min-w-[100px] max-w-[300px] truncate sm:max-w-none">
                             {column.render
                               ? column.render(item[column.key], item)
                               : item[column.key]
@@ -139,7 +139,7 @@ export function DataTable({
                         </TableCell>
                       ))}
                       {actions && (
-                        <TableCell className="px-2 sm:px-4">
+                        <TableCell className="px-3 sm:px-4">
                           {actions(item)}
                         </TableCell>
                       )}
