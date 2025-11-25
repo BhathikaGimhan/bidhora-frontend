@@ -2,6 +2,7 @@ export interface Review {
   id: string;
   projectId: string;
   projectTitle: string;
+  projectCategory?: string;
   reviewerId: string;
   reviewerName: string;
   reviewerPhotoURL?: string;

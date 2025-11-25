@@ -68,7 +68,28 @@ const ReviewCenter = () => {
       console.log('📦 Reviews fetched:', allReviews);
       console.log('📊 Total reviews count:', allReviews.length);
       
-      setReviews(allReviews);
+      // Fetch project categories for reviews that don't have them
+      const { collection, doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('@/firebaseConfig');
+      
+      const reviewsWithCategories = await Promise.all(
+        allReviews.map(async (review) => {
+          if (!review.projectCategory && review.projectId) {
+            try {
+              const projectDoc = await getDoc(doc(db, 'projects', review.projectId));
+              if (projectDoc.exists()) {
+                const projectData = projectDoc.data();
+                return { ...review, projectCategory: projectData.category };
+              }
+            } catch (error) {
+              console.error(`Error fetching category for project ${review.projectId}:`, error);
+            }
+          }
+          return review;
+        })
+      );
+      
+      setReviews(reviewsWithCategories);
     } catch (err) {
       console.error("Error fetching reviews:", err);
       setError("Failed to load reviews");
@@ -130,10 +151,8 @@ const ReviewCenter = () => {
     selectedCategory === "all"
       ? reviews
       : reviews.filter((review) => {
-          // Filter by checking if project title contains the selected category
-          const projectTitle = review.projectTitle.toLowerCase();
-          const category = selectedCategory.toLowerCase();
-          return projectTitle.includes(category);
+          // Filter by exact category match
+          return review.projectCategory === selectedCategory;
         });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
