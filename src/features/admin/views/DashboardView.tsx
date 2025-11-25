@@ -6,9 +6,17 @@ import {
   TrendingUp,
   Activity,
   FileCheck,
+  Loader2,
+  Calendar,
+  FileText,
+  MessageCircle,
+  Bell,
+  Settings,
+  HelpCircle,
 } from "lucide-react";
 import { StatCard } from "@/features/admin/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { userController } from "@/features/admin/controllers/userController";
 import { projectController } from "@/features/admin/controllers/projectController";
 import { transactionController } from "@/features/admin/controllers/transactionController";
@@ -21,6 +29,7 @@ import LoadingSpinner from "@/components/ui/loading-spinner";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/firebaseConfig";
 import { collection, query, orderBy, limit, getDocs, Timestamp, where } from "firebase/firestore";
+import { adminActivityService, AdminActivity } from "@/Services/adminActivityService";
 import {
   LineChart,
   Line,
@@ -33,14 +42,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-
-interface RecentActivity {
-  id: string;
-  type: 'user' | 'project' | 'payment' | 'submission';
-  message: string;
-  timestamp: Date;
-  color: string;
-}
 
 interface GrowthData {
   month: string;
@@ -71,7 +72,8 @@ export function DashboardView() {
     completedTransactions: 0,
     failedTransactions: 0,
   });
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [recentActivities, setRecentActivities] = useState<AdminActivity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [growthData, setGrowthData] = useState<GrowthData[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -146,79 +148,72 @@ export function DashboardView() {
     }
   };
 
-  const fetchRecentActivities = async (): Promise<RecentActivity[]> => {
+  const fetchRecentActivities = async (): Promise<AdminActivity[]> => {
+    setActivitiesLoading(true);
     try {
-      const activities: RecentActivity[] = [];
-
-      // Fetch recent users
-      const usersRef = collection(db, "users");
-      const usersQuery = query(usersRef, orderBy("createdAt", "desc"), limit(3));
-      const usersSnapshot = await getDocs(usersQuery);
-      
-      usersSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        activities.push({
-          id: `user-${doc.id}`,
-          type: 'user',
-          message: `New user registered: ${data.displayName || data.name || 'Unknown User'}`,
-          timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
-          color: 'green'
-        });
-      });
-
-      // Fetch recent projects
-      const projectsRef = collection(db, "projects");
-      const projectsQuery = query(projectsRef, orderBy("createdAt", "desc"), limit(3));
-      const projectsSnapshot = await getDocs(projectsQuery);
-      
-      projectsSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.status === "approved") {
-          activities.push({
-            id: `project-${doc.id}`,
-            type: 'project',
-            message: `Project approved: ${data.title}`,
-            timestamp: data.approvedAt ? data.approvedAt.toDate() : data.createdAt.toDate(),
-            color: 'blue'
-          });
-        }
-      });
-
-      // Fetch recent high-value payments
-      const paymentsQuery = query(projectsRef, orderBy("finalPaymentDate", "desc"), limit(2));
-      const paymentsSnapshot = await getDocs(paymentsQuery);
-      
-      paymentsSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.finalPaymentAmount && data.finalPaymentAmount >= 1000 && data.finalPaymentStatus === "pending") {
-          activities.push({
-            id: `payment-${doc.id}`,
-            type: 'payment',
-            message: `High-value payment pending: LKR ${data.finalPaymentAmount}`,
-            timestamp: data.finalPaymentDate ? data.finalPaymentDate.toDate() : new Date(),
-            color: 'yellow'
-          });
-        }
-      });
-
-      // Sort by timestamp (most recent first)
-      return activities
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-        .slice(0, 5);
+      const activities = await adminActivityService.getAllRecentActivities(10);
+      return activities;
     } catch (error) {
       console.error("Error fetching recent activities:", error);
       return [];
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+
+  const getActivityIcon = (actionType: AdminActivity['actionType']) => {
+    switch (actionType) {
+      case 'user':
+        return <Users className="w-4 h-4" />;
+      case 'project':
+        return <FileText className="w-4 h-4" />;
+      case 'faq':
+        return <HelpCircle className="w-4 h-4" />;
+      case 'review':
+        return <MessageCircle className="w-4 h-4" />;
+      case 'notification':
+        return <Bell className="w-4 h-4" />;
+      case 'transaction':
+        return <CreditCard className="w-4 h-4" />;
+      case 'system':
+        return <Settings className="w-4 h-4" />;
+      default:
+        return <Calendar className="w-4 h-4" />;
+    }
+  };
+
+  const getActivityColor = (actionType: AdminActivity['actionType']) => {
+    switch (actionType) {
+      case 'user':
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+      case 'project':
+        return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+      case 'faq':
+        return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+      case 'review':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'notification':
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
+      case 'transaction':
+        return 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300';
+      case 'system':
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300';
     }
   };
 
   const formatTimeAgo = (date: Date): string => {
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
+
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
     return date.toLocaleDateString();
   };
 
@@ -493,38 +488,61 @@ export function DashboardView() {
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5" />
-              <span>Recent Activity</span>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-purple-600" />
+              Recent Admin Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 sm:space-y-4">
-              {recentActivities.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  No recent activities
-                </div>
-              ) : (
-                recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-center space-x-3">
-                    <div 
-                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        activity.color === 'green' ? 'bg-green-500' :
-                        activity.color === 'blue' ? 'bg-blue-500' :
-                        activity.color === 'yellow' ? 'bg-yellow-500' :
-                        'bg-gray-500'
-                      }`}
-                    ></div>
-                    <span className="text-xs sm:text-sm flex-1 min-w-0 truncate">
-                      {activity.message}
-                    </span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatTimeAgo(activity.timestamp)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
+            {activitiesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              </div>
+            ) : recentActivities.length > 0 ? (
+              <div className="max-h-[400px] overflow-y-auto">
+                <ul className="space-y-2">
+                  {recentActivities.map((activity) => (
+                    <li
+                      key={activity.id}
+                      className="flex items-start gap-2 py-2 border-b last:border-b-0 hover:bg-accent/30 px-2 -mx-2 rounded transition-colors"
+                    >
+                      <div className={`p-1.5 rounded-md mt-0.5 flex-shrink-0 ${getActivityColor(activity.actionType)}`}>
+                        {getActivityIcon(activity.actionType)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm leading-tight">{activity.action}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                              {activity.description}
+                            </p>
+                          </div>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                            {formatTimeAgo(activity.timestamp)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs py-0 h-5">
+                            {activity.actionType}
+                          </Badge>
+                          {activity.targetName && (
+                            <span className="text-xs text-muted-foreground truncate">
+                              {activity.targetName}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">No recent activity</p>
+                <p className="text-sm mt-2">Admin activities will appear here</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
