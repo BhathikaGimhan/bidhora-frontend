@@ -38,6 +38,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from '@/components/ui/command';
 import {
   Popover,
@@ -652,11 +653,19 @@ export function UsersView() {
                 side="bottom"
                 sideOffset={4}
                 avoidCollisions={false}
+                onWheel={(e) => {
+                  e.stopPropagation();
+                }}
               >
-                <Command className="max-h-[min(300px,calc(100vh-120px))]">
+                <Command>
                   <CommandInput placeholder="Search designations..." />
                   <CommandEmpty>No designation found.</CommandEmpty>
-                  <div className="overflow-auto max-h-[min(250px,calc(100vh-170px))]">
+                  <CommandList 
+                    className="max-h-[300px]"
+                    onWheel={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
                     {EMPLOYEE_DESIGNATIONS.map((designationGroup) => (
                       <CommandGroup 
                         key={designationGroup.category} 
@@ -683,7 +692,7 @@ export function UsersView() {
                         ))}
                       </CommandGroup>
                     ))}
-                  </div>
+                  </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>

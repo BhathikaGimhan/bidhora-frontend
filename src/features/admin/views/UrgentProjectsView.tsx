@@ -544,62 +544,67 @@ export function UrgentProjectsView() {
 
       {/* Tabbed View for Different Statuses */}
       <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="pending" className="flex items-center gap-2">
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="inline-flex w-auto min-w-full">
+          <TabsTrigger value="pending" className="flex items-center gap-2 whitespace-nowrap">
             <Eye className="h-4 w-4" />
-            Pending Review
+            <span className="hidden sm:inline">Pending Review</span>
+            <span className="sm:hidden">Pending</span>
             {pendingProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md hover:from-orange-600 hover:to-orange-700 transition-all">
                 {pendingProjects.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="priced" className="flex items-center gap-2">
+          <TabsTrigger value="priced" className="flex items-center gap-2 whitespace-nowrap">
             <DollarSign className="h-4 w-4" />
-            Priced
+            <span>Priced</span>
             {pricedProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md hover:from-blue-600 hover:to-blue-700 transition-all">
                 {pricedProjects.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="ready_to_assign" className="flex items-center gap-2">
+          <TabsTrigger value="ready_to_assign" className="flex items-center gap-2 whitespace-nowrap">
             <FolderOpen className="h-4 w-4" />
-            Ready to Assign
+            <span className="hidden sm:inline">Ready to Assign</span>
+            <span className="sm:hidden">Ready</span>
             {readyToAssignProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md hover:from-emerald-600 hover:to-emerald-700 transition-all">
                 {readyToAssignProjects.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="assigned" className="flex items-center gap-2">
+          <TabsTrigger value="assigned" className="flex items-center gap-2 whitespace-nowrap">
             <UserCheck className="h-4 w-4" />
-            Assigned
+            <span>Assigned</span>
             {assignedProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md hover:from-purple-600 hover:to-purple-700 transition-all">
                 {assignedProjects.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="in_progress" className="flex items-center gap-2">
+          <TabsTrigger value="in_progress" className="flex items-center gap-2 whitespace-nowrap">
             <Clock className="h-4 w-4" />
-            In Progress
+            <span className="hidden sm:inline">In Progress</span>
+            <span className="sm:hidden">Progress</span>
             {inProgressProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md hover:from-yellow-600 hover:to-yellow-700 transition-all">
                 {inProgressProjects.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
+          <TabsTrigger value="completed" className="flex items-center gap-2 whitespace-nowrap">
             <CheckCircle2 className="h-4 w-4" />
-            Completed
+            <span>Completed</span>
             {completedProjects.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md hover:from-green-600 hover:to-green-700 transition-all">
                 {completedProjects.length}
               </Badge>
             )}
           </TabsTrigger>
         </TabsList>
+        </div>
 
         {/* Pending Review Tab */}
         <TabsContent value="pending" className="space-y-4">
