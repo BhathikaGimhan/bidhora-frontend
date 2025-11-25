@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -224,26 +223,26 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Project Details</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-4 sm:pt-6">
+          <DialogTitle className="text-xl sm:text-2xl">Project Details</DialogTitle>
+          <DialogDescription className="text-sm">
             Complete information about the project and client
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[calc(90vh-120px)] pr-4">
-          <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6">
+          <div className="space-y-4 sm:space-y-6 pt-4">
             {/* Project Status Banner */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div className="flex items-center space-x-2">
                 {getStatusIcon(project.status)}
-                <Badge variant={getStatusColor(project.status)} className="text-sm">
+                <Badge variant={getStatusColor(project.status)} className="text-xs sm:text-sm">
                   {project.status.toUpperCase()}
                 </Badge>
               </div>
               {project.isUrgent && (
-                <Badge variant="destructive" className="flex items-center space-x-1">
+                <Badge variant="destructive" className="flex items-center space-x-1 text-xs sm:text-sm">
                   <AlertCircle className="h-3 w-3" />
                   <span>URGENT</span>
                 </Badge>
@@ -252,41 +251,39 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
 
             {/* Project Information */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Briefcase className="h-5 w-5" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <Briefcase className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>Project Information</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
-                  <p className="text-muted-foreground whitespace-pre-wrap">
+                  <h3 className="text-lg sm:text-xl font-semibold mb-2 break-words">{project.title}</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground whitespace-pre-wrap break-words">
                     {project.description}
                   </p>
                 </div>
 
                 <Separator />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-start space-x-3">
-                    <DollarSign className="h-5 w-5 text-green-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Budget</p>
-                      <p className="text-lg font-semibold">
-                                              <div>
-                        <span className="font-medium">Budget Range:</span>{" "}
-                        LKR {project.budget.min.toLocaleString()} - LKR {project.budget.max.toLocaleString()}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Budget</p>
+                      <div className="text-sm sm:text-base font-semibold break-words">
+                        <span className="font-medium text-xs sm:text-sm">Budget Range:</span>{" "}
+                        <div className="break-words">LKR {project.budget.min.toLocaleString()} - LKR {project.budget.max.toLocaleString()}</div>
                       </div>
-                      </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start space-x-3">
-                    <Calendar className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Deadline</p>
-                      <p className="text-lg font-semibold">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Deadline</p>
+                      <p className="text-sm sm:text-base font-semibold break-words">
                         {new Date(project.deadline).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -296,21 +293,21 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                     </div>
                   </div>
 
-                  <div className="flex items-start space-x-3">
-                    <Tag className="h-5 w-5 text-purple-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Category</p>
-                      <Badge variant="outline" className="mt-1">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <Tag className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Category</p>
+                      <Badge variant="outline" className="mt-1 text-xs sm:text-sm">
                         {project.category}
                       </Badge>
                     </div>
                   </div>
 
-                  <div className="flex items-start space-x-3">
-                    <Clock className="h-5 w-5 text-gray-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Posted On</p>
-                      <p className="text-lg font-semibold">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Posted On</p>
+                      <p className="text-sm sm:text-base font-semibold break-words">
                         {new Date(project.createdDate).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -325,12 +322,12 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                   <>
                     <Separator />
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-2">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">
                         Required Skills
                       </p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
                         {project.skillsRequired.map((skill, index) => (
-                          <Badge key={index} variant="secondary">
+                          <Badge key={index} variant="secondary" className="text-xs">
                             {skill}
                           </Badge>
                         ))}
@@ -344,27 +341,27 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
             {/* Buyer Documents Section */}
             {project.documents && project.documents.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <FileText className="h-5 w-5" />
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>Buyer's Project Documents</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
                     Documents uploaded by the buyer with the project
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     {project.documents.map((doc, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-accent transition-colors"
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-3 border border-border rounded-lg hover:bg-accent transition-colors gap-2"
                       >
-                        <div className="flex items-center space-x-3 flex-1 min-w-0">
-                          <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0 w-full sm:w-auto">
+                          <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{doc.name}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <p className="text-xs sm:text-sm font-medium truncate">{doc.name}</p>
+                            <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
                               {doc.size && (
                                 <span>{(doc.size / 1024 / 1024).toFixed(2)} MB</span>
                               )}
@@ -381,9 +378,9 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                           variant="ghost"
                           size="sm"
                           onClick={() => window.open(doc.url, '_blank')}
-                          className="flex-shrink-0"
+                          className="flex-shrink-0 w-full sm:w-auto text-xs sm:text-sm h-8"
                         >
-                          <Download className="h-4 w-4 mr-2" />
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           Download
                         </Button>
                       </div>
@@ -395,34 +392,34 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
 
             {/* Client Information */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="h-5 w-5" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>Client Information</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Details about the project owner
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <LoadingSpinner />
                   </div>
                 ) : clientInfo ? (
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-4">
-                      <Avatar className="h-16 w-16">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-start space-x-3 sm:space-x-4">
+                      <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
                         <AvatarImage src={clientInfo.photoURL} alt={clientInfo.name} />
-                        <AvatarFallback className="text-lg">
+                        <AvatarFallback className="text-base sm:text-lg">
                           {clientInfo.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="text-lg font-semibold">{clientInfo.name}</h3>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-1">
+                          <h3 className="text-base sm:text-lg font-semibold break-words">{clientInfo.name}</h3>
                           {clientInfo.verified && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs w-fit">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Verified
                             </Badge>
@@ -436,67 +433,67 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
 
                     <Separator />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       {clientInfo.email && (
-                        <div className="flex items-start space-x-3">
-                          <Mail className="h-4 w-4 text-muted-foreground mt-1" />
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Email</p>
-                            <p className="text-sm break-all">{clientInfo.email}</p>
+                        <div className="flex items-start space-x-2 sm:space-x-3">
+                          <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-muted-foreground">Email</p>
+                            <p className="text-xs sm:text-sm break-all">{clientInfo.email}</p>
                           </div>
                         </div>
                       )}
 
                       {clientInfo.phoneNumber && (
-                        <div className="flex items-start space-x-3">
-                          <Phone className="h-4 w-4 text-muted-foreground mt-1" />
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                            <p className="text-sm">{clientInfo.phoneNumber}</p>
+                        <div className="flex items-start space-x-2 sm:space-x-3">
+                          <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-muted-foreground">Phone</p>
+                            <p className="text-xs sm:text-sm">{clientInfo.phoneNumber}</p>
                           </div>
                         </div>
                       )}
 
                       {clientInfo.location && (
-                        <div className="flex items-start space-x-3">
-                          <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Location</p>
-                            <p className="text-sm">{clientInfo.location}</p>
+                        <div className="flex items-start space-x-2 sm:space-x-3">
+                          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-muted-foreground">Location</p>
+                            <p className="text-xs sm:text-sm">{clientInfo.location}</p>
                           </div>
                         </div>
                       )}
 
                       {clientInfo.totalProjects !== undefined && (
-                        <div className="flex items-start space-x-3">
-                          <Briefcase className="h-4 w-4 text-muted-foreground mt-1" />
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">
+                        <div className="flex items-start space-x-2 sm:space-x-3">
+                          <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                               Total Projects
                             </p>
-                            <p className="text-sm">{clientInfo.totalProjects}</p>
+                            <p className="text-xs sm:text-sm">{clientInfo.totalProjects}</p>
                           </div>
                         </div>
                       )}
 
                       {clientInfo.rating !== undefined && clientInfo.rating > 0 && (
-                        <div className="flex items-start space-x-3">
-                          <span className="text-yellow-500 mt-1">★</span>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Rating</p>
-                            <p className="text-sm">{clientInfo.rating.toFixed(1)} / 5.0</p>
+                        <div className="flex items-start space-x-2 sm:space-x-3">
+                          <span className="text-yellow-500 mt-1 text-sm">★</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-muted-foreground">Rating</p>
+                            <p className="text-xs sm:text-sm">{clientInfo.rating.toFixed(1)} / 5.0</p>
                           </div>
                         </div>
                       )}
 
                       {clientInfo.createdAt && (
-                        <div className="flex items-start space-x-3">
-                          <Calendar className="h-4 w-4 text-muted-foreground mt-1" />
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">
+                        <div className="flex items-start space-x-2 sm:space-x-3">
+                          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                               Member Since
                             </p>
-                            <p className="text-sm">
+                            <p className="text-xs sm:text-sm">
                               {new Date(clientInfo.createdAt).toLocaleDateString('en-US', {
                                 month: 'long',
                                 year: 'numeric',
@@ -511,8 +508,8 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                       <>
                         <Separator />
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-2">Bio</p>
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Bio</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap break-words">
                             {clientInfo.bio}
                           </p>
                         </div>
@@ -520,21 +517,21 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No client information available</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">No client information available</p>
                 )}
               </CardContent>
             </Card>
 
             {/* Project Metadata */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Additional Information</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-sm sm:text-base font-medium">Additional Information</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                   <div>
                     <p className="text-muted-foreground">Project ID</p>
-                    <p className="font-mono text-xs mt-1">{project.id}</p>
+                    <p className="font-mono text-[10px] sm:text-xs mt-1 break-all">{project.id}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Featured</p>
@@ -599,7 +596,7 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
               </Card>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         
       </DialogContent>

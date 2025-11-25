@@ -551,38 +551,41 @@ export default function WorkSubmissionsView() {
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "pending" | "approved" | "rejected")} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="pending" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Pending Review
-            {pendingSubmissions.length > 0 && (
-              <Badge 
-                variant={urgentPendingCount > 0 ? "destructive" : "secondary"} 
-                className={`ml-1 ${urgentPendingCount > 0 ? 'animate-pulse' : ''}`}
-              >
-                {pendingSubmissions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="approved" className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" />
-            Approved
-            {approvedSubmissions.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {approvedSubmissions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="rejected" className="flex items-center gap-2">
-            <XCircle className="h-4 w-4" />
-            Rejected
-            {rejectedSubmissions.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {rejectedSubmissions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="inline-flex w-full sm:grid sm:grid-cols-3 min-w-max sm:min-w-0">
+            <TabsTrigger value="pending" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Pending Review</span>
+              <span className="xs:hidden">Pending</span>
+              {pendingSubmissions.length > 0 && (
+                <Badge 
+                  variant={urgentPendingCount > 0 ? "destructive" : "secondary"} 
+                  className={`ml-1 text-xs ${urgentPendingCount > 0 ? 'animate-pulse' : ''}`}
+                >
+                  {pendingSubmissions.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
+              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              Approved
+              {approvedSubmissions.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-xs">
+                  {approvedSubmissions.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="rejected" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
+              <XCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              Rejected
+              {rejectedSubmissions.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-xs">
+                  {rejectedSubmissions.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="pending" className="mt-6">
           <div className="flex justify-end mb-4">
@@ -752,14 +755,16 @@ export default function WorkSubmissionsView() {
               </div>
 
               <Tabs defaultValue="description" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="description" className="text-sm">
-                    Description
-                  </TabsTrigger>
-                  <TabsTrigger value="files" className="text-sm">
-                    Files ({selectedSubmission.files.length})
-                  </TabsTrigger>
-                </TabsList>
+                <div className="w-full overflow-x-auto">
+                  <TabsList className="inline-flex w-full sm:grid sm:grid-cols-2 min-w-max sm:min-w-0">
+                    <TabsTrigger value="description" className="text-xs sm:text-sm px-4 sm:px-6 whitespace-nowrap">
+                      Description
+                    </TabsTrigger>
+                    <TabsTrigger value="files" className="text-xs sm:text-sm px-4 sm:px-6 whitespace-nowrap">
+                      Files ({selectedSubmission.files.length})
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
                 <TabsContent value="description" className="space-y-4">
                   <Card>

@@ -682,17 +682,17 @@ export function UrgentProjectsView() {
 
       {/* Set Price Modal */}
       <Dialog open={isPricingModalOpen} onOpenChange={handleClosePricingModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Set Project Price</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Set Project Price</DialogTitle>
+            <DialogDescription className="text-sm">
               Review the project details and set an appropriate price for{" "}
               {selectedProject?.title}.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+              <Label htmlFor="price" className="sm:text-right">
                 Price ($)
               </Label>
               <Input
@@ -702,15 +702,15 @@ export function UrgentProjectsView() {
                 min="0"
                 value={adminPrice}
                 onChange={(e) => setAdminPrice(e.target.value)}
-                className="col-span-3"
+                className="sm:col-span-3"
                 placeholder="Enter price"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="duration" className="text-right">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+              <Label htmlFor="duration" className="sm:text-right">
                 Duration
               </Label>
-              <div className="col-span-3 flex gap-2">
+              <div className="sm:col-span-3 flex gap-2">
                 <Input
                   id="duration"
                   type="number"
@@ -725,34 +725,35 @@ export function UrgentProjectsView() {
                   onChange={(e) =>
                     setAdminDurationUnit(e.target.value as "days" | "weeks")
                   }
-                  className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+                  className="px-2 sm:px-3 py-2 border border-input bg-background rounded-md text-sm"
                 >
                   <option value="days">Days</option>
                   <option value="weeks">Weeks</option>
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="notes" className="text-right pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-4">
+              <Label htmlFor="notes" className="sm:text-right sm:pt-2">
                 Notes
               </Label>
               <Textarea
                 id="notes"
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
-                className="col-span-3"
+                className="sm:col-span-3"
                 placeholder="Optional notes for the customer..."
                 rows={3}
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleClosePricingModal}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={handleClosePricingModal} className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button 
               onClick={handleSubmitPricing} 
               disabled={submittingPrice || !adminPrice.trim()}
+              className="w-full sm:w-auto"
             >
               {submittingPrice ? (
                 <>
@@ -769,13 +770,13 @@ export function UrgentProjectsView() {
 
       {/* Assign Employee Modal */}
       <Dialog open={isAssignModalOpen} onOpenChange={handleCloseAssignModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              Assign Employee to Urgent Project
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 flex-shrink-0" />
+              <span className="line-clamp-2">Assign Employee to Urgent Project</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               This is a high-priority urgent project. Select an employee to assign to{" "}
               <span className="font-semibold">{selectedProject?.title}</span>.
               The employee will be notified via email immediately.
@@ -783,7 +784,7 @@ export function UrgentProjectsView() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="employee">
+              <Label htmlFor="employee" className="text-sm sm:text-base">
                 Select Employee
               </Label>
               <Popover open={employeePopoverOpen} onOpenChange={setEmployeePopoverOpen}>
@@ -792,16 +793,16 @@ export function UrgentProjectsView() {
                     variant="outline"
                     role="combobox"
                     aria-expanded={employeePopoverOpen}
-                    className="w-full justify-between"
+                    className="w-full justify-between text-sm"
                   >
-                    {getSelectedEmployeeDisplay()}
+                    <span className="truncate">{getSelectedEmployeeDisplay()}</span>
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search employees..." />
-                    <CommandEmpty>No employees found.</CommandEmpty>
+                    <CommandInput placeholder="Search employees..." className="text-sm" />
+                    <CommandEmpty className="text-sm">No employees found.</CommandEmpty>
                     <CommandGroup>
                       {employees.length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">
@@ -818,15 +819,15 @@ export function UrgentProjectsView() {
                             }}
                           >
                             <div className="flex flex-col w-full gap-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{employee.name}</span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-sm">{employee.name}</span>
                                 {employee.designation && (
                                   <Badge variant="secondary" className="text-xs">
                                     {employee.designation}
                                   </Badge>
                                 )}
                               </div>
-                              <span className="text-xs text-muted-foreground">{employee.email}</span>
+                              <span className="text-xs text-muted-foreground truncate">{employee.email}</span>
                             </div>
                           </CommandItem>
                         ))
@@ -837,25 +838,27 @@ export function UrgentProjectsView() {
               </Popover>
             </div>
             {selectedProject && (
-              <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-700 dark:text-red-400">
+              <div className="p-3 sm:p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-xs sm:text-sm text-red-700 dark:text-red-400">
                   <strong>⚠️ Priority Notice:</strong> This urgent project requires immediate attention. 
                   The assigned employee will receive an email marked as URGENT.
                 </p>
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={handleCloseAssignModal}
               disabled={assigningEmployee}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAssignEmployee}
               disabled={!selectedEmployeeId || assigningEmployee}
+              className="w-full sm:w-auto"
             >
               {assigningEmployee ? "Assigning..." : "Assign Employee"}
             </Button>

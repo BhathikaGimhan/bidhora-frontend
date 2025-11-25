@@ -18,7 +18,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, Edit, Trash2, Search, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { faqService, FAQ } from "@/Services/faqService";
@@ -33,6 +45,8 @@ const FAQManagement: React.FC = () => {
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [faqToDelete, setFaqToDelete] = useState<FAQ | null>(null);
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     category: "",
@@ -156,24 +170,24 @@ const FAQManagement: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    const faqToDelete = faqs.find(f => f.id === id);
-    if (!confirm("Are you sure you want to delete this FAQ?")) {
-      return;
-    }
+  const openDeleteDialog = (faq: FAQ) => {
+    setFaqToDelete(faq);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!faqToDelete) return;
 
     try {
-      await faqService.deleteFAQ(id);
+      await faqService.deleteFAQ(faqToDelete.id);
       
       // Log activity
-      if (faqToDelete) {
-        await adminActivityService.logFAQAction(
-          'Deleted FAQ',
-          id,
-          faqToDelete.question,
-          `Deleted FAQ from ${faqToDelete.category} category`
-        );
-      }
+      await adminActivityService.logFAQAction(
+        'Deleted FAQ',
+        faqToDelete.id,
+        faqToDelete.question,
+        `Deleted FAQ from ${faqToDelete.category} category`
+      );
       
       toast({
         title: "Success",
@@ -187,6 +201,9 @@ const FAQManagement: React.FC = () => {
         description: "Failed to delete FAQ. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setDeleteDialogOpen(false);
+      setFaqToDelete(null);
     }
   };
 
@@ -206,22 +223,22 @@ const FAQManagement: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-foreground">FAQ Management</h1>
+    <div className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">FAQ Management</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button
               onClick={openAddDialog}
-              className="bg-brand-primary hover:bg-brand-primary/90"
+              className="bg-brand-primary hover:bg-brand-primary/90 w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add FAQ
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">
                 {editingFaq ? "Edit FAQ" : "Add New FAQ"}
               </DialogTitle>
             </DialogHeader>
@@ -363,15 +380,15 @@ const FAQManagement: React.FC = () => {
           <div className="space-y-4">
             {filteredFaqs.map((faq) => (
               <Card key={faq.id}>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4">
+                    <div className="flex-1 w-full sm:w-auto">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="text-xs">
                           {categories.find((cat) => cat.id === faq.category)?.name}
                         </Badge>
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">{faq.question}</h3>
+                      <h3 className="text-base sm:text-lg font-semibold mb-2">{faq.question}</h3>
                       <p className="text-muted-foreground text-sm leading-relaxed mb-3">
                         {faq.answer}
                       </p>
@@ -383,21 +400,24 @@ const FAQManagement: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2 w-full sm:w-auto sm:ml-4">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(faq)}
+                        className="flex-1 sm:flex-none"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-4 w-4 sm:mr-0" />
+                        <span className="ml-2 sm:hidden">Edit</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(faq.id)}
-                        className="text-red-600 hover:text-red-700"
+                        onClick={() => openDeleteDialog(faq)}
+                        className="text-red-600 hover:text-red-700 flex-1 sm:flex-none"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 sm:mr-0" />
+                        <span className="ml-2 sm:hidden">Delete</span>
                       </Button>
                     </div>
                   </div>
@@ -420,6 +440,38 @@ const FAQManagement: React.FC = () => {
           )}
         </>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete FAQ</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Are you sure you want to delete this FAQ?</p>
+              {faqToDelete && (
+                <div className="mt-3 p-3 bg-muted rounded-md">
+                  <p className="font-medium text-foreground text-sm mb-1">
+                    {faqToDelete.question}
+                  </p>
+                  <Badge variant="secondary" className="text-xs">
+                    {categories.find((cat) => cat.id === faqToDelete.category)?.name}
+                  </Badge>
+                </div>
+              )}
+              <p className="text-sm mt-2">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete FAQ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
