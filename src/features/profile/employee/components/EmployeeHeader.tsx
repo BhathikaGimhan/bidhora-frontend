@@ -186,7 +186,7 @@ export const EmployeeHeader = ({ profile, isOwnProfile, onProfileUpdate }: Emplo
           <div className="flex-1 space-y-3">
             <div>
               {isOwnProfile && isEditingName ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
                   <input
                     type="text"
                     value={displayName}
@@ -195,33 +195,35 @@ export const EmployeeHeader = ({ profile, isOwnProfile, onProfileUpdate }: Emplo
                       if (e.key === 'Enter') handleSaveDisplayName();
                       if (e.key === 'Escape') handleCancelEdit();
                     }}
-                    className="text-4xl font-bold text-foreground bg-background border border-border rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground bg-background border border-border rounded-lg px-2 sm:px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto flex-1 min-w-0"
                     placeholder="Enter display name"
                     disabled={isSaving}
                     autoFocus
                   />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleSaveDisplayName}
-                    disabled={isSaving}
-                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                  >
-                    <Check className="w-5 h-5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleCancelEdit}
-                    disabled={isSaving}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
+                  <div className="flex items-center gap-1 self-end sm:self-auto">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleSaveDisplayName}
+                      disabled={isSaving}
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 h-8 w-8 p-0"
+                    >
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCancelEdit}
+                      disabled={isSaving}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 h-8 w-8 p-0"
+                    >
+                      <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <h1 className="text-4xl font-bold text-foreground">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground break-words">
                     {profile.displayName || "Employee"}
                   </h1>
                   {isOwnProfile && (
@@ -229,9 +231,9 @@ export const EmployeeHeader = ({ profile, isOwnProfile, onProfileUpdate }: Emplo
                       size="sm"
                       variant="ghost"
                       onClick={() => setIsEditingName(true)}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground hover:text-foreground h-8 w-8 p-0 flex-shrink-0"
                     >
-                      <Edit3 className="w-4 h-4" />
+                      <Edit3 className="w-3 h-3 sm:w-4 sm:h-4" />
                     </Button>
                   )}
                 </div>
