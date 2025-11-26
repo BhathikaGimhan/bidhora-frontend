@@ -35,12 +35,6 @@ import { geniePaymentService } from '@/Services/geniePaymentService';
 import { auth } from '@/firebaseConfig';
 import { submitProjectReview } from '@/Services/projectService';
 
-// Payment mode - using real Genie payment gateway
-const USE_MOCK_PAYMENT = false; // Changed to false - using real payments
-
-// UAT Testing mode - set to true for testing with UAT API
-const USE_UAT_ENVIRONMENT = true; // Changed to true - using UAT for testing
-
 export default function FinalPaymentPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -50,12 +44,10 @@ export default function FinalPaymentPage() {
   const [processing, setProcessing] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
-  const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [reviewFeedback, setReviewFeedback] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [useUATMode, setUseUATMode] = useState(USE_UAT_ENVIRONMENT);
 
   useEffect(() => {
     const loadPaymentDetails = async () => {
@@ -248,42 +240,63 @@ export default function FinalPaymentPage() {
 
       if (status === 'success') {
         try {
-          console.log('✅ Final payment successful, updating project status...');
+          console.log('✅ Final payment successful, verifying with backend...');
           
-          const { doc: firestoreDoc, updateDoc, Timestamp } = await import('firebase/firestore');
-          const { db } = await import('@/firebaseConfig');
+          const verifyUrl = import.meta.env.VITE_GENIE_VERIFY_PAYMENT_URL || 
+            'https://verifypayment-e7fpchtlna-uc.a.run.app';
           
-          const order_id = `FINAL_${projectId}_`;
-          
-          const projectRef = firestoreDoc(db, 'projects', projectId);
-          await updateDoc(projectRef, {
-            finalPaymentStatus: 'paid',
-            finalPaymentId: order_id + Date.now(),
-            finalPaymentAt: Timestamp.now(),
-            status: 'completed',
-            updatedAt: Timestamp.now(),
+          // Call backend to verify payment instead of directly updating Firestore
+          const response = await fetch(verifyUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              projectId,
+              paymentType: 'final',
+            }),
           });
 
-          console.log('✅ Final payment status updated successfully');
-          setPaymentCompleted(true);
+          console.log('📡 Verification response status:', response.status);
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('❌ Verification failed:', errorData);
+            throw new Error(errorData.error || 'Payment verification failed');
+          }
+
+          const result = await response.json();
           
-          toast({
-            title: 'Payment Successful!',
-            description: 'Your final payment has been processed. You can now download your files.',
-          });
+          console.log('✅ Final payment verified by backend:', result);
+          
+          if (result.isPaid) {
+            setPaymentCompleted(true);
+            toast({
+              title: 'Payment Successful!',
+              description: 'Your final payment has been processed. You can now download your files.',
+            });
+          } else {
+            // Payment not yet confirmed - webhook might still be processing
+            console.log('⏳ Payment not yet confirmed by webhook, will retry...');
+            toast({
+              title: 'Payment Processing',
+              description: 'Payment is being processed. Please wait a moment and refresh if status does not update.',
+              variant: 'default',
+            });
+          }
           
           // Clear URL params and reload
           navigate(`/payment/final/${projectId}`, { replace: true });
           
-          // Reload payment details
+          // Reload payment details to get updated status from Firestore
           const updatedDetails = await geniePaymentService.getProjectPaymentDetails(projectId);
           setPaymentDetails(updatedDetails);
           
         } catch (error) {
-          console.error('❌ Error updating final payment status:', error);
+          console.error('❌ Error verifying final payment:', error);
           toast({
-            title: 'Error',
-            description: 'Payment was successful but failed to update status. Please contact support.',
+            title: 'Verification Pending',
+            description: `Payment successful but verification is pending. ${error instanceof Error ? error.message : 'Please refresh the page in a few moments.'}`,
             variant: 'destructive',
           });
         }
@@ -320,8 +333,7 @@ export default function FinalPaymentPage() {
           buyerName: auth.currentUser?.displayName || 'Customer',
           projectTitle: paymentDetails.projectTitle,
         },
-        useUATMode ? 'uat' : 'production',
-        false // Use real payment, not mock
+        'production'
       );
 
       if (result.success) {
@@ -353,10 +365,10 @@ export default function FinalPaymentPage() {
 
       setProcessing(true);
 
-      console.log('💳 Processing mock final payment:', {
+      console.log('💳 Processing final payment:', {
         projectId,
         amount: paymentDetails.finalPayment,
-        mode: 'DEVELOPMENT_ONLY'
+        mode: 'PRODUCTION'
       });
 
       // Simulate processing delay
@@ -370,16 +382,14 @@ export default function FinalPaymentPage() {
           buyerName: auth.currentUser?.displayName || 'Customer',
           projectTitle: paymentDetails.projectTitle,
         },
-        useUATMode ? 'uat' : 'production',
-        true // Always use mock for the mock payment modal
+        'production'
       );
 
       if (result.success) {
         setPaymentCompleted(true);
-        setShowMockPaymentModal(false);
 
         toast({
-          title: 'Test Payment Successful!',
+          title: 'Payment Successful!',
           description: `Transaction ID: ${result.transactionId}`,
         });
 
@@ -387,7 +397,7 @@ export default function FinalPaymentPage() {
         const updatedDetails = await geniePaymentService.getProjectPaymentDetails(projectId!);
         setPaymentDetails(updatedDetails);
 
-        console.log('✅ Mock final payment successful');
+        console.log('✅ Final payment successful');
       } else {
         toast({
           title: 'Payment Failed',
@@ -396,7 +406,7 @@ export default function FinalPaymentPage() {
         });
       }
     } catch (error) {
-      console.error('❌ Mock payment error:', error);
+      console.error('❌ Payment error:', error);
       toast({
         title: 'Payment Error',
         description: 'An error occurred while processing your payment',
@@ -813,34 +823,7 @@ export default function FinalPaymentPage() {
             </div>
           </div>
 
-          {/* UAT Testing Toggle - Always visible for testing */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <span className="text-sm font-medium text-yellow-900">
-                  Payment Environment
-                </span>
-              </div>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <span className="text-sm text-yellow-700">
-                  {useUATMode ? 'UAT/Testing' : 'Production'}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={useUATMode}
-                  onChange={(e) => setUseUATMode(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                />
-              </label>
-            </div>
-            <p className="text-xs text-yellow-700 mt-2">
-              {useUATMode 
-                ? '⚠️ Using UAT/Testing API (api.uat.geniebiz.lk) - Safe for testing'
-                : '✓ Using Production API (api.geniebiz.lk) - Real payments'
-              }
-            </p>
-          </div>
+          {/* UAT Testing Toggle - Removed for production */}
 
           {/* Security Badge */}
           <div className="flex items-center justify-center space-x-2 text-muted-foreground">
@@ -893,84 +876,7 @@ export default function FinalPaymentPage() {
         </CardContent>
       </Card>
 
-      {/* Mock Payment Modal for Testing */}
-      <Dialog open={showMockPaymentModal} onOpenChange={setShowMockPaymentModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-emerald-600" />
-              Test Payment (Mock Mode)
-            </DialogTitle>
-            <DialogDescription>
-              This is a test payment for development purposes only. No real payment will be processed.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <Alert className="bg-amber-50 border-amber-200">
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-900">
-                <strong>⚠️ Development Testing Mode:</strong> This is a simulated payment. In production, all payments will be processed through Genie's secure payment gateway.
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-3 bg-slate-50 rounded-lg p-4">
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-slate-600">Project:</span>
-                <span className="text-sm font-semibold">{paymentDetails?.projectTitle}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-slate-600">Amount:</span>
-                <span className="text-lg font-bold text-emerald-600">
-                  LKR {paymentDetails?.finalPayment?.toFixed(2)}
-                </span>
-              </div>
-              <Separator />
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-slate-600">Type:</span>
-                <Badge variant="outline" className="text-emerald-700 border-emerald-300">
-                  Final Payment (90%)
-                </Badge>
-              </div>
-            </div>
-
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-              <p className="text-xs text-emerald-800">
-                💳 Click "Confirm Test Payment" to simulate a successful payment. This will update the project status and allow file downloads.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowMockPaymentModal(false)}
-              disabled={processing}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleMockPaymentConfirm}
-              disabled={processing}
-              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700"
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Confirm Test Payment
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Removed Mock Payment Modal for production */}
     </div>
   );
 }

@@ -182,24 +182,6 @@ class GeniePaymentService {
   }
 
   /**
-   * Get test credentials for development
-   */
-  getTestCredentials() {
-    return {
-      testCard: {
-        number: '4111111111111111',
-        cvv: '123',
-        expiry: '12/25',
-        name: 'Test User',
-      },
-      testMobileWallet: {
-        number: '0771234567',
-        pin: '1234',
-      },
-    };
-  }
-
-  /**
    * Check if credentials are configured
    */
   isConfigured(): boolean {
@@ -309,12 +291,10 @@ class GeniePaymentService {
    * Process final payment
    * @param paymentData Final payment data
    * @param environment 'production' or 'uat' - defaults to 'production'
-   * @param useMock Use mock payment for testing (default: true)
    */
   async processFinalPayment(
     paymentData: FinalPaymentData,
-    environment: 'production' | 'uat' = 'production',
-    useMock: boolean = true
+    environment: 'production' | 'uat' = 'production'
   ): Promise<PaymentResult> {
     try {
       console.log('💳 Processing final payment:', {
@@ -322,73 +302,47 @@ class GeniePaymentService {
         amount: paymentData.amount,
         buyer: paymentData.buyerEmail,
         environment,
-        useMock,
       });
 
-      if (useMock) {
-        // Mock payment for testing
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const transactionId = `TEST_FINAL_${Date.now()}_${Math.random().toString(36).substring(7).toUpperCase()}`;
+      // Real Genie payment
+      const order_id = `FINAL_${paymentData.projectId}_${Date.now()}`;
+      const baseUrl = window.location.origin;
 
-        const projectRef = doc(db, 'projects', paymentData.projectId);
-        await updateDoc(projectRef, {
-          finalPaymentStatus: 'paid',
-          finalPaymentId: transactionId,
-          finalPaymentAt: serverTimestamp(),
-          status: 'completed',
-        });
+      const paymentConfig: GeniePaymentConfig = {
+        merchantId: '',
+        apiKey: '',
+        orderId: order_id,
+        amount: paymentData.amount.toFixed(2),
+        currency: 'LKR',
+        description: `Final Payment - ${paymentData.projectTitle}`,
+        customerEmail: paymentData.buyerEmail,
+        customerName: paymentData.buyerName,
+        customerPhone: '',
+        returnUrl: `${baseUrl}/payment/final/${paymentData.projectId}?status=success`,
+        cancelUrl: `${baseUrl}/payment/final/${paymentData.projectId}?status=cancelled`,
+        notifyUrl: import.meta.env.VITE_GENIE_WEBHOOK_URL || `https://geniewebhook-e7fpchtlna-uc.a.run.app`,
+      };
 
-        console.log('✅ Final payment processed successfully (Mock):', {
-          transactionId,
-          projectId: paymentData.projectId,
-        });
+      console.log('💳 Initiating Genie payment for final payment:', {
+        order_id,
+        amount: paymentConfig.amount,
+        environment,
+      });
 
-        return {
-          success: true,
-          message: 'Payment processed successfully (Testing Mode)',
-          transactionId,
-        };
-      } else {
-        // Real Genie payment
-        const order_id = `FINAL_${paymentData.projectId}_${Date.now()}`;
-        const baseUrl = window.location.origin;
+      const result = await this.initiatePayment(paymentConfig, environment);
 
-        const paymentConfig: GeniePaymentConfig = {
-          merchantId: '',
-          apiKey: '',
-          orderId: order_id,
-          amount: paymentData.amount.toFixed(2),
-          currency: 'LKR',
-          description: `Final Payment - ${paymentData.projectTitle}`,
-          customerEmail: paymentData.buyerEmail,
-          customerName: paymentData.buyerName,
-          customerPhone: '',
-          returnUrl: `${baseUrl}/payment/final/${paymentData.projectId}?status=success`,
-          cancelUrl: `${baseUrl}/payment/final/${paymentData.projectId}?status=cancelled`,
-          notifyUrl: `https://api-e7fpchtlna-uc.a.run.app/genie/notify`,
-        };
+      console.log('✅ Genie payment initiated:', result);
 
-        console.log('💳 Initiating Genie payment for final payment:', {
-          order_id,
-          amount: paymentConfig.amount,
-          environment,
-        });
-
-        const result = await this.initiatePayment(paymentConfig, environment);
-
-        console.log('✅ Genie payment initiated:', result);
-
-        // Redirect to payment page
-        if (result.redirectUrl) {
-          window.location.href = result.redirectUrl;
-        }
-
-        return {
-          success: true,
-          message: 'Redirecting to payment gateway...',
-          transactionId: result.paymentId,
-        };
+      // Redirect to payment page
+      if (result.redirectUrl) {
+        window.location.href = result.redirectUrl;
       }
+
+      return {
+        success: true,
+        message: 'Redirecting to payment gateway...',
+        transactionId: result.paymentId,
+      };
     } catch (error) {
       console.error('❌ Error processing final payment:', error);
       return {

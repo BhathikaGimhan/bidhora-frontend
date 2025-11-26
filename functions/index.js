@@ -12,6 +12,10 @@ const { onRequest } = require("firebase-functions/https");
 const functions = require("firebase-functions");
 const logger = require("firebase-functions/logger");
 const nodemailer = require("nodemailer");
+const admin = require("firebase-admin");
+
+// Initialize Firebase Admin
+admin.initializeApp();
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -945,6 +949,7 @@ exports.sendFinalPaymentNotification = onRequest(
 /**
  * Genie Payment Gateway Proxy
  * Handles payment initiation and verification through Genie API
+ * PRODUCTION MODE - Using real Genie credentials
  */
 exports.geniePayment = onRequest(
   { cors: true, maxInstances: 10 },
@@ -957,28 +962,21 @@ exports.geniePayment = onRequest(
 
     const { action, paymentData, paymentId, environment } = req.body;
 
-    // Determine API base URL based on environment
-    const isUAT = environment === 'uat' || environment === 'test';
-    const GENIE_API_BASE = isUAT 
-      ? 'https://api.uat.geniebiz.lk' 
-      : 'https://api.geniebiz.lk';
+    // Always use Production API
+    const GENIE_API_BASE = 'https://api.geniebiz.lk';
 
-    logger.info("Genie environment", { 
-      environment: isUAT ? 'UAT' : 'Production',
+    logger.info("Genie Production Payment Gateway", { 
+      environment: 'Production',
       baseUrl: GENIE_API_BASE 
     });
 
-    // Get Genie credentials from environment variables (Firebase Functions v2)
-    // Use separate credentials for UAT and Production
-    const GENIE_APPLICATION_ID = isUAT
-      ? (process.env.GENIE_UAT_APPLICATION_ID || "36bafce7-a201-429b-a9e2-c5b78546677c")
-      : (process.env.GENIE_APPLICATION_ID || "e6092ac4-3dba-466c-b0a7-137566fd81af");
-    const GENIE_API_KEY = isUAT
-      ? (process.env.GENIE_UAT_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjM2YmFmY2U3LWEyMDEtNDI5Yi1hOWUyLWM1Yjc4NTQ2Njc3YyIsImNvbXBhbnlJZCI6IjYzOTdmMzlkZjA3ZmJhMDAwODQyYTkwYiIsImlhdCI6MTY3MDkwMjY4NSwiZXhwIjo0ODI2NTc2Mjg1fQ.fy12dgFhA3iB_RCjD7y8j5HClNRZUiBZgAg-QzFpxaE")
-      : (process.env.GENIE_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6ImU2MDkyYWM0LTNkYmEtNDY2Yy1iMGE3LTEzNzU2NmZkODFhZiIsImNvbXBhbnlJZCI6IjY5MWFmNTFiOTVhNDRhODY2MzkzYTgzNCIsImlhdCI6MTc2Mzc4Njg0MSwiZXhwIjo0OTE5NDYwNDQxfQ.CBoQW3aJauu9wtfFgPdVQCAqV9ZbS2YB93nFjw0kb40");
+    // Get Genie Production credentials from environment variables or hardcoded defaults
+    // Production credentials for Bidhora (https://bidhora.com)
+    const GENIE_APPLICATION_ID = process.env.GENIE_APPLICATION_ID || "e6092ac4-3dba-466c-b0a7-137566fd81af";
+    const GENIE_API_KEY = process.env.GENIE_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6ImU2MDkyYWM0LTNkYmEtNDY2Yy1iMGE3LTEzNzU2NmZkODFhZiIsImNvbXBhbnlJZCI6IjY5MWFmNTFiOTVhNDRhODY2MzkzYTgzNCIsImlhdCI6MTc2Mzc4Njg0MSwiZXhwIjo0OTE5NDYwNDQxfQ.CBoQW3aJauu9wtfFgPdVQCAqV9ZbS2YB93nFjw0kb40";
 
-    logger.info("Genie credentials loaded", {
-      environment: isUAT ? 'UAT' : 'Production',
+    logger.info("Genie Production credentials loaded", {
+      environment: 'Production',
       appIdLength: GENIE_APPLICATION_ID?.length || 0,
       apiKeyLength: GENIE_API_KEY?.length || 0,
       appIdPrefix: GENIE_APPLICATION_ID?.substring(0, 8) || 'missing'
@@ -996,7 +994,7 @@ exports.geniePayment = onRequest(
     try {
       if (action === "initiate") {
         // Initiate payment
-        logger.info("Initiating Genie payment", { 
+        logger.info("Initiating Genie production payment", { 
           paymentData,
           apiKeyPrefix: GENIE_API_KEY.substring(0, 20) + "..."
         });
@@ -1023,8 +1021,8 @@ exports.geniePayment = onRequest(
 
         const apiUrl = `${GENIE_API_BASE}/public/v2/transactions`;
 
-        logger.info("Sending to Genie API", { 
-          environment: isUAT ? 'UAT' : 'Production',
+        logger.info("Sending to Genie Production API", { 
+          environment: 'Production',
           url: apiUrl,
           requestBody: genieRequestBody,
           headers: {
@@ -1097,9 +1095,9 @@ exports.geniePayment = onRequest(
         });
       } else if (action === "verify") {
         // Verify payment
-        logger.info("Verifying Genie payment", { 
+        logger.info("Verifying Genie production payment", { 
           paymentId,
-          environment: isUAT ? 'UAT' : 'Production'
+          environment: 'Production'
         });
 
         const verifyUrl = `${GENIE_API_BASE}/public/v2/transactions/${paymentId}`;
@@ -1137,6 +1135,415 @@ exports.geniePayment = onRequest(
       logger.error("Genie payment error", error);
       res.status(500).json({
         error: "Payment processing failed",
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * Genie Payment Webhook Handler
+ * Receives payment notifications from Genie and updates project status
+ */
+exports.genieWebhook = onRequest(
+  { cors: true, maxInstances: 10 },
+  async (req, res) => {
+    // Only allow POST requests
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    try {
+      const webhookData = req.body;
+      
+      logger.info("Genie webhook received", {
+        data: webhookData,
+        headers: req.headers
+      });
+
+      // Extract transaction details from webhook
+      const { id: transactionId, localId, customerReference, status, state } = webhookData;
+      const orderId = localId || customerReference;
+
+      if (!orderId) {
+        logger.error("Webhook missing order ID", webhookData);
+        res.status(400).json({ error: "Missing order ID" });
+        return;
+      }
+
+      // Determine if this is a deposit or final payment based on order ID
+      const isDepositPayment = orderId.startsWith('DEPOSIT_');
+      const isFinalPayment = orderId.startsWith('FINAL_');
+
+      if (!isDepositPayment && !isFinalPayment) {
+        logger.error("Unknown payment type", { orderId });
+        res.status(400).json({ error: "Unknown payment type" });
+        return;
+      }
+
+      // Extract project ID from order ID
+      const projectId = orderId.split('_')[1];
+
+      logger.info("Processing webhook", {
+        projectId,
+        orderId,
+        transactionId,
+        status,
+        state,
+        paymentType: isDepositPayment ? 'deposit' : 'final'
+      });
+
+      // Check if payment is successful
+      // Genie sends either COMPLETED, CONFIRMED, or SUCCESS status
+      const isSuccess = status === 'COMPLETED' || 
+                       state === 'COMPLETED' || 
+                       status === 'SUCCESS' ||
+                       state === 'CONFIRMED' ||
+                       status === 'CONFIRMED';
+
+      if (isSuccess) {
+        const db = admin.firestore();
+        const projectRef = db.collection('projects').doc(projectId);
+
+        // Check if payment already processed (idempotency)
+        const projectDoc = await projectRef.get();
+        if (!projectDoc.exists) {
+          logger.error("Project not found", { projectId });
+          res.status(404).json({ error: "Project not found" });
+          return;
+        }
+
+        const projectData = projectDoc.data();
+
+        if (isDepositPayment) {
+          // Check if this deposit payment was already processed
+          if (projectData.initialPaymentId === transactionId || 
+              projectData.initialPaymentId === orderId) {
+            logger.info("Deposit payment already processed - idempotent check", { 
+              projectId, 
+              transactionId,
+              existingPaymentId: projectData.initialPaymentId 
+            });
+            res.status(200).json({ 
+              success: true, 
+              message: "Payment already processed" 
+            });
+            return;
+          }
+
+          // Update deposit payment status
+          await projectRef.update({
+            initialPaymentStatus: 'paid',
+            initialPaymentId: transactionId || orderId,
+            initialPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+            customerDecision: 'approved',
+            status: 'ready_to_assign',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          logger.info("Deposit payment updated successfully", { projectId, transactionId });
+        } else if (isFinalPayment) {
+          // Check if this final payment was already processed
+          if (projectData.finalPaymentId === transactionId || 
+              projectData.finalPaymentId === orderId) {
+            logger.info("Final payment already processed - idempotent check", { 
+              projectId, 
+              transactionId,
+              existingPaymentId: projectData.finalPaymentId 
+            });
+            res.status(200).json({ 
+              success: true, 
+              message: "Payment already processed" 
+            });
+            return;
+          }
+
+          // Update final payment status
+          await projectRef.update({
+            finalPaymentStatus: 'paid',
+            finalPaymentId: transactionId || orderId,
+            finalPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: 'completed',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          logger.info("Final payment updated successfully", { projectId, transactionId });
+        }
+
+        res.status(200).json({ 
+          success: true, 
+          message: "Payment processed successfully" 
+        });
+      } else {
+        logger.warn("Payment not successful", { status, state, orderId });
+        res.status(200).json({ 
+          success: false, 
+          message: "Payment not completed" 
+        });
+      }
+    } catch (error) {
+      logger.error("Webhook processing error", error);
+      res.status(500).json({
+        error: "Webhook processing failed",
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * Verify and Confirm Payment
+ * Called by frontend after payment redirect to verify payment status
+ */
+exports.verifyPayment = onRequest(
+  { cors: true, maxInstances: 10 },
+  async (req, res) => {
+    // Only allow POST requests
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    try {
+      const { projectId, paymentType } = req.body;
+
+      if (!projectId || !paymentType) {
+        res.status(400).json({ error: "Missing required parameters" });
+        return;
+      }
+
+      logger.info("Verifying payment", { projectId, paymentType });
+
+      const db = admin.firestore();
+      const projectRef = db.collection('projects').doc(projectId);
+      const projectDoc = await projectRef.get();
+
+      if (!projectDoc.exists) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      const projectData = projectDoc.data();
+
+      if (paymentType === 'deposit') {
+        const isPaid = projectData.initialPaymentStatus === 'paid';
+        res.status(200).json({
+          success: true,
+          isPaid,
+          paymentId: projectData.initialPaymentId,
+          message: isPaid ? "Deposit payment verified" : "Payment not yet confirmed"
+        });
+      } else if (paymentType === 'final') {
+        const isPaid = projectData.finalPaymentStatus === 'paid';
+        res.status(200).json({
+          success: true,
+          isPaid,
+          paymentId: projectData.finalPaymentId,
+          message: isPaid ? "Final payment verified" : "Payment not yet confirmed"
+        });
+      } else {
+        res.status(400).json({ error: "Invalid payment type" });
+      }
+    } catch (error) {
+      logger.error("Payment verification error", error);
+      res.status(500).json({
+        error: "Verification failed",
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * Register Webhook with Genie
+ * One-time setup to register our webhook URL with Genie Business
+ * This ensures all payment notifications are sent to our webhook endpoint
+ */
+exports.registerGenieWebhook = onRequest(
+  { cors: true, maxInstances: 1 },
+  async (req, res) => {
+    try {
+      const GENIE_API_KEY = process.env.GENIE_API_KEY;
+      // Get webhook URL from environment or use default
+      const WEBHOOK_URL = process.env.GENIE_WEBHOOK_URL || 
+        "https://geniewebhook-e7fpchtlna-uc.a.run.app";
+
+      logger.info("Registering webhook with Genie", { hookUrl: WEBHOOK_URL });
+
+      const response = await fetch("https://api.geniebiz.lk/public/webhooks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": GENIE_API_KEY,
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          hookUrl: WEBHOOK_URL,
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        logger.error("Failed to register webhook", {
+          status: response.status,
+          data: responseData,
+        });
+        res.status(response.status).json({
+          error: "Failed to register webhook with Genie",
+          details: responseData,
+        });
+        return;
+      }
+
+      logger.info("Webhook registered successfully", responseData);
+      res.status(200).json({
+        success: true,
+        message: "Webhook registered successfully with Genie",
+        webhookId: responseData.id,
+        hookUrl: responseData.hookUrl,
+        created: responseData.created,
+      });
+    } catch (error) {
+      logger.error("Error registering webhook", error);
+      res.status(500).json({
+        error: "Failed to register webhook",
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * Manual Payment Fix
+ * One-time function to manually mark a payment as paid
+ * Use for payments that were made before webhook was properly configured
+ */
+exports.manualPaymentFix = onRequest(
+  { cors: true, maxInstances: 1 },
+  async (req, res) => {
+    try {
+      const { projectId, paymentType, transactionId } = req.body || req.query;
+
+      if (!projectId || !paymentType) {
+        res.status(400).json({ 
+          error: "Missing required parameters",
+          required: ["projectId", "paymentType (deposit or final)"]
+        });
+        return;
+      }
+
+      logger.info("Manual payment fix requested", { projectId, paymentType, transactionId });
+
+      const db = admin.firestore();
+      const projectRef = db.collection('projects').doc(projectId);
+      const projectDoc = await projectRef.get();
+
+      if (!projectDoc.exists) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      const txId = transactionId || `MANUAL_FIX_${Date.now()}`;
+
+      if (paymentType === 'deposit') {
+        await projectRef.update({
+          initialPaymentStatus: 'paid',
+          initialPaymentId: txId,
+          initialPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+          customerDecision: 'approved',
+          status: 'ready_to_assign',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        logger.info("Deposit payment manually fixed", { projectId, txId });
+        res.status(200).json({
+          success: true,
+          message: "Deposit payment marked as paid",
+          projectId,
+          transactionId: txId,
+          newStatus: 'ready_to_assign'
+        });
+      } else if (paymentType === 'final') {
+        await projectRef.update({
+          finalPaymentStatus: 'paid',
+          finalPaymentId: txId,
+          finalPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
+          status: 'completed',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        logger.info("Final payment manually fixed", { projectId, txId });
+        res.status(200).json({
+          success: true,
+          message: "Final payment marked as paid",
+          projectId,
+          transactionId: txId,
+          newStatus: 'completed'
+        });
+      } else {
+        res.status(400).json({ 
+          error: "Invalid payment type",
+          allowed: ["deposit", "final"]
+        });
+      }
+    } catch (error) {
+      logger.error("Manual payment fix error", error);
+      res.status(500).json({
+        error: "Failed to fix payment",
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * List Registered Webhooks
+ * Get all webhooks registered with Genie Business
+ */
+exports.listGenieWebhooks = onRequest(
+  { cors: true, maxInstances: 1 },
+  async (req, res) => {
+    try {
+      const GENIE_API_KEY = process.env.GENIE_API_KEY;
+
+      logger.info("Fetching registered webhooks from Genie");
+
+      const response = await fetch("https://api.geniebiz.lk/public/webhooks", {
+        method: "GET",
+        headers: {
+          "Authorization": GENIE_API_KEY,
+          "Accept": "application/json",
+        },
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        logger.error("Failed to fetch webhooks", {
+          status: response.status,
+          data: responseData,
+        });
+        res.status(response.status).json({
+          error: "Failed to fetch webhooks from Genie",
+          details: responseData,
+        });
+        return;
+      }
+
+      logger.info("Webhooks fetched successfully", {
+        count: Array.isArray(responseData) ? responseData.length : 0,
+      });
+
+      res.status(200).json({
+        success: true,
+        webhooks: responseData,
+      });
+    } catch (error) {
+      logger.error("Error fetching webhooks", error);
+      res.status(500).json({
+        error: "Failed to fetch webhooks",
         message: error.message,
       });
     }
