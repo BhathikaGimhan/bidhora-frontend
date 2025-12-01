@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { auth } from "../firebaseConfig";
 import { getMaintenanceMode } from "../Services/maintenanceService";
+import { isAdmin } from "../Services/authService";
 import { Loader2, Wrench } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
@@ -12,38 +13,69 @@ interface MaintenanceGuardProps {
 export const MaintenanceGuard: React.FC<MaintenanceGuardProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState({
     title: "System Maintenance",
     message: "We're currently performing scheduled maintenance. Please check back soon.",
   });
+  const location = useLocation();
+
+  // Allow admin login page and admin panel routes to bypass maintenance mode
+  const isAuthPage = location.pathname === '/auth';
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isEmployeeRoute = location.pathname.startsWith('/employee');
+  const shouldBypassMaintenance = isAuthPage || isAdminRoute || isEmployeeRoute;
 
   useEffect(() => {
-    const checkMaintenanceAndAuth = async () => {
-      try {
-        // Check maintenance mode
-        const maintenance = await getMaintenanceMode();
-        setIsMaintenanceMode(maintenance.enabled);
-        setMaintenanceMessage({
-          title: maintenance.title,
-          message: maintenance.message,
-        });
+    // Allow these routes immediately without showing loading
+    if (shouldBypassMaintenance) {
+      setLoading(false);
+      return;
+    }
 
-        // Check if user is admin
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const token = await currentUser.getIdTokenResult();
-          setIsAdmin(token.claims.role === "admin");
+    // Subscribe to auth state changes
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      try {
+        // Check if user is admin first (before checking maintenance)
+        let userIsAdmin = false;
+        if (user) {
+          userIsAdmin = await isAdmin();
+          setIsAdminUser(userIsAdmin);
+          console.log("User admin status:", userIsAdmin);
+        } else {
+          setIsAdminUser(false);
+          console.log("No user logged in");
+        }
+
+        // Only check maintenance mode if user is not admin
+        if (!userIsAdmin) {
+          const maintenance = await getMaintenanceMode();
+          setIsMaintenanceMode(maintenance.enabled);
+          setMaintenanceMessage({
+            title: maintenance.title,
+            message: maintenance.message,
+          });
+          console.log("Maintenance mode:", maintenance.enabled);
+        } else {
+          // Admin users bypass maintenance
+          setIsMaintenanceMode(false);
+          console.log("Admin user - bypassing maintenance check");
         }
       } catch (error) {
-        console.error("Error checking maintenance mode:", error);
+        console.error("Error checking maintenance mode or auth:", error);
+        setIsAdminUser(false);
       } finally {
         setLoading(false);
       }
-    };
+    });
 
-    checkMaintenanceAndAuth();
-  }, []);
+    return () => unsubscribe();
+  }, [shouldBypassMaintenance]);
+
+  // Allow these routes immediately without showing loading
+  if (shouldBypassMaintenance) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
@@ -56,8 +88,13 @@ export const MaintenanceGuard: React.FC<MaintenanceGuardProps> = ({ children }) 
     );
   }
 
+  // If user is admin, allow access to all routes even during maintenance
+  if (isAdminUser) {
+    return <>{children}</>;
+  }
+
   // If maintenance mode is active and user is not admin, show maintenance page
-  if (isMaintenanceMode && !isAdmin) {
+  if (isMaintenanceMode && !isAdminUser) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-4xl">

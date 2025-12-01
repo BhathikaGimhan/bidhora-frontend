@@ -388,6 +388,7 @@ class GeniePaymentService {
       const returnObject = {
         projectId,
         projectTitle: data.title,
+        description: data.description,
         totalAmount: adminPrice,
         initialPayment: adminPrice * 0.1,
         finalPayment: adminPrice * 0.9,

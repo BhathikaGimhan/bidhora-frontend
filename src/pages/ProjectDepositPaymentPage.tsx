@@ -32,10 +32,14 @@ import {
   DollarSign,
   Calendar,
   FileText,
+  Mail,
+  Download,
 } from "lucide-react";
 import geniePaymentService from "@/Services/geniePaymentService";
 import type { GeniePaymentConfig } from "@/Services/geniePaymentService";
 import type { Project } from "@/Services/projectService";
+import { InvoiceService } from "@/Services/invoiceService";
+import { useToast } from "@/hooks/use-toast";
 
 // Firebase Functions API base URL
 const API_BASE_URL = "https://api-e7fpchtlna-uc.a.run.app";
@@ -44,12 +48,14 @@ export default function ProjectDepositPaymentPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { toast } = useToast();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const invoiceDownloaded = React.useRef(false);
 
   const fetchProjectInfo = async () => {
     try {
@@ -233,6 +239,56 @@ export default function ProjectDepositPaymentPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, projectId, authChecked, project]);
+
+  // Automatically download invoice when payment is successful
+  useEffect(() => {
+    if (
+      project?.initialPaymentStatus === 'paid' && 
+      project.initialPaymentId && 
+      auth.currentUser &&
+      !invoiceDownloaded.current
+    ) {
+      invoiceDownloaded.current = true;
+      
+      // Download invoice asynchronously
+      (async () => {
+        try {
+          // Use the invoice number from Firestore (same as email) or generate if missing
+          const invoiceNumber = (project as any).depositInvoiceNumber || 
+            InvoiceService.generateInvoiceNumber('deposit', projectId!);
+          
+          const invoiceData = {
+            invoiceNumber,
+            invoiceDate: new Date().toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            }),
+            paymentType: 'deposit' as const,
+            projectId: projectId!,
+            projectTitle: project.title,
+            projectDescription: project.description,
+            buyerName: auth.currentUser.displayName || auth.currentUser.email || 'Customer',
+            buyerEmail: auth.currentUser.email!,
+            amount: project.initialPaymentAmount || (project.adminPrice! * 0.1),
+            currency: 'LKR',
+            transactionId: project.initialPaymentId,
+            paymentMethod: 'Genie Payment Gateway',
+            totalProjectAmount: project.adminPrice,
+            depositPercentage: 10,
+          };
+
+          await InvoiceService.downloadInvoice(invoiceData);
+          toast({
+            title: 'Invoice Downloaded',
+            description: 'Your payment invoice has been downloaded successfully.',
+          });
+        } catch (error) {
+          console.error('Error downloading invoice:', error);
+        }
+      })();
+    }
+  }, [project, projectId, toast]);
 
 
   const handlePaymentSuccess = async (orderId: string) => {
@@ -455,6 +511,22 @@ export default function ProjectDepositPaymentPage() {
               </AlertDescription>
             </Alert>
 
+            <Alert className="bg-blue-50 border-blue-200">
+              <Mail className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5" />
+                    <span className="font-medium">Invoice emailed to your registered email address</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="font-medium">Invoice automatically downloaded to your device</span>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -492,7 +564,7 @@ export default function ProjectDepositPaymentPage() {
               )}
             </div>
 
-            <div className="pt-4">
+            <div className="pt-4 space-y-3">
               <Button onClick={() => navigate(`/profile/${auth.currentUser?.uid}`)} className="w-full">
                 Go to Profile
               </Button>

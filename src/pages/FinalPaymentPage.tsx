@@ -30,10 +30,12 @@ import {
   Calendar,
   Star,
   MessageSquare,
+  Mail,
 } from 'lucide-react';
 import { geniePaymentService } from '@/Services/geniePaymentService';
 import { auth } from '@/firebaseConfig';
 import { submitProjectReview } from '@/Services/projectService';
+import { InvoiceService } from '@/Services/invoiceService';
 
 export default function FinalPaymentPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -48,6 +50,7 @@ export default function FinalPaymentPage() {
   const [hoveredRating, setHoveredRating] = useState(0);
   const [reviewFeedback, setReviewFeedback] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const invoiceDownloaded = React.useRef(false);
 
   useEffect(() => {
     const loadPaymentDetails = async () => {
@@ -319,6 +322,58 @@ export default function FinalPaymentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, projectId, paymentDetails]);
 
+  // Auto-download invoice when payment is successful
+  useEffect(() => {
+    if (
+      paymentDetails?.finalPaymentStatus === 'paid' && 
+      paymentDetails.finalPaymentId && 
+      auth.currentUser &&
+      !invoiceDownloaded.current
+    ) {
+      invoiceDownloaded.current = true;
+      
+      const downloadInvoice = async () => {
+        try {
+          // Use the invoice number from Firestore (same as email) or generate if missing
+          const invoiceNumber = (paymentDetails as any).finalInvoiceNumber || 
+            InvoiceService.generateInvoiceNumber('final', projectId!);
+          
+          const invoiceData = {
+            invoiceNumber,
+            invoiceDate: new Date().toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            }),
+            paymentType: 'final' as const,
+            projectId: projectId!,
+            projectTitle: paymentDetails.projectTitle,
+            projectDescription: paymentDetails.description,
+            buyerName: auth.currentUser.displayName || auth.currentUser.email || 'Customer',
+            buyerEmail: auth.currentUser.email!,
+            amount: paymentDetails.finalPayment,
+            currency: 'LKR',
+            transactionId: paymentDetails.finalPaymentId,
+            paymentMethod: 'Genie Payment Gateway',
+            totalProjectAmount: paymentDetails.totalAmount,
+            finalPercentage: 90,
+          };
+
+          await InvoiceService.downloadInvoice(invoiceData);
+          
+          toast({
+            title: 'Invoice Downloaded',
+            description: 'Your invoice has been downloaded automatically.',
+          });
+        } catch (error) {
+          console.error('Error auto-downloading invoice:', error);
+        }
+      };
+
+      downloadInvoice();
+    }
+  }, [paymentDetails, projectId, toast]);
+
   const handlePayment = async () => {
     if (!paymentDetails) return;
 
@@ -535,7 +590,23 @@ export default function FinalPaymentPage() {
             <Alert className="bg-emerald-50 border-emerald-200">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               <AlertDescription className="text-emerald-800">
-                Thank you for your payment! You can now download all your project files.
+                Congratulations! Your project is now complete. You can now download all your project files.
+              </AlertDescription>
+            </Alert>
+
+            <Alert className="bg-blue-50 border-blue-200">
+              <Mail className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5" />
+                    <span className="font-medium">Invoice emailed to your registered email address</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="font-medium">Invoice automatically downloaded to your device</span>
+                  </div>
+                </div>
               </AlertDescription>
             </Alert>
 
@@ -752,7 +823,7 @@ export default function FinalPaymentPage() {
               </>
             )}
 
-            <div className="pt-4">
+            <div className="pt-4 space-y-3">
               <Button onClick={() => navigate(`/profile/${auth.currentUser?.uid}`)} className="w-full">
                 Go to Profile
               </Button>
