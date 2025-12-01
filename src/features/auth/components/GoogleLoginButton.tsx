@@ -104,7 +104,16 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
         title: "Google Login Successful",
         description: "Welcome to Bidhora!",
       });
-      navigate("/profile/" + user.uid);
+      
+      // Get redirect URL from query params or default to profile
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectUrl = searchParams.get('redirect');
+      
+      if (redirectUrl) {
+        navigate(decodeURIComponent(redirectUrl));
+      } else {
+        navigate("/profile/" + user.uid);
+      }
     } catch (error) {
       setIsProcessing(false);
       toast({
@@ -135,7 +144,16 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
             title: "Google Login Successful",
             description: "Welcome to Bidhora!",
           });
-          navigate("/profile/" + user.uid);
+          
+          // Get redirect URL from query params or default to profile
+          const searchParams = new URLSearchParams(window.location.search);
+          const redirectUrl = searchParams.get('redirect');
+          
+          if (redirectUrl) {
+            navigate(decodeURIComponent(redirectUrl));
+          } else {
+            navigate("/profile/" + user.uid);
+          }
         }
       } catch (error) {
         toast({

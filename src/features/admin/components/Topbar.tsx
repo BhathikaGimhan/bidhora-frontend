@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Menu, ArrowLeft } from 'lucide-react';
+import { LogOut, Menu, ArrowLeft, Home, Briefcase, MessageSquare, Phone, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -93,6 +93,38 @@ export function AdminTopbar({ onMobileMenuToggle }: TopbarProps) {
 
         {/* Right side */}
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Main Site Navigation */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Home className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Main Site</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48" align="end">
+              <DropdownMenuItem onClick={() => window.location.href = '/'}>
+                <Home className="mr-2 h-4 w-4" />
+                <span>Home</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/post-project'}>
+                <Briefcase className="mr-2 h-4 w-4" />
+                <span>Post a Job</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/review-center'}>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                <span>Review Center</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/help-center'}>
+                <HelpCircle className="mr-2 h-4 w-4" />
+                <span>Help Center</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/contact'}>
+                <Phone className="mr-2 h-4 w-4" />
+                <span>Contact</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Theme Toggle */}
           <ThemeToggle />
 
