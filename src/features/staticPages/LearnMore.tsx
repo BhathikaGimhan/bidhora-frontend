@@ -18,6 +18,7 @@ import {
   Award,
   Zap,
 } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const LearnMore: React.FC = () => {
   const navigate = useNavigate();
@@ -74,6 +75,10 @@ const LearnMore: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background dark:bg-brand-black">
+      <SEO 
+        title="Learn More" 
+        description="Discover why Bidhora is the best choice for professionals and clients in Sri Lanka. Secure payments, global talent, and 24/7 support."
+      />
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary/10 via-background to-primary/5">
         <div className="max-w-7xl mx-auto text-center">

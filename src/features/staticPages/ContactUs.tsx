@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { emailService } from "@/Services/emailService";
 import { useToast } from "@/hooks/use-toast";
+import SEO from "@/components/SEO";
 
 const ContactUs: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -101,6 +102,10 @@ const ContactUs: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background dark:bg-brand-black py-12 px-4 sm:px-6 lg:px-8">
+      <SEO 
+        title="Contact Us" 
+        description="Get in touch with Bidhora. We are here to help with your digital solution and project needs. Contact us via email or phone."
+      />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">

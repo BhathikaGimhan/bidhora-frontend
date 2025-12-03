@@ -154,13 +154,13 @@ Path: project-submissions/{projectId}/{timestamp}_{filename}
 **Steps**:
 1. Admin sees notification on dashboard (pending count)
 2. Clicks on "Work Submissions" stat card
-3. Sees list of all submissions (employee + freelancer)
+3. Sees list of all submissions (employee + service provider)
 4. Identifies employee submission by blue "Employee" badge
 5. Clicks "View" to open detail modal
 
 **What Admin Sees**:
 - Project title
-- Submission type (Employee/Freelancer)
+- Submission type (Employee/Service Provider)
 - Employee name and photo
 - Client name and photo
 - Submission date
@@ -340,9 +340,9 @@ src/
   4. 🆕 **Work Submissions** (clickable, shows pending count)
 
 - **Work Submissions Page**:
-  - Combined view of employee + freelancer submissions
+  - Combined view of employee + service provider submissions
   - Blue "Employee" badge for employees
-  - Purple "Freelancer" badge for freelancers
+  - Purple "Service Provider" badge for service providers
   - Status badges (Pending, Approved, Rejected)
   - Responsive table (desktop) / cards (mobile)
   - Detailed modal with file management
@@ -378,7 +378,7 @@ src/
 - **Error**: Red
 - **Info**: Blue
 - **Employee Badge**: Blue
-- **Freelancer Badge**: Purple
+- **Service Provider Badge**: Purple
 
 ### Theme
 - Default: Dark mode
@@ -404,7 +404,7 @@ src/
 ### Firestore Collections
 - [ ] `users` collection with role field
 - [ ] `projects` collection with employee fields
-- [ ] `workSubmissions` collection (for freelancers)
+- [ ] `workSubmissions` collection (for service providers)
 
 ### Security Rules
 - [ ] Admin-only access to all submissions

@@ -652,7 +652,7 @@ export function UsersView() {
                 align="start"
                 side="bottom"
                 sideOffset={4}
-                avoidCollisions={false}
+                collisionPadding={10}
                 onWheel={(e) => {
                   e.stopPropagation();
                 }}
@@ -661,7 +661,7 @@ export function UsersView() {
                   <CommandInput placeholder="Search designations..." />
                   <CommandEmpty>No designation found.</CommandEmpty>
                   <CommandList 
-                    className="max-h-[300px]"
+                    className="max-h-[40vh] overflow-y-auto"
                     onWheel={(e) => {
                       e.stopPropagation();
                     }}

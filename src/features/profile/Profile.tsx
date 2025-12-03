@@ -272,7 +272,7 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Show ProfileHeader for buyers/sellers, AdminHeader for admins, EmployeeHeader for employees */}
+      {/* Show ProfileHeader for buyers, AdminHeader for admins, EmployeeHeader for employees */}
       {profile.role === "admin" ? (
         <>
           <AdminHeader profile={profile} isOwnProfile={isOwnProfile} />
@@ -313,7 +313,7 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
         </div>
       )}
 
-      {/* Admin Navigation - Show under profile header like buyers and sellers */}
+      {/* Admin Navigation - Show under profile header like buyers */}
       {profile.role === "admin" && (
         <div className="bg-background border-b">
           <div className="container mx-auto px-4">
@@ -339,7 +339,7 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
 
       <div className="container mx-auto px-4 py-8">
         {profile.role === "admin" ? (
-          // Admin Layout - Same structure as seller/buyer
+          // Admin Layout - Same structure as buyer
           <div className="w-full">
             {adminActiveTab === "profile" && (
               <AdminProfileSection profile={profile} />
@@ -567,19 +567,6 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
                           })()}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Profile Complete
-                        </span>
-                        <span className="font-medium">
-                          {Math.round(
-                            (Object.values(profile).filter(Boolean).length /
-                              Object.keys(profile).length) *
-                              100
-                          )}
-                          %
-                        </span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -603,7 +590,7 @@ export default function Profile({ userId: propUserId }: ProfileProps) {
             )}
           </div>
         ) : (
-          // No seller role handling - only buyer, admin, and employee roles supported
+          // Only buyer, admin, and employee roles supported
           <div className="w-full">
             <div className="text-center py-8">
               <p className="text-muted-foreground">Invalid user role</p>

@@ -977,7 +977,7 @@ exports.sendEmployeeAssignmentNotification = onRequest(
                   <div style="opacity: 0.9; margin-bottom: 10px;">
                     Login to your Bidhora account to view full project details and begin work.
                   </div>
-                  <a href="${project_link || 'https://www.bidhora.com/dashboard'}" class="action-button">
+                  <a href="${project_link || `https://www.bidhora.com/employee/projects/${project_id}`}" class="action-button">
                     View Project Details →
                   </a>
                 </div>

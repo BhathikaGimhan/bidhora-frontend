@@ -770,7 +770,7 @@ export function UrgentProjectsView() {
 
       {/* Assign Employee Modal */}
       <Dialog open={isAssignModalOpen} onOpenChange={handleCloseAssignModal}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 flex-shrink-0" />
@@ -793,17 +793,31 @@ export function UrgentProjectsView() {
                     variant="outline"
                     role="combobox"
                     aria-expanded={employeePopoverOpen}
-                    className="w-full justify-between text-sm"
+                    className="w-full justify-between text-sm h-auto min-h-[40px]"
                   >
-                    <span className="truncate">{getSelectedEmployeeDisplay()}</span>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <span className="truncate text-left flex-1 mr-2">{getSelectedEmployeeDisplay()}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <PopoverContent 
+                  className="w-[--radix-popover-trigger-width] max-w-[90vw] p-0" 
+                  align="start"
+                  side="bottom"
+                  sideOffset={4}
+                  collisionPadding={10}
+                  onWheel={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
                   <Command>
                     <CommandInput placeholder="Search employees..." className="text-sm" />
                     <CommandEmpty className="text-sm">No employees found.</CommandEmpty>
-                    <CommandGroup>
+                    <CommandGroup 
+                      className="max-h-[40vh] overflow-y-auto"
+                      onWheel={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
                       {employees.length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">
                           No employees available
@@ -817,17 +831,18 @@ export function UrgentProjectsView() {
                               setSelectedEmployeeId(employee.uid);
                               setEmployeePopoverOpen(false);
                             }}
+                            className="cursor-pointer"
                           >
-                            <div className="flex flex-col w-full gap-1">
+                            <div className="flex flex-col w-full gap-1 py-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-medium text-sm">{employee.name}</span>
+                                <span className="font-medium text-sm break-words">{employee.name}</span>
                                 {employee.designation && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge variant="secondary" className="text-xs shrink-0">
                                     {employee.designation}
                                   </Badge>
                                 )}
                               </div>
-                              <span className="text-xs text-muted-foreground truncate">{employee.email}</span>
+                              <span className="text-xs text-muted-foreground break-all">{employee.email}</span>
                             </div>
                           </CommandItem>
                         ))

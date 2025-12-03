@@ -38,7 +38,7 @@ export class NotificationService {
           recipientName: data.recipientName,
           type: data.type,
           read: data.read || false,
-          createdDate: data.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || new Date().toISOString().split('T')[0],
+          createdDate: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
           priority: data.priority || 'medium',
           createdAt: data.createdAt,
           updatedAt: data.updatedAt
@@ -80,7 +80,7 @@ export class NotificationService {
             recipientName: data.recipientName,
             type: data.type,
             read: data.read || false,
-            createdDate: data.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || new Date().toISOString().split('T')[0],
+            createdDate: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
             priority: data.priority || 'medium',
             createdAt: data.createdAt,
             updatedAt: data.updatedAt
@@ -193,7 +193,7 @@ export class NotificationService {
             recipientName: data.recipientName,
             type: data.type,
             read: data.read || false,
-            createdDate: data.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || new Date().toISOString().split('T')[0],
+            createdDate: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
             priority: data.priority || 'medium',
             createdAt: data.createdAt,
             updatedAt: data.updatedAt
@@ -226,7 +226,7 @@ export class NotificationService {
           recipientName: data.recipientName,
           type: data.type,
           read: data.read || false,
-          createdDate: data.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || new Date().toISOString().split('T')[0],
+          createdDate: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
           priority: data.priority || 'medium',
           createdAt: data.createdAt,
           updatedAt: data.updatedAt
