@@ -36,8 +36,6 @@ interface OngoingProjectDetailsProps {
     assignedEmployeeEmail?: string;
   };
   onBack: () => void;
-  onContactSeller?: (sellerId: string, projectTitle?: string) => void;
-  onViewSellerProfile?: (sellerId: string) => void;
 }
 
 export const OngoingProjectDetails = ({

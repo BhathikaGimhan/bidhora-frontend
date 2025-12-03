@@ -290,12 +290,6 @@ export const BuyerProjects = ({
     setSelectedProjectData(null);
   };
 
-  const handleViewSellerProfile = (sellerId: string) => {
-    console.log("🎯 handleViewSellerProfile called with sellerId:", sellerId);
-    console.log("🚀 Navigating to seller profile:", `/profile/${sellerId}`);
-    navigate(`/profile/${sellerId}`);
-  };
-
   const filterProjectsByStatus = (status: string) => {
     return projects.filter((project) => {
       const projectStatus = project.status as string;
@@ -337,9 +331,8 @@ export const BuyerProjects = ({
     return (
       <>
         <OngoingProjectDetails
-          project={buyerProjectToProject(selectedProjectData) as Project & { status: string; assignedTo?: string; assignedSeller?: UserType; progress?: number; }}
+          project={buyerProjectToProject(selectedProjectData) as Project & { status: string; assignedTo?: string; progress?: number; }}
           onBack={handleBack}
-          onViewSellerProfile={handleViewSellerProfile}
         />
 
         {/* Chat Modal removed - chat feature disabled */}

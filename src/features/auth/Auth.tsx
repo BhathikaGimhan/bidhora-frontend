@@ -1,10 +1,15 @@
 import ThemeToggle from '@/layouts/ThemeToggle'
 import AnimatedBackground from './components/AnimatedBackground'
 import LoginForm from './components/LoginForm'
+import SEO from '@/components/SEO'
 
 function Auth() {
   return (
     <div className="min-h-screen relative overflow-hidden">
+      <SEO 
+        title="Login / Sign Up" 
+        description="Join Bidhora to hire professionals or find work. Sign up or login to your account to access professional digital solutions."
+      />
       {/* Animated Background */}
       <AnimatedBackground />
       

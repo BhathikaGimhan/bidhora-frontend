@@ -11,15 +11,18 @@ interface ProtectedEmployeeRouteProps {
 export function ProtectedEmployeeRoute({ children }: ProtectedEmployeeRouteProps) {
   const [loading, setLoading] = useState(true);
   const [isEmployee, setIsEmployee] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const checkEmployeeRole = async () => {
-      const user = auth.currentUser;
-      
+    // Listen to auth state changes to prevent redirect on refresh
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
+        setIsAuthenticated(false);
         setLoading(false);
         return;
       }
+
+      setIsAuthenticated(true);
 
       try {
         const db = getFirestore();
@@ -34,9 +37,9 @@ export function ProtectedEmployeeRoute({ children }: ProtectedEmployeeRouteProps
       } finally {
         setLoading(false);
       }
-    };
+    });
 
-    checkEmployeeRole();
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
@@ -47,7 +50,7 @@ export function ProtectedEmployeeRoute({ children }: ProtectedEmployeeRouteProps
     );
   }
 
-  if (!auth.currentUser) {
+  if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
 

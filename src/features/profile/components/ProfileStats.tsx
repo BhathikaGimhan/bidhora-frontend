@@ -104,7 +104,7 @@ export const ProfileStats = ({
               Member since{" "}
               {profile.createdAt
                 ? formatDate(profile.createdAt, { year: "numeric" })
-                : "No mcn"}
+                : "N/A"}
             </span>
           </div>
 

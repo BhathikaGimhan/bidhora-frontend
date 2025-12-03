@@ -14,7 +14,7 @@ interface ProposalsListProps {
   loading: boolean;
   error: string | null;
   onBack: () => void;
-  onApproveProposal: (proposalId: string, sellerId: string) => void;
+  onApproveProposal: (proposalId: string, senderId: string) => void;
   onRejectProposal: (proposalId: string) => void;
   isOwner?: boolean;
 }

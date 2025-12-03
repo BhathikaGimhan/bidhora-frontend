@@ -18,6 +18,7 @@ import { auth } from "@/firebaseConfig";
 import { getUserProfile } from "@/Services/authService";
 import ProposalModal from "./ProposalModal";
 import DocumentViewer from "@/components/DocumentViewer";
+import SEO from "@/components/SEO";
 
 const ProjectDetailView: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -144,6 +145,13 @@ const ProjectDetailView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {project && (
+        <SEO 
+          title={project.title}
+          description={project.description.substring(0, 160)}
+          keywords={`${project.category}, ${project.skills.join(", ")}, digital project, bidhora`}
+        />
+      )}
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
         <Button

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,7 @@ export default function FinalPaymentPage() {
   const [hoveredRating, setHoveredRating] = useState(0);
   const [reviewFeedback, setReviewFeedback] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const invoiceDownloaded = React.useRef(false);
+  const invoiceDownloaded = useRef(false);
 
   useEffect(() => {
     const loadPaymentDetails = async () => {

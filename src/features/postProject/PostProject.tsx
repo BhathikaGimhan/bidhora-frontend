@@ -25,6 +25,7 @@ import { CheckCircle, ArrowRight } from "lucide-react";
 import { updateUserProfileForProject } from "../../Services/projectService";
 import { PhoneNumberModal } from "./components/PhoneNumberModal";
 import { userProfileService } from "@/Services/userProfileService";
+import SEO from "@/components/SEO";
 
 export interface FormData {
   title: string;
@@ -346,6 +347,9 @@ const PostProject = () => {
       // Update user profile with the new project
       await updateUserProfileForProject(user.uid, docRef.id, {
         ...projectData,
+        deadline: projectData.deadline.toDate(),
+        createdAt: projectData.createdAt.toDate(),
+        updatedAt: projectData.updatedAt.toDate(),
         id: docRef.id,
       });
 
@@ -369,6 +373,10 @@ const PostProject = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Post a Project" 
+        description="Post your project on Bidhora and hire the best professionals in Sri Lanka. Web Development, Graphic Design, Writing, and more."
+      />
       <HeroSection />
       <main className="container mx-auto px-4 py-8 pt-8 pb-24 ">
         <Card className="bg-card border border-border shadow-lg max-w-3xl mx-auto mt-0">

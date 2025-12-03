@@ -1,10 +1,15 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import SEO from "@/components/SEO";
 
 const PrivacyPolicy: React.FC = () => {
   return (
     <div className="min-h-screen bg-background dark:bg-brand-black py-12 px-4 sm:px-6 lg:px-8">
+      <SEO 
+        title="Privacy Policy" 
+        description="Read our Privacy Policy to understand how we collect, use, and protect your personal information on Bidhora."
+      />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl sm:text-5xl font-bold text-brand-primary mb-4">

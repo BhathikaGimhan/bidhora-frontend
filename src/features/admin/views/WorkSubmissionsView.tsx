@@ -193,7 +193,7 @@ export default function WorkSubmissionsView() {
         variant="outline"
         className="bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300"
       >
-        Freelancer
+        Service Provider
       </Badge>
     );
   };

@@ -14,13 +14,13 @@ import { Proposal, User as UserType } from "@/Services/projectService";
 
 interface ProposalItemProps {
   proposal: Proposal & {
-    seller?: UserType;
+    sender?: UserType;
     project?: {
       status?: string;
       assignedTo?: string;
     };
   };
-  onApprove?: (proposalId: string, sellerId: string) => void;
+  onApprove?: (proposalId: string, senderId: string) => void;
   onReject?: (proposalId: string) => void;
   isOwner?: boolean;
 }
@@ -131,8 +131,8 @@ export const ProposalItem = ({
           <div className="flex items-center gap-3 flex-1">
             <Avatar className="h-10 w-10">
               <AvatarImage
-                src={proposal.seller?.photoURL || ""}
-                alt={proposal.seller?.displayName || "User"}
+                src={proposal.sender?.photoURL || ""}
+                alt={proposal.sender?.displayName || "User"}
               />
               <AvatarFallback>
                 <User className="h-5 w-5" />
@@ -140,7 +140,7 @@ export const ProposalItem = ({
             </Avatar>
             <div className="flex-1">
               <h4 className="font-medium text-base">
-                {proposal.seller?.displayName || "Anonymous"}
+                {proposal.sender?.displayName || "Anonymous"}
               </h4>
               {proposal.name && (
                 <p className="text-sm font-medium text-primary">
@@ -148,7 +148,7 @@ export const ProposalItem = ({
                 </p>
               )}
               <p className="text-sm text-muted-foreground">
-                {proposal.seller?.email}
+                {proposal.sender?.email}
               </p>
             </div>
           </div>
