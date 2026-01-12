@@ -965,21 +965,28 @@ exports.geniePayment = onRequest(
 
     const { action, paymentData, paymentId, environment } = req.body;
 
-    // Always use Production API
-    const GENIE_API_BASE = 'https://api.geniebiz.lk';
+    const targetEnv = environment === 'uat' ? 'uat' : 'production';
+    const GENIE_API_BASE = targetEnv === 'uat' ? 'https://api.uat.geniebiz.lk' : 'https://api.geniebiz.lk';
 
-    logger.info("Genie Production Payment Gateway", { 
-      environment: 'Production',
+    logger.info(`Genie ${targetEnv.toUpperCase()} Payment Gateway`, { 
+      environment: targetEnv,
       baseUrl: GENIE_API_BASE 
     });
 
-    // Get Genie Production credentials from environment variables or hardcoded defaults
-    // Production credentials for Bidhora (https://bidhora.com)
-    const GENIE_APPLICATION_ID = process.env.GENIE_APPLICATION_ID || "e6092ac4-3dba-466c-b0a7-137566fd81af";
-    const GENIE_API_KEY = process.env.GENIE_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6ImU2MDkyYWM0LTNkYmEtNDY2Yy1iMGE3LTEzNzU2NmZkODFhZiIsImNvbXBhbnlJZCI6IjY5MWFmNTFiOTVhNDRhODY2MzkzYTgzNCIsImlhdCI6MTc2Mzc4Njg0MSwiZXhwIjo0OTE5NDYwNDQxfQ.CBoQW3aJauu9wtfFgPdVQCAqV9ZbS2YB93nFjw0kb40";
+    // Get Genie credentials from environment variables or hardcoded defaults
+    let GENIE_APPLICATION_ID;
+    let GENIE_API_KEY;
 
-    logger.info("Genie Production credentials loaded", {
-      environment: 'Production',
+    if (targetEnv === 'uat') {
+        GENIE_APPLICATION_ID = process.env.GENIE_UAT_APPLICATION_ID || "36bafce7-a201-429b-a9e2-c5b78546677c";
+        GENIE_API_KEY = process.env.GENIE_UAT_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjM2YmFmY2U3LWEyMDEtNDI5Yi1hOWUyLWM1Yjc4NTQ2Njc3YyIsImNvbXBhbnlJZCI6IjYzOTdmMzlkZjA3ZmJhMDAwODQyYTkwYiIsImlhdCI6MTY3MDkwMjY4NSwiZXhwIjo0ODI2NTc2Mjg1fQ.fy12dgFhA3iB_RCjD7y8j5HClNRZUiBZgAg-QzFpxaE";
+    } else {
+        GENIE_APPLICATION_ID = process.env.GENIE_APPLICATION_ID || "e6092ac4-3dba-466c-b0a7-137566fd81af";
+        GENIE_API_KEY = process.env.GENIE_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6ImU2MDkyYWM0LTNkYmEtNDY2Yy1iMGE3LTEzNzU2NmZkODFhZiIsImNvbXBhbnlJZCI6IjY5MWFmNTFiOTVhNDRhODY2MzkzYTgzNCIsImlhdCI6MTc2Mzc4Njg0MSwiZXhwIjo0OTE5NDYwNDQxfQ.CBoQW3aJauu9wtfFgPdVQCAqV9ZbS2YB93nFjw0kb40";
+    }
+
+    logger.info(`Genie ${targetEnv.toUpperCase()} credentials loaded`, {
+      environment: targetEnv,
       appIdLength: GENIE_APPLICATION_ID?.length || 0,
       apiKeyLength: GENIE_API_KEY?.length || 0,
       appIdPrefix: GENIE_APPLICATION_ID?.substring(0, 8) || 'missing'
@@ -997,7 +1004,7 @@ exports.geniePayment = onRequest(
     try {
       if (action === "initiate") {
         // Initiate payment
-        logger.info("Initiating Genie production payment", { 
+        logger.info(`Initiating Genie ${targetEnv.toUpperCase()} payment`, { 
           paymentData,
           apiKeyPrefix: GENIE_API_KEY.substring(0, 20) + "..."
         });
@@ -1024,8 +1031,8 @@ exports.geniePayment = onRequest(
 
         const apiUrl = `${GENIE_API_BASE}/public/v2/transactions`;
 
-        logger.info("Sending to Genie Production API", { 
-          environment: 'Production',
+        logger.info(`Sending to Genie ${targetEnv.toUpperCase()} API`, { 
+          environment: targetEnv,
           url: apiUrl,
           requestBody: genieRequestBody,
           headers: {
@@ -1098,9 +1105,9 @@ exports.geniePayment = onRequest(
         });
       } else if (action === "verify") {
         // Verify payment
-        logger.info("Verifying Genie production payment", { 
+        logger.info(`Verifying Genie ${targetEnv.toUpperCase()} payment`, { 
           paymentId,
-          environment: 'Production'
+          environment: targetEnv
         });
 
         const verifyUrl = `${GENIE_API_BASE}/public/v2/transactions/${paymentId}`;

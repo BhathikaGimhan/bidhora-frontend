@@ -380,16 +380,13 @@ export default function FinalPaymentPage() {
     // Proceed with real Genie payment
     setProcessing(true);
     try {
-      const result = await geniePaymentService.processFinalPayment(
-        {
+      const result = await geniePaymentService.processFinalPayment({
           projectId: projectId!,
           amount: paymentDetails.finalPayment,
           buyerEmail: paymentDetails.buyerEmail,
           buyerName: auth.currentUser?.displayName || 'Customer',
           projectTitle: paymentDetails.projectTitle,
-        },
-        'production'
-      );
+        });
 
       if (result.success) {
         // Don't set paymentCompleted here - wait for callback
@@ -429,16 +426,13 @@ export default function FinalPaymentPage() {
       // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const result = await geniePaymentService.processFinalPayment(
-        {
+      const result = await geniePaymentService.processFinalPayment({
           projectId: projectId!,
           amount: paymentDetails.finalPayment,
           buyerEmail: paymentDetails.buyerEmail,
           buyerName: auth.currentUser?.displayName || 'Customer',
           projectTitle: paymentDetails.projectTitle,
-        },
-        'production'
-      );
+        });
 
       if (result.success) {
         setPaymentCompleted(true);

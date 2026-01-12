@@ -385,10 +385,9 @@ export default function ProjectDepositPaymentPage() {
         environment: 'Production',
       });
 
-      // Initiate payment with Genie (Production mode)
+      // Initiate payment with Genie (uses environment from service)
       const result = await geniePaymentService.initiatePayment(
-        paymentConfig,
-        'production'
+        paymentConfig
       );
       
       console.log("✅ Payment initiated:", result);

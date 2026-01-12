@@ -53,6 +53,7 @@ class GeniePaymentService {
   private apiKey: string;
   private publicKey: string;
   private cloudFunctionUrl: string;
+  private defaultEnvironment: 'production' | 'uat';
 
   constructor() {
     // Genie Payment Gateway credentials
@@ -62,16 +63,19 @@ class GeniePaymentService {
     // Cloud Function URL for proxying Genie API calls (bypasses CORS)
     this.cloudFunctionUrl = import.meta.env.VITE_GENIE_CLOUD_FUNCTION_URL || 
       'https://geniepayment-e7fpchtlna-uc.a.run.app';
+    
+    // Set default environment from .env
+    this.defaultEnvironment = (import.meta.env.VITE_PAYMENT_ENVIRONMENT as 'production' | 'uat') || 'production';
   }
 
   /**
    * Initiate payment with Genie via Cloud Function
    * @param config Payment configuration
-   * @param environment 'production' or 'uat' - defaults to 'production'
+   * @param environment 'production' or 'uat' - defaults to setting in .env
    */
   async initiatePayment(
     config: GeniePaymentConfig, 
-    environment: 'production' | 'uat' = 'production'
+    environment: 'production' | 'uat' = this.defaultEnvironment
   ): Promise<GeniePaymentResponse> {
     try {
       console.log('🚀 Initiating Genie payment:', {
@@ -137,11 +141,11 @@ class GeniePaymentService {
   /**
    * Verify payment status via Cloud Function
    * @param paymentId Transaction/Payment ID to verify
-   * @param environment 'production' or 'uat' - defaults to 'production'
+   * @param environment 'production' or 'uat' - defaults to setting in .env
    */
   async verifyPayment(
     paymentId: string, 
-    environment: 'production' | 'uat' = 'production'
+    environment: 'production' | 'uat' = this.defaultEnvironment
   ): Promise<{ status: string; orderId: string }> {
     try {
       console.log('🔍 Verifying payment:', { paymentId, environment });
@@ -290,11 +294,11 @@ class GeniePaymentService {
   /**
    * Process final payment
    * @param paymentData Final payment data
-   * @param environment 'production' or 'uat' - defaults to 'production'
+   * @param environment 'production' or 'uat' - defaults to setting in .env
    */
   async processFinalPayment(
     paymentData: FinalPaymentData,
-    environment: 'production' | 'uat' = 'production'
+    environment: 'production' | 'uat' = this.defaultEnvironment
   ): Promise<PaymentResult> {
     try {
       console.log('💳 Processing final payment:', {
