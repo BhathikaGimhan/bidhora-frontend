@@ -47,6 +47,17 @@ interface UpdateDesignationResponse {
   designation: string;
 }
 
+interface UpdateMarketerStatusRequest {
+  targetUserId: string;
+  isMarketer: boolean;
+  promoCode?: string;
+  commissionRate?: number;
+}
+
+interface UpdateMarketerStatusResponse {
+  message: string;
+}
+
 interface Project {
   id: string;
   title: string;
@@ -93,6 +104,9 @@ interface AllUsersResponse {
     totalEarnings: number;
     rating: number;
     verified: boolean;
+    isMarketer?: boolean;
+    promoCode?: string;
+    commissionRate?: number;
   }[];
 }
 
@@ -256,6 +270,55 @@ export const updateUserDesignation = async (
   }
 };
 
+export const updateUserMarketerStatus = async (
+  data: UpdateMarketerStatusRequest
+): Promise<UpdateMarketerStatusResponse> => {
+  try {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error("No authenticated user found");
+    }
+
+    // Check if current user is admin
+    const currentUserDoc = await getDoc(doc(db, "users", currentUser.uid));
+    if (!currentUserDoc.exists() || currentUserDoc.data().role !== "admin") {
+      throw new Error("Unauthorized: Only admins can update marketer status");
+    }
+
+    const userRef = doc(db, "users", data.targetUserId);
+    
+    // Verify target user exists
+    const targetUserDoc = await getDoc(userRef);
+    if (!targetUserDoc.exists()) {
+      throw new Error("User not found");
+    }
+
+    const updateData: any = {
+      isMarketer: data.isMarketer,
+      updatedAt: Timestamp.now(),
+    };
+
+    if (data.isMarketer) {
+      if (data.promoCode) updateData.promoCode = data.promoCode.trim();
+      if (data.commissionRate !== undefined) updateData.commissionRate = data.commissionRate;
+    } else {
+      // If removing marketer status, maybe we should keep the code/rate or remove them?
+      // Let's keep them but set isMarketer to false.
+    }
+
+    await updateDoc(userRef, updateData);
+
+    return {
+      message: "Marketer status updated successfully",
+    };
+  } catch (error: unknown) {
+    console.error("Marketer status update error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to update marketer status";
+    throw new Error(errorMessage);
+  }
+};
+
 export const getAllUsers = async (): Promise<AllUsersResponse> => {
   try {
     const currentUser = auth.currentUser;
@@ -296,6 +359,9 @@ export const getAllUsers = async (): Promise<AllUsersResponse> => {
         totalEarnings: userData.totalEarnings || 0,
         rating: userData.rating || 0,
         verified: userData.verified || false,
+        isMarketer: userData.isMarketer || false,
+        promoCode: userData.promoCode,
+        commissionRate: userData.commissionRate,
       };
     });
 

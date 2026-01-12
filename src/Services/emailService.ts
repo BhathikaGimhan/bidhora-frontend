@@ -43,6 +43,14 @@ export interface FinalPaymentNotificationData {
   payment_link: string;
 }
 
+export interface MarketerWelcomeData {
+  email: string;
+  name: string;
+  promoCode: string;
+  commissionRate: number;
+  profileId: string;
+}
+
 export interface EmailResponse {
   success: boolean;
   message: string;
@@ -79,16 +87,35 @@ class EmailService {
         message: response.data.message || "Email sent successfully!",
       };
     } catch (error) {
-      console.error("Email service error:", error);
-
-      // Return a user-friendly error message
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to send email. Please try again later.";
+      console.error("Error sending contact email:", error);
       return {
         success: false,
-        message: errorMessage,
+        message: "Failed to send email. Please try again later.",
+      };
+    }
+  }
+
+  async sendMarketerWelcomeEmail(data: MarketerWelcomeData): Promise<EmailResponse> {
+    try {
+      const response = await axios.post(
+        `${this.apiBaseUrl}/sendMarketerWelcomeEmail`,
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return {
+        success: true,
+        message: response.data.message || "Welcome email sent successfully!",
+      };
+    } catch (error) {
+      console.error("Error sending marketer welcome email:", error);
+      return {
+        success: false,
+        message: "Failed to send welcome email. Please try again later.",
       };
     }
   }

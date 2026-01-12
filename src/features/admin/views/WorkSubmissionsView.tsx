@@ -251,6 +251,14 @@ export default function WorkSubmissionsView() {
   // Define columns for DataTable
   const columns = [
     {
+      key: "projectId",
+      title: "Project ID",
+      sortable: true,
+      render: (value: string) => (
+        <span className="font-mono text-xs text-muted-foreground">{value || "N/A"}</span>
+      ),
+    },
+    {
       key: "projectTitle",
       title: "Project",
       sortable: true,

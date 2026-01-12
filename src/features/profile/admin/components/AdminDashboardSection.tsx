@@ -5,14 +5,24 @@ import {
   FolderOpen,
   BarChart3,
   Settings as SettingsIcon,
+  CreditCard,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { adminStatsService, AdminStats } from "@/Services/adminStatsService";
+import { projectController } from "@/features/admin/controllers/projectController";
+import { userController } from "@/features/admin/controllers/userController";
+import { transactionController } from "@/features/admin/controllers/transactionController";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 
+interface QuickStats {
+  totalUsers: number;
+  activeProjects: number;
+  totalProjects: number;
+  totalRevenue: number;
+}
+
 export const AdminDashboardSection = () => {
-  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [stats, setStats] = useState<QuickStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,8 +31,20 @@ export const AdminDashboardSection = () => {
       try {
         setLoading(true);
         setError(null);
-        const adminStats = await adminStatsService.getAdminStats();
-        setStats(adminStats);
+        
+        // Fetch data using the same controllers as the main dashboard
+        const [projectStats, userStats, transactionStats] = await Promise.all([
+          projectController.getProjectStats(),
+          userController.getUserStats(),
+          transactionController.getTransactionStats()
+        ]);
+
+        setStats({
+          totalUsers: userStats.totalUsers,
+          activeProjects: projectStats.activeProjects,
+          totalProjects: projectStats.totalProjects,
+          totalRevenue: transactionStats.totalRevenue
+        });
       } catch (err) {
         console.error("Error fetching admin stats:", err);
         setError("Failed to load dashboard statistics");
@@ -115,51 +137,76 @@ export const AdminDashboardSection = () => {
       </div>
 
       {/* Quick Stats */}
-      <Card className="shadow-sm">
-        <CardContent className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <LoadingSpinner />
-            </div>
-          ) : error ? (
-            <div className="text-center py-8 text-red-600">
-              <p>{error}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">
-                  {stats?.totalUsers || 0}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">Total Users</p>
+      <h3 className="text-lg font-semibold mb-4 text-foreground">Quick Stats Overview</h3>
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <LoadingSpinner />
+        </div>
+      ) : error ? (
+        <div className="text-center py-8 text-red-600">
+          <p>{error}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                  <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                  <h4 className="text-2xl font-bold text-foreground">{stats?.totalUsers || 0}</h4>
+                </div>
               </div>
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">
-                  {stats?.activeProjects || 0}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Active Projects
-                </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
+                  <FolderOpen className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active Projects</p>
+                  <h4 className="text-2xl font-bold text-foreground">{stats?.activeProjects || 0}</h4>
+                </div>
               </div>
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-purple-600">
-                  {stats?.totalProjects || 0}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">Total Projects</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                  <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Projects</p>
+                  <h4 className="text-2xl font-bold text-foreground">{stats?.totalProjects || 0}</h4>
+                </div>
               </div>
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-orange-600">
-                  LKR {(stats?.totalRevenue || 0).toLocaleString()}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Total Revenue
-                </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-full">
+                  <CreditCard className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
+                  <h4 className="text-2xl font-bold text-foreground">
+                    LKR {(stats?.totalRevenue || 0).toLocaleString()}
+                  </h4>
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

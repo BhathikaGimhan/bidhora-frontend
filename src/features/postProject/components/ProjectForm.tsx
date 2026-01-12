@@ -10,6 +10,8 @@ import UrgentCheckbox from "@/features/postProject/components/UrgentCheckbox";
 import FormActions from "@/features/postProject/components/FormActions";
 import MultipleFileUpload from "@/features/postProject/components/MultipleFileUpload";
 import { SERVICE_CATEGORIES } from "@/constants/serviceCategories";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   formData: FormData;
@@ -68,6 +70,25 @@ const ProjectForm: React.FC<Props> = ({ formData, setFormData, onSubmit, isSubmi
           maxFileSize={10}
         />
       </div>
+
+      <div className="space-y-3 p-5 bg-gradient-to-r from-primary/5 to-transparent border-2 border-dashed border-primary/30 rounded-xl hover:border-primary/50 transition-colors">
+        <Label htmlFor="promoCode" className="text-primary font-bold flex items-center gap-2 text-base">
+          <span className="text-xl">🎟️</span> Have a Promo Code? (optional)
+        </Label>
+        <div className="relative">
+          <Input
+            id="promoCode"
+            placeholder="Enter code here"
+            value={formData.promoCode || ""}
+            onChange={(e) => handleInputChange("promoCode", e.target.value)}
+            className="pl-4 h-11 border-primary/20 focus-visible:ring-primary/40 bg-white/80 backdrop-blur-sm transition-all font-medium tracking-wide uppercase placeholder:normal-case placeholder:tracking-normal"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground font-medium ml-1">
+          Enter a valid promo code.
+        </p>
+      </div>
+
       <FormActions onCancel={onCancel} isSubmitting={isSubmitting} />
     </form>
   );

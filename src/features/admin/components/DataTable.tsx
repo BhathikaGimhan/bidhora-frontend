@@ -61,8 +61,20 @@ export function DataTable({
     }
   };
 
+  // Filter data
+  const filteredData = data.filter((item) => {
+    if (!searchQuery) return true;
+    
+    // Check if any column value matches the search query
+    return columns.some((column) => {
+      const value = item[column.key];
+      if (value == null) return false;
+      return String(value).toLowerCase().includes(searchQuery.toLowerCase());
+    });
+  });
+
   // Sort data
-  const sortedData = [...data].sort((a, b) => {
+  const sortedData = [...filteredData].sort((a, b) => {
     if (!sortColumn) return 0;
     
     const aValue = a[sortColumn];

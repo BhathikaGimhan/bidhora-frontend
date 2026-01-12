@@ -130,6 +130,8 @@ class ProjectController {
         return "assigned";
       case "completed_by_employee":
         return "completed_by_employee";
+      case "awaiting_final_payment":
+        return "awaiting_final_payment";
       case "completed":
         return "completed";
       case "cancelled":

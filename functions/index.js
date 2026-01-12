@@ -13,7 +13,8 @@ const functions = require("firebase-functions");
 const logger = require("firebase-functions/logger");
 const nodemailer = require("nodemailer");
 const admin = require("firebase-admin");
-const { jsPDF } = require("jspdf");
+const chromium = require("@sparticuz/chromium");
+const puppeteer = require("puppeteer-core");
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -69,318 +70,6 @@ function getSriLankaTime() {
 // Create reusable transporter object using SMTP transport
 const transporter = nodemailer.createTransport(emailConfig);
 
-/**
- * Generate invoice PDF
- */
-async function generateInvoicePDF(data) {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  
-  // Colors
-  const primaryColor = [16, 185, 129]; // Emerald-500
-  const darkColor = [31, 41, 55]; // Gray-800
-  const lightGray = [243, 244, 246]; // Gray-100
-  
-  let yPos = 20;
-
-  // Header with company logo/name
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 45, 'F');
-  
-  // Add Bidhora logo - embedded from file
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const logoPath = path.join(__dirname, 'bidhora-logo.png');
-    const logoBuffer = fs.readFileSync(logoPath);
-    const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-    doc.addImage(logoBase64, 'PNG', 15, 8, 30, 30);
-    logger.info('Bidhora logo added successfully to invoice');
-  } catch (e) {
-    // If logo fails to load, continue without it
-    logger.warn('Failed to add Bidhora logo to invoice', { error: e.message });
-  }
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(28);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Bidhora', 50, 22);
-  
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Professional Digital Solution Platform', 50, 30);
-  
-  // Invoice title on the right
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('INVOICE', pageWidth - 20, 25, { align: 'right' });
-  
-  yPos = 55;
-
-  // Invoice details box
-  doc.setFillColor(...lightGray);
-  doc.roundedRect(20, yPos, pageWidth - 40, 25, 3, 3, 'F');
-  
-  doc.setTextColor(...darkColor);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Invoice Number: ${data.invoiceNumber}`, 25, yPos + 8);
-  doc.text(`Date: ${data.invoiceDate}`, 25, yPos + 15);
-  doc.text(`Transaction ID: ${data.transactionId}`, 25, yPos + 22);
-  
-  yPos += 35;
-
-  // Bill To section
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('BILL TO:', 20, yPos);
-  
-  yPos += 8;
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...darkColor);
-  doc.text(data.buyerName, 20, yPos);
-  
-  yPos += 6;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(data.buyerEmail, 20, yPos);
-  
-  yPos += 15;
-
-  // Project Details section
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('PROJECT DETAILS:', 20, yPos);
-  
-  yPos += 8;
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...darkColor);
-  doc.text('Project Title:', 20, yPos);
-  doc.setFont('helvetica', 'normal');
-  const titleLines = doc.splitTextToSize(data.projectTitle, pageWidth - 80);
-  doc.text(titleLines, 60, yPos);
-  yPos += titleLines.length * 5;
-  
-  yPos += 3;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Project ID:', 20, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.projectId, 60, yPos);
-  
-  if (data.projectDescription) {
-    yPos += 6;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Description:', 20, yPos);
-    doc.setFont('helvetica', 'normal');
-    const descLines = doc.splitTextToSize(data.projectDescription, pageWidth - 80);
-    doc.text(descLines, 60, yPos);
-    yPos += descLines.length * 5;
-  }
-  
-  yPos += 15;
-
-  // Payment Details Table
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('PAYMENT DETAILS:', 20, yPos);
-  
-  yPos += 10;
-
-  // Table header
-  doc.setFillColor(...primaryColor);
-  doc.rect(20, yPos, pageWidth - 40, 10, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Description', 25, yPos + 7);
-  doc.text('Amount', pageWidth - 25, yPos + 7, { align: 'right' });
-  
-  yPos += 10;
-
-  // Table rows
-  doc.setTextColor(...darkColor);
-  doc.setFont('helvetica', 'normal');
-  
-  const paymentTypeLabel = data.paymentType === 'deposit' 
-    ? `Deposit Payment (${data.depositPercentage || 10}%)`
-    : `Final Payment (${data.finalPercentage || 90}%)`;
-  
-  doc.setFillColor(255, 255, 255);
-  doc.rect(20, yPos, pageWidth - 40, 10, 'FD');
-  doc.text(paymentTypeLabel, 25, yPos + 7);
-  doc.text(`${data.currency} ${data.amount.toFixed(2)}`, pageWidth - 25, yPos + 7, { align: 'right' });
-  
-  yPos += 10;
-
-  if (data.totalProjectAmount) {
-    doc.setFillColor(...lightGray);
-    doc.rect(20, yPos, pageWidth - 40, 8, 'F');
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.text(`Total Project Value: ${data.currency} ${data.totalProjectAmount.toFixed(2)}`, 25, yPos + 5.5);
-    yPos += 8;
-  }
-
-  // Total section
-  doc.setFillColor(...darkColor);
-  doc.rect(20, yPos, pageWidth - 40, 12, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL PAID', 25, yPos + 8);
-  doc.text(`${data.currency} ${data.amount.toFixed(2)}`, pageWidth - 25, yPos + 8, { align: 'right' });
-  
-  yPos += 20;
-
-  // Payment Method
-  doc.setTextColor(...darkColor);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Payment Method: ${data.paymentMethod}`, 20, yPos);
-  doc.text('Status: PAID', pageWidth - 20, yPos, { align: 'right' });
-  
-  // Footer
-  const footerY = pageHeight - 30;
-  doc.setDrawColor(...primaryColor);
-  doc.setLineWidth(0.5);
-  doc.line(20, footerY, pageWidth - 20, footerY);
-  
-  doc.setTextColor(...darkColor);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Bidhora', pageWidth / 2, footerY + 5, { align: 'center' });
-  doc.text('Colombo, Sri Lanka', pageWidth / 2, footerY + 10, { align: 'center' });
-  doc.text('contact@bidhora.com | https://bidhora.com', pageWidth / 2, footerY + 15, { align: 'center' });
-  
-  doc.setFontSize(8);
-  doc.setTextColor(128, 128, 128);
-  doc.text('Thank you for your business!', pageWidth / 2, footerY + 22, { align: 'center' });
-
-  return doc;
-}
-
-/**
- * Generate invoice number
- */
-function generateInvoiceNumber(paymentType, projectId) {
-  const prefix = paymentType === 'deposit' ? 'INV-DEP' : 'INV-FIN';
-  const timestamp = Date.now();
-  const shortProjectId = projectId.substring(0, 6).toUpperCase();
-  return `${prefix}-${shortProjectId}-${timestamp}`;
-}
-
-/**
- * Send invoice email with PDF attachment
- */
-async function sendInvoiceEmail(invoiceData) {
-  const doc = await generateInvoicePDF(invoiceData);
-  const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
-  
-  const paymentTypeText = invoiceData.paymentType === 'deposit' ? 'Deposit' : 'Final';
-  
-  const emailHtml = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Payment Invoice - ${invoiceData.invoiceNumber}</title>
-        <style>
-          body { font-family: 'Inter', sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-          .header { background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%); color: white; padding: 40px 30px; text-align: center; }
-          .content { padding: 40px 30px; }
-          .success-icon { font-size: 64px; text-align: center; margin-bottom: 20px; }
-          .title { font-size: 24px; font-weight: 700; color: #1f2937; text-align: center; margin-bottom: 10px; }
-          .subtitle { font-size: 16px; color: #6b7280; text-align: center; margin-bottom: 30px; }
-          .invoice-box { background: #f0fdf4; border: 2px solid #059669; border-radius: 12px; padding: 20px; margin: 20px 0; }
-          .invoice-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #d1fae5; }
-          .invoice-row:last-child { border-bottom: none; font-weight: 700; }
-          .label { color: #374151; font-weight: 600; }
-          .value { color: #059669; }
-          .button { display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
-          .footer { text-align: center; color: #6b7280; font-size: 14px; padding: 20px; background: #f9fafb; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div style="font-size: 28px; font-weight: 700; margin-bottom: 10px;">Bidhora</div>
-            <div>Payment Invoice</div>
-          </div>
-          <div class="content">
-            <div class="success-icon">✅</div>
-            <div class="title">Payment Successful!</div>
-            <div class="subtitle">Thank you for your payment. Your invoice is attached.</div>
-            
-            <div class="invoice-box">
-              <div class="invoice-row">
-                <span class="label">Invoice Number:</span>
-                <span class="value">${invoiceData.invoiceNumber}</span>
-              </div>
-              <div class="invoice-row">
-                <span class="label">Transaction ID:</span>
-                <span class="value">${invoiceData.transactionId}</span>
-              </div>
-              <div class="invoice-row">
-                <span class="label">Payment Type:</span>
-                <span class="value">${paymentTypeText} Payment</span>
-              </div>
-              <div class="invoice-row">
-                <span class="label">Project:</span>
-                <span class="value">${invoiceData.projectTitle}</span>
-              </div>
-              <div class="invoice-row">
-                <span class="label">Amount Paid:</span>
-                <span class="value">${invoiceData.currency} ${invoiceData.amount.toFixed(2)}</span>
-              </div>
-            </div>
-            
-            <p style="color: #374151; line-height: 1.6;">
-              Your payment has been successfully processed. Please find your invoice attached to this email as a PDF document.
-            </p>
-            
-            <p style="color: #374151; line-height: 1.6;">
-              If you have any questions about this invoice or payment, please don't hesitate to contact us.
-            </p>
-          </div>
-          <div class="footer">
-            <p>Bidhora - Professional Digital Solution Platform</p>
-            <p>Colombo, Sri Lanka</p>
-            <p>contact@bidhora.com | https://bidhora.com</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-  
-  const mailOptions = {
-    from: '"Bidhora" <contact@bidhora.com>',
-    to: invoiceData.buyerEmail,
-    subject: `Payment Invoice ${invoiceData.invoiceNumber} - ${paymentTypeText} Payment`,
-    html: emailHtml,
-    attachments: [
-      {
-        filename: `Bidhora_Invoice_${invoiceData.invoiceNumber}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf'
-      }
-    ]
-  };
-  
-  await transporter.sendMail(mailOptions);
-  logger.info('Invoice email sent', { 
-    invoiceNumber: invoiceData.invoiceNumber,
-    recipient: invoiceData.buyerEmail 
-  });
-}
 
 // Contact form email handler
 exports.sendContactEmail = onRequest({ cors: true }, async (req, res) => {
@@ -1460,7 +1149,7 @@ exports.geniePayment = onRequest(
  * Receives payment notifications from Genie and updates project status
  */
 exports.genieWebhook = onRequest(
-  { cors: true, maxInstances: 10 },
+  { cors: true, maxInstances: 10, memory: '1GiB' },
   async (req, res) => {
     // Only allow POST requests
     if (req.method !== "POST") {
@@ -2043,3 +1732,387 @@ exports.listGenieWebhooks = onRequest(
     }
   }
 );
+/**
+ * Generate invoice PDF using Puppeteer for perfect Unicode support
+ */
+async function generateInvoicePDF(data) {
+  let browser = null;
+  try {
+    // Configure chromium for serverless environment
+    chromium.setHeadlessMode = true;
+    chromium.setGraphicsMode = false;
+
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
+    });
+
+    const page = await browser.newPage();
+
+    // HTML Template with embedded CSS and Google Fonts
+    // Recreating the exact design from the original jsPDF implementation
+    // Note: We use base64 encoded logo if available, otherwise fallback to text
+    let logoHtml = '';
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logoPath = path.join(__dirname, 'bidhora-logo.png');
+      if (fs.existsSync(logoPath)) {
+        const logoBuffer = fs.readFileSync(logoPath);
+        const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+        logoHtml = `<div style="width: 30mm; height: 30mm; display: flex; align-items: center; justify-content: center;">
+          <img src="${logoBase64}" alt="Bidhora" style="width: 100%; height: 100%; object-fit: contain;" />
+        </div>`;
+      }
+    } catch (e) {
+      console.warn('Logo not found for PDF generation', e);
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+          <style>
+            body {
+              font-family: 'Noto Sans Sinhala', 'Poppins', sans-serif;
+              margin: 0;
+              padding: 0;
+              color: #333;
+              background: white;
+            }
+          </style>
+        </head>
+        <body>
+          <div style="padding: 0; color: #333; font-family: 'Noto Sans Sinhala', 'Poppins', sans-serif; width: 210mm; min-height: 297mm; position: relative; box-sizing: border-box;">
+            
+            <!-- Header Background -->
+            <div style="background-color: #10b981; height: 45mm; width: 100%; position: absolute; top: 0; left: 0; z-index: 0;"></div>
+            
+            <!-- Header Content -->
+            <div style="position: relative; z-index: 1; padding: 8mm 15mm; display: flex; justify-content: space-between; align-items: flex-start;">
+               <div style="display: flex; align-items: center; gap: 15px;">
+                 <!-- Logo -->
+                 ${logoHtml}
+                 <div style="color: white;">
+                   <h1 style="font-size: 28pt; font-weight: bold; margin: 0; line-height: 1;">Bidhora</h1>
+                   <p style="margin: 5px 0 0 0; font-size: 10pt;">Professional Digital Solution Platform</p>
+                 </div>
+               </div>
+               <div style="text-align: right; padding-top: 10mm;">
+                 <h2 style="font-size: 24pt; font-weight: bold; margin: 0; color: white;">INVOICE</h2>
+               </div>
+            </div>
+
+            <div style="padding: 10mm 20mm;">
+              <!-- Info Box -->
+              <div style="background-color: #f3f4f6; padding: 5mm; border-radius: 3mm; margin-bottom: 10mm; display: flex; flex-direction: column; gap: 2mm;">
+                <div style="font-size: 10pt; font-weight: bold; color: #1f2937;">Invoice Number: ${data.invoiceNumber}</div>
+                <div style="font-size: 10pt; font-weight: bold; color: #1f2937;">Date: ${data.invoiceDate}</div>
+                <div style="font-size: 10pt; font-weight: bold; color: #1f2937;">Transaction ID: ${data.transactionId}</div>
+              </div>
+
+              <!-- Bill To -->
+              <div style="margin-bottom: 15mm;">
+                <h3 style="color: #10b981; font-size: 12pt; font-weight: bold; margin-bottom: 3mm;">BILL TO:</h3>
+                <p style="margin: 0; font-weight: bold; font-size: 11pt; color: #1f2937;">${data.buyerName}</p>
+                <p style="margin: 2mm 0 0 0; font-size: 10pt; color: #374151;">${data.buyerEmail}</p>
+              </div>
+
+              <!-- Project Details -->
+              <div style="margin-bottom: 10mm;">
+                <h3 style="color: #10b981; font-size: 12pt; font-weight: bold; margin-bottom: 3mm;">PROJECT DETAILS:</h3>
+                
+                <div style="margin-bottom: 2mm; display: flex; align-items: flex-start;">
+                  <span style="font-size: 10pt; font-weight: bold; color: #1f2937; width: 35mm; flex-shrink: 0;">Project Title:</span>
+                  <span style="font-size: 10pt; color: #374151;">${data.projectTitle}</span>
+                </div>
+                
+                <div style="margin-bottom: 2mm; display: flex; align-items: flex-start;">
+                  <span style="font-size: 10pt; font-weight: bold; color: #1f2937; width: 35mm; flex-shrink: 0;">Project ID:</span>
+                  <span style="font-size: 10pt; color: #374151;">${data.projectId}</span>
+                </div>
+                
+                ${data.projectDescription ? `
+                  <div style="margin-bottom: 2mm; display: flex; align-items: flex-start;">
+                    <span style="font-size: 10pt; font-weight: bold; color: #1f2937; width: 35mm; flex-shrink: 0;">Description:</span>
+                    <span style="font-size: 10pt; color: #374151; white-space: pre-wrap;">${data.projectDescription}</span>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Payment Details Table -->
+              <div style="margin-bottom: 10mm;">
+                <h3 style="color: #10b981; font-size: 12pt; font-weight: bold; margin-bottom: 5mm;">PAYMENT DETAILS:</h3>
+                
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background-color: #10b981; color: white;">
+                      <th style="padding: 3mm 5mm; text-align: left; font-size: 10pt; font-weight: bold;">Description</th>
+                      <th style="padding: 3mm 5mm; text-align: right; font-size: 10pt; font-weight: bold;">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="background-color: white;">
+                      <td style="padding: 3mm 5mm; border-bottom: 1px solid #e5e7eb; font-size: 10pt; color: #1f2937;">
+                        ${data.paymentType === 'deposit' 
+                          ? `Deposit Payment (${data.depositPercentage || 10}%)` 
+                          : `Final Payment (${data.finalPercentage || 90}%)`}
+                      </td>
+                      <td style="padding: 3mm 5mm; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 10pt; color: #1f2937;">
+                        ${data.currency} ${Number(data.amount).toFixed(2)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                ${data.totalProjectAmount ? `
+                  <div style="background-color: #f3f4f6; padding: 2mm 5mm; margin-top: 0; font-size: 9pt; color: #374151;">
+                    Total Project Value: ${data.currency} ${Number(data.totalProjectAmount).toFixed(2)}
+                  </div>
+                ` : ''}
+
+                <!-- Total Paid Bar -->
+                <div style="background-color: #1f2937; color: white; padding: 3mm 5mm; margin-top: 0; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 12pt; font-weight: bold;">TOTAL PAID</span>
+                  <span style="font-size: 12pt; font-weight: bold;">${data.currency} ${Number(data.amount).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <!-- Payment Method & Status -->
+              <div style="display: flex; justify-content: space-between; font-size: 10pt; color: #1f2937; margin-bottom: 40mm;">
+                <div>Payment Method: ${data.paymentMethod}</div>
+                <div style="text-align: right;">Status: PAID</div>
+              </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div style="position: absolute; bottom: 15mm; left: 0; width: 100%; padding: 0 20mm; box-sizing: border-box;">
+              <div style="border-top: 0.5px solid #10b981; margin-bottom: 5mm;"></div>
+              <div style="text-align: center; color: #1f2937; font-size: 9pt;">
+                <div>Bidhora</div>
+                <div>Colombo, Sri Lanka</div>
+                <div>contact@bidhora.com | https://bidhora.com</div>
+                <div style="margin-top: 3mm; font-size: 8pt; color: #808080;">Thank you for your business!</div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '0px',
+        right: '0px',
+        bottom: '0px',
+        left: '0px'
+      }
+    });
+
+    return pdfBuffer;
+
+  } catch (error) {
+    console.error("Error generating PDF with Puppeteer:", error);
+    throw error;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
+/**
+ * Generate invoice number
+ */
+function generateInvoiceNumber(paymentType, projectId) {
+  const prefix = paymentType === 'deposit' ? 'INV-DEP' : 'INV-FIN';
+  const timestamp = Date.now();
+  const shortProjectId = projectId.substring(0, 6).toUpperCase();
+  return `${prefix}-${shortProjectId}-${timestamp}`;
+}
+
+/**
+ * Send invoice email with PDF attachment
+ */
+async function sendInvoiceEmail(invoiceData) {
+  // generateInvoicePDF now returns a Buffer directly
+  const pdfBuffer = await generateInvoicePDF(invoiceData);
+  
+  const paymentTypeText = invoiceData.paymentType === 'deposit' ? 'Deposit' : 'Final';
+  
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Payment Invoice - ${invoiceData.invoiceNumber}</title>
+        <style>
+          body { font-family: 'Inter', sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; }
+          .success-icon { font-size: 64px; text-align: center; margin-bottom: 20px; }
+          .title { font-size: 24px; font-weight: 700; color: #1f2937; text-align: center; margin-bottom: 10px; }
+          .subtitle { font-size: 16px; color: #6b7280; text-align: center; margin-bottom: 30px; }
+          .invoice-box { background: #f0fdf4; border: 2px solid #059669; border-radius: 12px; padding: 20px; margin: 20px 0; }
+          .invoice-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #d1fae5; }
+          .invoice-row:last-child { border-bottom: none; font-weight: 700; }
+          .label { color: #374151; font-weight: 600; }
+          .value { color: #059669; }
+          .button { display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+          .footer { text-align: center; color: #6b7280; font-size: 14px; padding: 20px; background: #f9fafb; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div style="font-size: 28px; font-weight: 700; margin-bottom: 10px;">Bidhora</div>
+            <div>Payment Invoice</div>
+          </div>
+          <div class="content">
+            <div class="success-icon">✅</div>
+            <div class="title">Payment Successful!</div>
+            <div class="subtitle">Thank you for your payment. Your invoice is attached.</div>
+            
+            <div class="invoice-box">
+              <div class="invoice-row">
+                <span class="label">Invoice No:</span>
+                <span class="value">${invoiceData.invoiceNumber}</span>
+              </div>
+              <div class="invoice-row">
+                <span class="label">Amount:</span>
+                <span class="value">${invoiceData.currency} ${Number(invoiceData.amount).toFixed(2)}</span>
+              </div>
+              <div class="invoice-row">
+                <span class="label">Date:</span>
+                <span class="value">${invoiceData.invoiceDate}</span>
+              </div>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="https://bidhora.com/profile" class="button">View Project Details</a>
+            </div>
+          </div>
+          <div class="footer">
+            <p>This is an automated email. Please do not reply.</p>
+            <p>&copy; ${new Date().getFullYear()} Bidhora. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const mailOptions = {
+    from: '"Bidhora Payments" <contact@bidhora.com>',
+    to: invoiceData.buyerEmail,
+    subject: `Payment Receipt - ${invoiceData.projectTitle}`,
+    html: emailHtml,
+    attachments: [
+      {
+        filename: `Invoice_${invoiceData.invoiceNumber}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }
+    ]
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+// Send marketer welcome email
+exports.sendMarketerWelcomeEmail = onRequest({ cors: true }, async (req, res) => {
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
+  try {
+    const { email, name, promoCode, commissionRate, profileId } = req.body;
+
+    if (!email || !promoCode) {
+      res.status(400).json({ success: false, message: "Missing required fields" });
+      return;
+    }
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Welcome to Bidhora Marketing Program</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+            .header { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 40px 30px; text-align: center; }
+            .content { padding: 40px 30px; }
+            .title { font-size: 24px; font-weight: 700; color: #1f2937; text-align: center; margin-bottom: 10px; }
+            .subtitle { font-size: 16px; color: #6b7280; text-align: center; margin-bottom: 30px; }
+            .info-box { background: #f0fdf4; border: 2px solid #059669; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }
+            .code { font-size: 32px; font-weight: 800; color: #059669; letter-spacing: 2px; margin: 10px 0; display: block; }
+            .rate { font-size: 18px; color: #4b5563; font-weight: 600; }
+            .button { display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+            .footer { text-align: center; color: #6b7280; font-size: 14px; padding: 20px; background: #f9fafb; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div style="font-size: 28px; font-weight: 700; margin-bottom: 10px;">Bidhora</div>
+              <div>Marketing Partner Program</div>
+            </div>
+            <div class="content">
+              <div class="title">Welcome Aboard, ${name}!</div>
+              <div class="subtitle">You have been approved as a Bidhora Marketer.</div>
+              
+              <p style="color: #374151; line-height: 1.6; text-align: center;">
+                We are excited to have you join our marketing team. Use your unique promo code below to invite new clients and earn commissions on their projects.
+              </p>
+
+              <div class="info-box">
+                <div style="font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Your Promo Code</div>
+                <span class="code">${promoCode}</span>
+                <div class="rate">Commission Rate: ${commissionRate}%</div>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="https://bidhora.com/profile/${profileId}" class="button">Access Your Dashboard</a>
+              </div>
+              
+              <p style="color: #6b7280; font-size: 14px; text-align: center; margin-top: 20px;">
+                Share this code with potential clients. When they start a project using your code, you'll earn a commission!
+              </p>
+            </div>
+            <div class="footer">
+              <p>This is an automated email. Please do not reply.</p>
+              <p>&copy; ${new Date().getFullYear()} Bidhora. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: '"Bidhora Team" <contact@bidhora.com>',
+      to: email,
+      subject: "Welcome to Bidhora Marketing Program - Your Promo Code",
+      html: emailHtml,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ success: true, message: "Welcome email sent successfully" });
+  } catch (error) {
+    logger.error("Error sending marketer welcome email:", error);
+    res.status(500).json({ success: false, message: "Failed to send email", error: error.message });
+  }
+});

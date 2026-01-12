@@ -142,6 +142,14 @@ export function ProjectsView() {
 
   const columns = [
     {
+      key: "id",
+      title: "Project ID",
+      sortable: true,
+      render: (value: string) => (
+        <span className="font-mono text-xs text-muted-foreground">{value}</span>
+      ),
+    },
+    {
       key: "title",
       title: "Project",
       sortable: true,

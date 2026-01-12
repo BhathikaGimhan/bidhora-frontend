@@ -250,6 +250,9 @@ export function CompletedView() {
                     Completed
                   </Badge>
                 </div>
+                <div className="text-xs text-muted-foreground mt-1 font-mono">
+                  ID: {project.id}
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-3 mb-4">

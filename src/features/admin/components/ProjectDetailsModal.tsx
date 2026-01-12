@@ -269,6 +269,16 @@ export function ProjectDetailsModal({ project, isOpen, onClose }: ProjectDetails
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                   <div className="flex items-start space-x-2 sm:space-x-3">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Project ID</p>
+                      <p className="text-sm sm:text-base font-semibold font-mono break-all">
+                        {project.id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-2 sm:space-x-3">
                     <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 mt-0.5 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs sm:text-sm font-medium text-muted-foreground">Budget</p>
