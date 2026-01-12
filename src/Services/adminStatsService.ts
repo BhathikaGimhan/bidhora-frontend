@@ -37,6 +37,7 @@ export const adminStatsService = {
       const totalProjects = allProjectsSnapshot.size;
 
       // Calculate total revenue from completed projects that have been paid
+      // Note: Revenue calculation still requires getDocs as we need to sum specific fields
       let totalRevenue = 0;
       const completedProjectsQuery = query(
         collection(db, "projects"),

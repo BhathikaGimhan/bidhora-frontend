@@ -20,6 +20,9 @@ export interface User {
   displayName?: string;
   photoURL?: string;
   role: "buyer" | "service_provider" | "admin";
+  isMarketer?: boolean;
+  promoCode?: string;
+  commissionRate?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +52,7 @@ export interface Project {
   createdAt: Date;
   bids: number;
   buyerEmail?: string; // Buyer's email address
+  buyerName?: string; // Buyer's name
   assignedTo?: string; // ID of the user assigned to this project
   // Enhanced with user details
   poster?: User;
@@ -63,6 +67,7 @@ export interface Project {
     | "approved"
     | "assigned"
     | "completed_by_employee"
+    | "awaiting_final_payment"
     | "completed"
     | "cancelled";
   adminPrice?: number; // Price set by admin
@@ -92,6 +97,12 @@ export interface Project {
   customerRating?: number; // 1-5 stars
   customerReview?: string;
   customerReviewedAt?: Date; // When customer left review
+
+  // Marketing / Promo
+  promoCode?: string;
+  marketerId?: string;
+  commissionAmount?: number;
+  commissionStatus?: "pending" | "earned" | "paid";
 }
 
 export interface Proposal {
@@ -319,6 +330,41 @@ export const getProjectById = async (
   } catch (error) {
     console.error("Error fetching project by ID:", error);
     return null;
+  }
+};
+
+export const getProjectsByPromoCode = async (promoCode: string): Promise<Project[]> => {
+  try {
+    const q = query(
+      collection(db, "projects"),
+      where("promoCode", "==", promoCode),
+      orderBy("createdAt", "desc")
+    );
+    const snapshot = await getDocs(q);
+    
+    const projects = await Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      let poster = null;
+      
+      if (data.createdBy) {
+        poster = await getUserDetails(data.createdBy);
+      }
+      
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate(),
+        deadline: data.deadline?.toDate(),
+        poster,
+        buyerName: data.buyerName || poster?.displayName,
+        buyerEmail: data.buyerEmail || poster?.email,
+      } as Project;
+    }));
+    
+    return projects;
+  } catch (error) {
+    console.error("Error fetching projects by promo code:", error);
+    return [];
   }
 };
 

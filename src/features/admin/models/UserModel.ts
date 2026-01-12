@@ -4,6 +4,9 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'buyer' | 'employee';
+  isMarketer?: boolean;
+  promoCode?: string;
+  commissionRate?: number;
   designation?: string; // Job designation for employees
   status: 'active' | 'inactive' | 'banned';
   avatar?: string;

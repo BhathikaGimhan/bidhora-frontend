@@ -241,6 +241,7 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
             "completed_by_employee",
             "needs_revision",
             "completed",
+            "awaiting_final_payment",
           ])
         )
       ),

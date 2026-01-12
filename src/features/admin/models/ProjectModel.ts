@@ -11,6 +11,7 @@ export interface Project {
     | "approved"
     | "assigned"
     | "completed_by_employee"
+    | "awaiting_final_payment"
     | "completed"
     | "cancelled";
   clientId: string;
@@ -19,6 +20,11 @@ export interface Project {
     min: number;
     max: number;
   };
+  promoCode?: string;
+  marketerId?: string;
+  commissionAmount?: number;
+  commissionStatus?: "pending" | "earned" | "paid";
+  createdAt: string;
   adminPrice?: number;
   adminDuration?: number; // Duration in days/weeks
   adminDurationUnit?: "days" | "weeks"; // Unit for duration

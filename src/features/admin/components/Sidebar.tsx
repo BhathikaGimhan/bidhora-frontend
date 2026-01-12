@@ -18,6 +18,7 @@ import {
   DollarSign,
   AlertCircle,
   Star,
+  Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const sidebarItems = [
   { title: "Work Submissions", url: "/admin/work-submissions", icon: Package },
   { title: "Urgent Projects", url: "/admin/projects", icon: AlertCircle },
   { title: "Project Review", url: "/admin/project-review", icon: DollarSign },
+  { title: "Marketing", url: "/admin/marketing", icon: Megaphone },
   { title: "Reviews", url: "/admin/reviews", icon: Star },
   { title: "FAQ Management", url: "/admin/faq", icon: HelpCircle },
   { title: "Notifications", url: "/admin/notifications", icon: Bell },

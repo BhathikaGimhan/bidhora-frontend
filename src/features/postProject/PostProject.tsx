@@ -39,6 +39,7 @@ export interface FormData {
   category: string;
   projectImage: File | null;
   projectFiles: File[];
+  promoCode?: string;
 }
 
 const PostProject = () => {
@@ -61,6 +62,7 @@ const PostProject = () => {
     category: "",
     projectImage: null,
     projectFiles: [],
+    promoCode: "",
   };
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -334,11 +336,12 @@ const PostProject = () => {
         buyerId: user.uid,   // Legacy/alternative field for backwards compatibility
         buyerName: user.displayName || user.email?.split("@")[0] || "Anonymous",
         buyerEmail: user.email,
-        status: "pending", // pending, admin_review, priced, customer_approved, approved, assigned, completed_by_employee, completed, cancelled
+        status: "pending", // pending, admin_review, priced, customer_approved, approved, assigned, completed_by_employee, awaiting_final_payment, completed, cancelled
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         proposalsCount: 0,
         viewsCount: 0,
+        promoCode: formData.promoCode ? formData.promoCode.trim() : null,
       };
 
       const docRef = await addDoc(collection(db, "projects"), projectData);

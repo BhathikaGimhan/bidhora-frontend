@@ -26,6 +26,18 @@ export const MaintenanceGuard: React.FC<MaintenanceGuardProps> = ({ children }) 
   const isEmployeeRoute = location.pathname.startsWith('/employee');
   const shouldBypassMaintenance = isAuthPage || isAdminRoute || isEmployeeRoute;
 
+  // Check for allowed emails to bypass maintenance
+  const MAINTENANCE_ALLOWED_EMAILS = [
+    "testprojectforemail@gmail.com",
+    "gihanvimukthi0@gmail.com"
+  ];
+
+  /*
+   * Added state to track if user is explicitly allowed during maintenance
+   * This is separate from admin status but provides similar bypass capability
+   */
+  const [isAllowedUser, setIsAllowedUser] = useState(false);
+
   useEffect(() => {
     // Allow these routes immediately without showing loading
     if (shouldBypassMaintenance) {
@@ -38,17 +50,28 @@ export const MaintenanceGuard: React.FC<MaintenanceGuardProps> = ({ children }) 
       try {
         // Check if user is admin first (before checking maintenance)
         let userIsAdmin = false;
+        let userIsAllowed = false;
+
         if (user) {
           userIsAdmin = await isAdmin();
           setIsAdminUser(userIsAdmin);
+          
+          // Check if user is in allowed list
+          if (user.email && MAINTENANCE_ALLOWED_EMAILS.includes(user.email)) {
+            userIsAllowed = true;
+            setIsAllowedUser(true);
+            console.log("User is in maintenance whitelist:", user.email);
+          }
+          
           console.log("User admin status:", userIsAdmin);
         } else {
           setIsAdminUser(false);
+          setIsAllowedUser(false);
           console.log("No user logged in");
         }
 
-        // Only check maintenance mode if user is not admin
-        if (!userIsAdmin) {
+        // Only check maintenance mode if user is not admin AND not allowed
+        if (!userIsAdmin && !userIsAllowed) {
           const maintenance = await getMaintenanceMode();
           setIsMaintenanceMode(maintenance.enabled);
           setMaintenanceMessage({
@@ -57,13 +80,14 @@ export const MaintenanceGuard: React.FC<MaintenanceGuardProps> = ({ children }) 
           });
           console.log("Maintenance mode:", maintenance.enabled);
         } else {
-          // Admin users bypass maintenance
+          // Admin users and allowed users bypass maintenance
           setIsMaintenanceMode(false);
-          console.log("Admin user - bypassing maintenance check");
+          console.log("User bypassing maintenance check (Admin or Allowed)");
         }
       } catch (error) {
         console.error("Error checking maintenance mode or auth:", error);
         setIsAdminUser(false);
+        setIsAllowedUser(false);
       } finally {
         setLoading(false);
       }
@@ -88,13 +112,13 @@ export const MaintenanceGuard: React.FC<MaintenanceGuardProps> = ({ children }) 
     );
   }
 
-  // If user is admin, allow access to all routes even during maintenance
-  if (isAdminUser) {
+  // If user is admin or allowed, allow access to all routes even during maintenance
+  if (isAdminUser || isAllowedUser) {
     return <>{children}</>;
   }
 
-  // If maintenance mode is active and user is not admin, show maintenance page
-  if (isMaintenanceMode && !isAdminUser) {
+  // If maintenance mode is active and user is not admin and not allowed, show maintenance page
+  if (isMaintenanceMode && !isAdminUser && !isAllowedUser) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-4xl">

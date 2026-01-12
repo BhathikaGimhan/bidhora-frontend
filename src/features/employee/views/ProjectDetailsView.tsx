@@ -390,6 +390,9 @@ export function ProjectDetailsView() {
                   {project.title}
                 </CardTitle>
               </div>
+              <div className="mb-2 text-sm text-muted-foreground">
+                <span className="font-medium">Project ID:</span> {project.id}
+              </div>
               {project.isUrgent && (
                 <div className="mb-3 flex items-center gap-2">
                   <Badge variant="destructive" className="font-bold text-sm px-3 py-1 bg-red-600 hover:bg-red-700 shadow-lg animate-pulse">

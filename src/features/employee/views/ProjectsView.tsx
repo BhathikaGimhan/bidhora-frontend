@@ -351,6 +351,9 @@ export function ProjectsView() {
                     {getStatusLabel(project.status)}
                   </Badge>
                 </div>
+                <div className="text-xs text-muted-foreground mt-1 font-mono">
+                  ID: {project.id}
+                </div>
                 {project.isUrgent && (
                   <div className="mt-2 animate-pulse">
                     <Badge variant="destructive" className="font-bold shadow-lg bg-red-600 hover:bg-red-700 text-white">

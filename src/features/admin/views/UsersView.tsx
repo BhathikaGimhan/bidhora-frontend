@@ -45,10 +45,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { MoreHorizontal, Ban, Trash2, CheckCircle, AlertCircle, UserCog, RefreshCw, Briefcase, Check, ChevronsUpDown } from 'lucide-react';
+import { MoreHorizontal, Ban, Trash2, CheckCircle, AlertCircle, UserCog, RefreshCw, Briefcase, Check, ChevronsUpDown, TrendingUp } from 'lucide-react';
 import { User } from '@/features/admin/models/UserModel';
 import { useToast } from '@/hooks/use-toast';
-import { getAllUsers, banUser, unbanUser, deleteUser, updateUserRole, updateUserDesignation } from '@/Services/authService';
+import { getAllUsers, banUser, unbanUser, deleteUser, updateUserRole, updateUserDesignation, updateUserMarketerStatus } from '@/Services/authService';
 import  LoadingSpinner  from '@/components/ui/loading-spinner';
 import { auth } from '@/firebaseConfig';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -353,6 +353,36 @@ export function UsersView() {
     }
   };
 
+  const handleToggleMarketer = async (user: User) => {
+    try {
+      setActionLoading(true);
+      const newStatus = !user.isMarketer;
+      
+      await updateUserMarketerStatus({
+        targetUserId: user.id,
+        isMarketer: newStatus,
+      });
+
+      toast({
+        title: "Success",
+        description: newStatus 
+          ? "User set as marketer. Please configure details in Marketing section." 
+          : "User removed from marketers.",
+      });
+      
+      fetchUsers();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update marketer status';
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const columns = [
     {
       key: 'name',
@@ -365,7 +395,14 @@ export function UsersView() {
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium">{user.name}</div>
+            <div className="flex items-center gap-2">
+              <div className="font-medium">{user.name}</div>
+              {user.isMarketer && (
+                <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200">
+                  Marketer
+                </Badge>
+              )}
+            </div>
             <div className="text-sm text-muted-foreground">{user.email}</div>
           </div>
         </div>
@@ -463,6 +500,15 @@ export function UsersView() {
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+
+        {/* Marketer Toggle */}
+        <DropdownMenuItem
+          onClick={() => handleToggleMarketer(user)}
+          disabled={actionLoading}
+        >
+          <TrendingUp className="mr-2 h-4 w-4" />
+          {user.isMarketer ? 'Remove Marketer Status' : 'Set as Marketer'}
+        </DropdownMenuItem>
 
         {/* Set Designation for Employees */}
         {user.role === 'employee' && (
