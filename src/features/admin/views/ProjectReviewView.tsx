@@ -734,24 +734,14 @@ export function ProjectReviewView() {
           <div className="grid gap-4 py-4">
             {selectedProject && (
               <>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Project Value:</span>
-                    <span className="font-semibold">
-                                          <div>
-                      <div className="text-xs text-muted-foreground">Price (LKR)</div>
-                      <div className="font-medium">
-                      LKR {(selectedProject as any).adminPrice?.toFixed(2)}
-                      </div>
-                    </div>
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Payment Status:</span>
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg mb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Payment Status:</span>
                     <Badge variant="default" className="bg-green-600">
-                      ✅ Fixed Deposit Paid
+                      ✅ Fixed Deposit Paid (LKR 1,500)
                     </Badge>
                   </div>
+                  <p className="text-xs text-emerald-600 mt-2">Project is ready for employee assignment. The employee will work on this project and submit deliverables in parts.</p>
                 </div>
 
                 <div className="space-y-2">

@@ -490,14 +490,56 @@ export const updateWorkSubmissionStatus = async (
         const submissionDoc = await getDoc(doc(db, "projectSubmissions", partSubmissionId));
         if (submissionDoc.exists()) {
             const data = submissionDoc.data();
+            
+            console.log('📄 Part submission data:', {
+              projectId: data.projectId,
+              isFinal: data.isFinal,
+              hasDocuments: !!data.documents,
+              documentsCount: data.documents?.length,
+              documentsContent: data.documents,
+            });
+            
             const projectRef = doc(db, "projects", data.projectId);
             const projectDoc = await getDoc(projectRef);
             if (projectDoc.exists()) {
                 const pData = projectDoc.data();
-                await updateDoc(projectRef, {
+                
+                // Check if this is a final part submission
+                const isFinalPart = data.isFinal === true;
+                
+                console.log('🔍 Checking final part status:', {
+                  isFinalValue: data.isFinal,
+                  isFinalPart,
+                  strictCheck: data.isFinal === true,
+                });
+                
+                // Update project counters
+                const projectUpdateData: any = {
                     approvedParts: (pData.approvedParts || 0) + 1,
                     updatedAt: Timestamp.now()
-                });
+                };
+                
+                // If final part, update project status for final payment
+                if (isFinalPart) {
+                    projectUpdateData.status = 'awaiting_final_payment';
+                    projectUpdateData.adminReviewStatus = 'approved';
+                    projectUpdateData.adminReviewedAt = Timestamp.now();
+                    projectUpdateData.adminReviewedBy = user.uid;
+                    projectUpdateData.adminReviewNotes = reviewNotes || null;
+                    // Store the final part price for the final payment
+                    projectUpdateData.finalPartPrice = adminPrice;
+                    // Store the final part documents for download after payment
+                    if (data.documents && data.documents.length > 0) {
+                        projectUpdateData.finalPartDocuments = data.documents;
+                        console.log('✅ Storing finalPartDocuments:', data.documents);
+                    } else {
+                        console.log('⚠️ No documents found in part submission');
+                    }
+                }
+                
+                console.log('📝 Project update data:', projectUpdateData);
+                
+                await updateDoc(projectRef, projectUpdateData);
 
                 // Send payment notification email to buyer
                 try {
@@ -522,29 +564,44 @@ export const updateWorkSubmissionStatus = async (
                   }
 
                   if (buyerEmail && adminPrice) {
-                    // Generate payment link
-                    const paymentLink = `https://bidhora.com/payment/part/${partSubmissionId}`;
-                    
                     // Import emailService dynamically to avoid circular dependencies
                     const { emailService } = await import('./emailService');
                     
-                    // Send part payment email notification
-                    await emailService.sendPartPaymentNotification({
-                      to_email: buyerEmail,
-                      to_name: buyerName,
-                      project_title: pData.title,
-                      part_tag: data.partTag,
-                      submission_id: partSubmissionId,
-                      amount: adminPrice,
-                      payment_link: paymentLink,
-                    });
-                    
-                    console.log('✅ Part payment notification sent to buyer:', buyerEmail);
+                    if (isFinalPart) {
+                      // For final part, send final payment email with review link
+                      const finalPaymentLink = `https://bidhora.com/payment/final/${data.projectId}`;
+                      
+                      await emailService.sendFinalPaymentNotification({
+                        to_email: buyerEmail,
+                        to_name: buyerName,
+                        project_title: pData.title,
+                        project_id: data.projectId,
+                        amount: adminPrice,
+                        payment_link: finalPaymentLink,
+                      });
+                      
+                      console.log('✅ Final payment notification sent to buyer:', buyerEmail);
+                    } else {
+                      // For regular part, send part payment email
+                      const paymentLink = `https://bidhora.com/payment/part/${partSubmissionId}`;
+                      
+                      await emailService.sendPartPaymentNotification({
+                        to_email: buyerEmail,
+                        to_name: buyerName,
+                        project_title: pData.title,
+                        part_tag: data.partTag,
+                        submission_id: partSubmissionId,
+                        amount: adminPrice,
+                        payment_link: paymentLink,
+                      });
+                      
+                      console.log('✅ Part payment notification sent to buyer:', buyerEmail);
+                    }
                   } else {
                     console.warn('⚠️ Could not send payment email - missing buyer email or price');
                   }
                 } catch (emailError) {
-                  console.error('❌ Error sending part payment email:', emailError);
+                  console.error('❌ Error sending payment email:', emailError);
                   // Don't fail the approval if email fails
                 }
             }

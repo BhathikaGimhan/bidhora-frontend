@@ -37,9 +37,7 @@ export interface FinalPaymentNotificationData {
   to_name: string;
   project_title: string;
   project_id: string;
-  total_price: number;
-  initial_payment: number;
-  final_payment: number;
+  amount: number; // Final part payment amount
   payment_link: string;
 }
 
@@ -231,9 +229,7 @@ class EmailService {
           to_name: notificationData.to_name,
           project_title: notificationData.project_title,
           project_id: notificationData.project_id,
-          total_price: notificationData.total_price,
-          initial_payment: notificationData.initial_payment,
-          final_payment: notificationData.final_payment,
+          amount: notificationData.amount,
           payment_link: notificationData.payment_link,
         },
         {

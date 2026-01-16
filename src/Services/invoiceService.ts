@@ -4,7 +4,7 @@ import html2canvas from 'html2canvas';
 export interface InvoiceData {
   invoiceNumber: string;
   invoiceDate: string;
-  paymentType: 'deposit' | 'final';
+  paymentType: 'deposit' | 'final' | 'part';
   projectId: string;
   projectTitle: string;
   projectDescription?: string;
@@ -23,6 +23,11 @@ export interface InvoiceData {
   totalProjectAmount?: number;
   depositPercentage?: number;
   finalPercentage?: number;
+  
+  // Part submission details (for part payments)
+  partTag?: string;
+  partNumber?: number;
+  submissionId?: string;
 }
 
 export class InvoiceService {
@@ -124,8 +129,10 @@ export class InvoiceService {
                 <tr style="background-color: white;">
                   <td style="padding: 3mm 5mm; border-bottom: 1px solid #e5e7eb; font-size: 10pt; color: #1f2937;">
                     ${data.paymentType === 'deposit' 
-                      ? `Deposit Payment (${data.depositPercentage || 10}%)` 
-                      : `Final Payment (${data.finalPercentage || 90}%)`}
+                      ? 'Project Deposit Payment' 
+                      : data.paymentType === 'part'
+                      ? `Part Payment${data.partTag ? ` - ${data.partTag}` : ''}`
+                      : 'Final Payment'}
                   </td>
                   <td style="padding: 3mm 5mm; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 10pt; color: #1f2937;">
                     ${data.currency} ${data.amount.toFixed(2)}
@@ -202,8 +209,13 @@ export class InvoiceService {
   /**
    * Generate invoice number
    */
-  static generateInvoiceNumber(paymentType: 'deposit' | 'final', projectId: string): string {
-    const prefix = paymentType === 'deposit' ? 'INV-DEP' : 'INV-FIN';
+  static generateInvoiceNumber(paymentType: 'deposit' | 'final' | 'part', projectId: string): string {
+    const prefixMap = {
+      deposit: 'INV-DEP',
+      final: 'INV-FIN',
+      part: 'INV-PRT'
+    };
+    const prefix = prefixMap[paymentType];
     const timestamp = Date.now();
     const shortProjectId = projectId.substring(0, 6).toUpperCase();
     return `${prefix}-${shortProjectId}-${timestamp}`;

@@ -765,9 +765,7 @@ exports.sendFinalPaymentNotification = onRequest(
         to_name,
         project_title,
         project_id,
-        total_price,
-        initial_payment,
-        final_payment,
+        amount,
         payment_link,
       } = req.body;
 
@@ -777,9 +775,7 @@ exports.sendFinalPaymentNotification = onRequest(
         !to_name ||
         !project_title ||
         !project_id ||
-        !total_price ||
-        !initial_payment ||
-        !final_payment ||
+        !amount ||
         !payment_link
       ) {
         res.status(400).json({
@@ -789,13 +785,13 @@ exports.sendFinalPaymentNotification = onRequest(
         return;
       }
 
-      // Email HTML for final payment notification
+      // Email HTML for final payment notification - Updated for new flow
       const paymentEmailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
-          <title>Complete Your Project Payment - Bidhora</title>
+          <title>Complete Your Final Project Payment - Bidhora</title>
           <style>
             body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); margin: 0; padding: 20px; }
             .container { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
@@ -808,15 +804,16 @@ exports.sendFinalPaymentNotification = onRequest(
             .greeting { font-size: 26px; font-weight: 700; color: #059669; margin-bottom: 22px; text-align: center; }
             .message { font-size: 17px; line-height: 1.8; color: #4b5563; margin-bottom: 32px; text-align: center; }
             .highlight-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 3px solid #059669; border-radius: 14px; padding: 28px; margin: 32px 0; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15); }
-            .project-title { font-size: 22px; font-weight: 700; color: #0c4a6e; margin-bottom: 22px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; }
-            .payment-details { background: white; border-radius: 10px; padding: 22px; }
+            .project-title { font-size: 22px; font-weight: 700; color: #047857; margin-bottom: 22px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; }
+            .final-badge { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 10px 20px; border-radius: 25px; display: inline-block; font-weight: 700; font-size: 15px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3); }
+            .payment-details { background: white; border-radius: 12px; padding: 22px; border-left: 4px solid #059669; }
             .detail-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 2px solid #e5e7eb; align-items: center; }
             .detail-row:last-child { border-bottom: none; }
             .detail-label { font-weight: 600; color: #374151; font-size: 15px; }
             .detail-value { color: #1f2937; font-weight: 600; font-size: 15px; }
-            .total-row { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 22px; border-radius: 10px; margin-top: 18px; border: 2px solid #f59e0b; }
-            .total-label { font-size: 19px; font-weight: 700; color: #92400e; }
-            .total-value { font-size: 28px; font-weight: 800; color: #059669; }
+            .total-row { background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 22px; border-radius: 12px; margin-top: 18px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }
+            .total-label { font-size: 19px; font-weight: 700; color: white; }
+            .total-value { font-size: 28px; font-weight: 800; color: white; }
             .cta-container { text-align: center; margin: 35px 0; }
             .cta-text { font-size: 19px; font-weight: 700; color: #374151; margin-bottom: 18px; }
             .cta-button { display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 18px 48px; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 19px; box-shadow: 0 8px 16px rgba(5, 150, 105, 0.35); transition: all 0.3s ease; }
@@ -824,8 +821,12 @@ exports.sendFinalPaymentNotification = onRequest(
             .info-box { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 22px; margin: 25px 0; }
             .info-title { font-weight: 700; color: #1e40af; margin-bottom: 12px; font-size: 16px; }
             .info-text { color: #4b5563; font-size: 15px; line-height: 1.7; }
-            .security-badge { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 10px; padding: 18px; margin-top: 25px; text-align: center; }
-            .security-text { font-weight: 700; color: #92400e; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+            .review-box { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 22px; margin: 25px 0; }
+            .review-title { font-weight: 700; color: #92400e; margin-bottom: 12px; font-size: 16px; }
+            .review-text { color: #78350f; font-size: 15px; line-height: 1.7; }
+            .security-badge { background: #f0fdf4; border: 2px solid #059669; border-radius: 10px; padding: 18px; margin-top: 25px; text-align: center; }
+            .security-text { font-weight: 700; color: #047857; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+            .footer { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center; }
           </style>
         </head>
         <body>
@@ -833,52 +834,62 @@ exports.sendFinalPaymentNotification = onRequest(
             <div class="header">
               <div class="logo">Bidhora</div>
               <div class="celebration">🎊</div>
-              <div class="tagline">Your Project is Ready!</div>
+              <div class="tagline">Your Project is Complete!</div>
             </div>
             
             <div class="content">
-              <div class="greeting">🎉 Great News, ${to_name}!</div>
+              <div class="greeting">🎉 Congratulations, ${to_name}!</div>
               
               <div class="message">
-                Your project <strong>"${project_title}"</strong> has been <strong>successfully completed</strong> and approved by our admin team! 
-                The work is ready for you to download and use immediately.
+                Your project has been <strong>successfully completed</strong> and approved by our admin team! 
+                Complete your final payment to download the final part of your project and leave a review.
               </div>
               
               <div class="highlight-box">
-                <div class="project-title">
-                  💼 ${project_title}
+                <div class="project-title">💼 ${project_title}</div>
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <span class="final-badge">🏆 FINAL DELIVERY</span>
                 </div>
                 
                 <div class="payment-details">
                   <div class="detail-row">
-                    <span class="detail-label">📊 Total Project Price:</span>
-                    <span class="detail-value">LKR ${total_price.toLocaleString()}</span>
+                    <span class="detail-label">Project ID</span>
+                    <span class="detail-value">#${project_id.substring(0, 8).toUpperCase()}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">✅ Initial Deposit Paid:</span>
-                    <span class="detail-value" style="color: #059669;">LKR ${initial_payment.toLocaleString()} ✓</span>
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value" style="color: #059669;">✅ Completed & Approved</span>
                   </div>
-                  <div class="total-row detail-row">
-                    <span class="total-label">💰 Final Payment Due:</span>
-                    <span class="total-value">LKR ${final_payment.toLocaleString()}</span>
+                </div>
+                
+                <div class="total-row">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="total-label">💰 Final Payment</span>
+                    <span class="total-value">LKR ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>
 
               <div class="cta-container">
-                <div class="cta-text">🎁 Complete Your Payment to Access Files</div>
-                <a href="${payment_link}" class="cta-button">
-                  💳 Pay Now & Download Files
-                </a>
+                <div class="cta-text">🎁 Complete payment to download the final part of your project</div>
+                <a href="${payment_link}" class="cta-button">Pay Now & Download →</a>
               </div>
 
               <div class="info-box">
-                <div class="info-title">📋 What Happens Next?</div>
+                <div class="info-title">📋 What's Included</div>
                 <div class="info-text">
-                  <strong>1.</strong> Click the "Pay Now" button above<br/>
-                  <strong>2.</strong> Complete the secure payment process<br/>
-                  <strong>3.</strong> Immediately access and download all project files<br/>
-                  <strong>4.</strong> Keep the files forever - they're yours!
+                  <strong>✓</strong> Final part of your project files<br/>
+                  <strong>✓</strong> Instant download access after payment<br/>
+                  <strong>✓</strong> Invoice automatically generated<br/>
+                  <strong>✓</strong> Lifetime access to your files
+                </div>
+              </div>
+
+              <div class="review-box">
+                <div class="review-title">⭐ Your Review Matters</div>
+                <div class="review-text">
+                  After completing payment, you'll have the opportunity to rate and review your experience. 
+                  Your feedback helps us improve and helps others make informed decisions!
                 </div>
               </div>
 
@@ -888,44 +899,40 @@ exports.sendFinalPaymentNotification = onRequest(
                   <span>•</span>
                   <span>📥 Instant Download</span>
                   <span>•</span>
-                  <span>✅ Quality Guaranteed</span>
+                  <span>⭐ Leave a Review</span>
                 </div>
               </div>
             </div>
-<div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center;">
-  <div style="font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 16px; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(5, 150, 105, 0.1);">
-    The Bidhora Team
-  </div>
-
-  <div style="color: #065f46; font-size: 14px; line-height: 1.8;">
-    <div style="margin-bottom: 8px;">
-      📧 <a href="mailto:contact@bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">contact@bidhora.com</a>
-    </div>
-    <div style="margin-bottom: 8px;">
-      📞 <span style="font-weight: 500;">074 377 4787</span>
-    </div>
-    <div>
-      🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a>
-    </div>
-  </div>
-
-  <p style="color: #6b7280; font-size: 12px; margin-top: 24px; font-style: italic; opacity: 0.8; margin-bottom: 0;">
-    Sent on ${getSriLankaTime()}
-  </p>
-</div>
-
-
-
+            
+            <div class="footer">
+              <div style="font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 16px; letter-spacing: -0.5px;">
+                The Bidhora Team
+              </div>
+              <div style="color: #065f46; font-size: 14px; line-height: 1.8;">
+                <div style="margin-bottom: 8px;">
+                  📧 <a href="mailto:contact@bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">contact@bidhora.com</a>
+                </div>
+                <div style="margin-bottom: 8px;">
+                  📞 <span style="font-weight: 500;">074 377 4787</span>
+                </div>
+                <div>
+                  🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a>
+                </div>
+              </div>
+              <p style="color: #6b7280; font-size: 12px; margin-top: 24px; font-style: italic; opacity: 0.8; margin-bottom: 0;">
+                Sent on ${getSriLankaTime()}
+              </p>
+            </div>
           </div>
         </body>
       </html>
-    `;
+      `;
 
       // Send email to buyer
       await transporter.sendMail({
         from: '"Bidhora Team" <contact@bidhora.com>',
         to: to_email,
-        subject: `🎊 Your Project is Ready! Complete Payment to Download - ${project_title}`,
+        subject: `🎊 Project Complete! Final Payment Required - ${project_title}`,
         html: paymentEmailHtml,
       });
 
@@ -934,7 +941,7 @@ exports.sendFinalPaymentNotification = onRequest(
         to_name,
         project_id,
         project_title,
-        final_payment,
+        amount,
       });
 
       res.status(200).json({
@@ -999,7 +1006,7 @@ exports.sendPartPaymentNotification = onRequest(
         return;
       }
 
-      // Email HTML for part payment notification
+      // Email HTML for part payment notification - System Theme (Green)
       const paymentEmailHtml = `
       <!DOCTYPE html>
       <html>
@@ -1007,37 +1014,40 @@ exports.sendPartPaymentNotification = onRequest(
           <meta charset="utf-8">
           <title>Part Payment Required - Bidhora</title>
           <style>
-            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); margin: 0; padding: 20px; }
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); margin: 0; padding: 20px; }
             .container { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-            .header { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%); color: white; padding: 50px 30px; text-align: center; position: relative; }
+            .header { background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%); color: white; padding: 50px 30px; text-align: center; position: relative; }
             .logo { font-size: 36px; font-weight: 800; margin-bottom: 15px; letter-spacing: -0.5px; }
+            .celebration { font-size: 48px; margin-bottom: 10px; }
             .tagline { font-size: 19px; opacity: 0.95; font-weight: 400; letter-spacing: 0.3px; }
             .content { padding: 45px 35px; }
-            .greeting { font-size: 26px; font-weight: 700; color: #f59e0b; margin-bottom: 22px; text-align: center; }
+            .greeting { font-size: 26px; font-weight: 700; color: #059669; margin-bottom: 22px; text-align: center; }
             .message { font-size: 17px; line-height: 1.8; color: #4b5563; margin-bottom: 32px; text-align: center; }
-            .highlight-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 3px solid #f59e0b; border-radius: 14px; padding: 28px; margin: 32px 0; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15); }
-            .project-title { font-size: 22px; font-weight: 700; color: #78350f; margin-bottom: 22px; text-align: center; }
-            .part-badge { background: #059669; color: white; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: 600; font-size: 14px; margin-bottom: 20px; }
-            .payment-details { background: white; border-radius: 10px; padding: 22px; }
+            .highlight-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 3px solid #059669; border-radius: 14px; padding: 28px; margin: 32px 0; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15); }
+            .project-title { font-size: 22px; font-weight: 700; color: #047857; margin-bottom: 22px; text-align: center; }
+            .part-badge { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 10px 20px; border-radius: 25px; display: inline-block; font-weight: 700; font-size: 15px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3); }
+            .payment-details { background: white; border-radius: 12px; padding: 22px; border-left: 4px solid #059669; }
             .detail-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 2px solid #e5e7eb; align-items: center; }
             .detail-row:last-child { border-bottom: none; }
             .detail-label { font-weight: 600; color: #374151; font-size: 15px; }
             .detail-value { color: #1f2937; font-weight: 600; font-size: 15px; }
-            .total-row { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); padding: 22px; border-radius: 10px; margin-top: 18px; border: 2px solid #059669; }
+            .total-row { background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 22px; border-radius: 12px; margin-top: 18px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }
             .total-label { font-size: 19px; font-weight: 700; color: white; }
             .total-value { font-size: 28px; font-weight: 800; color: white; }
             .cta-container { text-align: center; margin: 35px 0; }
             .cta-text { font-size: 19px; font-weight: 700; color: #374151; margin-bottom: 18px; }
-            .cta-button { display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: white; padding: 18px 48px; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 19px; box-shadow: 0 8px 16px rgba(245, 158, 11, 0.35); transition: all 0.3s ease; }
-            .cta-button:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(245, 158, 11, 0.45); }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 18px 48px; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 19px; box-shadow: 0 8px 16px rgba(5, 150, 105, 0.35); transition: all 0.3s ease; }
+            .cta-button:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(5, 150, 105, 0.45); }
             .info-box { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 22px; margin: 25px 0; }
             .info-text { color: #4b5563; font-size: 15px; line-height: 1.7; }
+            .footer { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
               <div class="logo">Bidhora</div>
+              <div class="celebration">📦</div>
               <div class="tagline">Part Submission Approved!</div>
             </div>
             
@@ -1045,40 +1055,64 @@ exports.sendPartPaymentNotification = onRequest(
               <div class="greeting">🎉 Excellent Progress, ${to_name}!</div>
               
               <div class="message">
-                Good news! A part of your project has been completed and approved.
+                Good news! A part of your project has been completed, reviewed, and approved by our team. Complete the payment to download your deliverables.
               </div>
               
               <div class="highlight-box">
                 <div class="project-title">📋 ${project_title}</div>
                 <div style="text-align: center; margin-bottom: 20px;">
-                  <span class="part-badge">${part_tag}</span>
+                  <span class="part-badge">✨ ${part_tag}</span>
                 </div>
                 
                 <div class="payment-details">
                   <div class="detail-row">
-                    <span class="detail-label">Part Submission ID</span>
-                    <span class="detail-value">#${submission_id.substring(0, 8)}</span>
+                    <span class="detail-label">Submission ID</span>
+                    <span class="detail-value">#${submission_id.substring(0, 8).toUpperCase()}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value" style="color: #059669;">✅ Approved</span>
                   </div>
                 </div>
                 
                 <div class="total-row">
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span class="total-label">💰 Payment Amount</span>
-                    <span class="total-value">LKR ${amount.toLocaleString()}</span>
+                    <span class="total-value">LKR ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>
               
               <div class="cta-container">
-                <div class="cta-text">✨ Click below to complete the payment</div>
-                <a href="${payment_link}" class="cta-button">Pay Now →</a>
+                <div class="cta-text">✨ Click below to complete payment and download files</div>
+                <a href="${payment_link}" class="cta-button">Pay Now & Download →</a>
               </div>
               
               <div class="info-box">
                 <div class="info-text">
-                  ℹ️ This is a milestone payment for the approved part submission. Once payment is complete, you'll receive access to the delivered work for this part.
+                  ℹ️ <strong>What happens next?</strong> Once your payment is complete, you'll receive immediate access to download the deliverables for this part. An invoice will also be generated automatically for your records.
                 </div>
               </div>
+            </div>
+            
+            <div class="footer">
+              <div style="font-weight: 700; color: #047857; font-size: 22px; margin-bottom: 16px; letter-spacing: -0.5px;">
+                The Bidhora Team
+              </div>
+              <div style="color: #065f46; font-size: 14px; line-height: 1.8;">
+                <div style="margin-bottom: 8px;">
+                  📧 <a href="mailto:contact@bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">contact@bidhora.com</a>
+                </div>
+                <div style="margin-bottom: 8px;">
+                  📞 <span style="font-weight: 500;">074 377 4787</span>
+                </div>
+                <div>
+                  🌐 <a href="https://www.bidhora.com" style="color: #059669; font-weight: 600; text-decoration: none;">www.bidhora.com</a>
+                </div>
+              </div>
+              <p style="color: #6b7280; font-size: 12px; margin-top: 24px; font-style: italic; opacity: 0.8; margin-bottom: 0;">
+                Sent on ${getSriLankaTime()}
+              </p>
             </div>
           </div>
         </body>
@@ -1404,10 +1438,13 @@ exports.genieWebhook = onRequest(
           }
 
           // Update part submission payment status
+          const invoiceNumber = submissionData.invoiceNumber || generateInvoiceNumber('part', submissionId);
+          
           await submissionRef.update({
             paymentStatus: 'paid',
             paidAt: admin.firestore.FieldValue.serverTimestamp(),
             paymentId: transactionId || orderId,
+            invoiceNumber: invoiceNumber,
           });
 
           // Update project stats
@@ -1421,9 +1458,55 @@ exports.genieWebhook = onRequest(
               totalPaidAmount: (projectData.totalPaidAmount || 0) + (submissionData.adminPrice || 0),
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
+
+            // Send invoice email for part payment
+            try {
+              // Check if email already sent
+              if (!submissionData.invoiceEmailSent) {
+                // Mark as sending to prevent duplicates
+                await submissionRef.update({ invoiceEmailSent: true });
+                
+                // Get buyer info
+                const buyerId = projectData.createdBy || projectData.buyerId || projectData.customerId;
+                if (buyerId) {
+                  const buyerDoc = await db.collection('users').doc(buyerId).get();
+                  const buyerData = buyerDoc.data();
+                  
+                  const invoiceData = {
+                    invoiceNumber,
+                    invoiceDate: new Date().toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    }),
+                    paymentType: 'part',
+                    projectId: submissionData.projectId,
+                    projectTitle: projectData.title || 'Project',
+                    projectDescription: submissionData.description,
+                    buyerName: buyerData?.displayName || buyerData?.email || 'Customer',
+                    buyerEmail: buyerData?.email || projectData.customerEmail,
+                    amount: submissionData.adminPrice || 0,
+                    currency: 'LKR',
+                    transactionId: transactionId || orderId,
+                    paymentMethod: 'Genie Payment Gateway',
+                    partTag: submissionData.partTag,
+                    submissionId: submissionId,
+                  };
+                  
+                  await sendInvoiceEmail(invoiceData);
+                  logger.info("Part payment invoice email sent", { submissionId, invoiceNumber });
+                }
+              } else {
+                logger.info("Part invoice email already sent - skipping", { submissionId });
+              }
+            } catch (emailError) {
+              logger.error("Failed to send part invoice email", { submissionId, error: emailError.message });
+              // Rollback email sent flag if email failed
+              await submissionRef.update({ invoiceEmailSent: false });
+            }
           }
 
-          logger.info("Part payment processed successfully", { submissionId, transactionId });
+          logger.info("Part payment processed successfully", { submissionId, transactionId, invoiceNumber });
           res.status(200).json({ success: true, message: "Part payment processed" });
           return;
         }
@@ -1537,8 +1620,6 @@ exports.genieWebhook = onRequest(
                 currency: 'LKR',
                 transactionId: transactionId || orderId,
                 paymentMethod: 'Genie Payment Gateway',
-                totalProjectAmount: totalAmount,
-                depositPercentage: 10,
               };
               
               await sendInvoiceEmail(invoiceData);
@@ -2083,8 +2164,10 @@ async function generateInvoicePDF(data) {
                     <tr style="background-color: white;">
                       <td style="padding: 3mm 5mm; border-bottom: 1px solid #e5e7eb; font-size: 10pt; color: #1f2937;">
                         ${data.paymentType === 'deposit' 
-                          ? `Deposit Payment (${data.depositPercentage || 10}%)` 
-                          : `Final Payment (${data.finalPercentage || 90}%)`}
+                          ? 'Project Deposit Payment' 
+                          : data.paymentType === 'part'
+                          ? `Part Payment${data.partTag ? ` - ${data.partTag}` : ''}`
+                          : 'Final Payment'}
                       </td>
                       <td style="padding: 3mm 5mm; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 10pt; color: #1f2937;">
                         ${data.currency} ${Number(data.amount).toFixed(2)}
@@ -2158,7 +2241,12 @@ async function generateInvoicePDF(data) {
  * Generate invoice number
  */
 function generateInvoiceNumber(paymentType, projectId) {
-  const prefix = paymentType === 'deposit' ? 'INV-DEP' : 'INV-FIN';
+  const prefixMap = {
+    deposit: 'INV-DEP',
+    final: 'INV-FIN',
+    part: 'INV-PRT'
+  };
+  const prefix = prefixMap[paymentType] || 'INV';
   const timestamp = Date.now();
   const shortProjectId = projectId.substring(0, 6).toUpperCase();
   return `${prefix}-${shortProjectId}-${timestamp}`;
@@ -2171,7 +2259,12 @@ async function sendInvoiceEmail(invoiceData) {
   // generateInvoicePDF now returns a Buffer directly
   const pdfBuffer = await generateInvoicePDF(invoiceData);
   
-  const paymentTypeText = invoiceData.paymentType === 'deposit' ? 'Deposit' : 'Final';
+  const paymentTypeMap = {
+    deposit: 'Deposit',
+    final: 'Final',
+    part: 'Part'
+  };
+  const paymentTypeText = paymentTypeMap[invoiceData.paymentType] || 'Payment';
   
   const emailHtml = `
     <!DOCTYPE html>

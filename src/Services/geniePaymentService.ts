@@ -197,7 +197,7 @@ class GeniePaymentService {
   // ============================================
 
   /**
-   * Initialize final payment for a project (90% of total)
+   * Initialize final payment for a project
    * Sends email notification to buyer with payment link
    */
   async initiateFinalPayment(projectId: string): Promise<{ success: boolean; message: string; paymentLink?: string }> {
@@ -221,7 +221,8 @@ class GeniePaymentService {
         return { success: false, message: 'Final payment already completed' };
       }
 
-      const finalPaymentAmount = (projectData.adminPrice || 0) * 0.9; // 90% of total
+      // New flow: use finalPartPrice if set (from final part approval), otherwise fallback to adminPrice
+      const finalPaymentAmount = projectData.finalPartPrice || projectData.adminPrice || 0;
 
       // Update project with final payment pending status
       await updateDoc(projectRef, {
@@ -271,9 +272,7 @@ class GeniePaymentService {
         to_name: buyerName,
         project_title: projectData.title,
         project_id: projectId,
-        total_price: projectData.adminPrice || 0,
-        initial_payment: (projectData.adminPrice || 0) * 0.1,
-        final_payment: finalPaymentAmount,
+        amount: finalPaymentAmount,
         payment_link: paymentLink,
       });
 
@@ -370,7 +369,10 @@ class GeniePaymentService {
       }
 
       const data = projectDoc.data();
-      const adminPrice = data.adminPrice || 0;
+      
+      // New flow: finalPartPrice is set when admin approves final part submission
+      // Fallback to adminPrice for legacy projects
+      const finalPaymentAmount = data.finalPartPrice || data.adminPrice || 0;
 
       // Support both createdBy and buyerId fields for backwards compatibility
       // Prioritize buyerId since that's what PostProject.tsx uses consistently
@@ -386,26 +388,81 @@ class GeniePaymentService {
         status: data.status,
         adminReviewStatus: data.adminReviewStatus,
         finalPaymentStatus: data.finalPaymentStatus,
-        hasDocuments: !!(data.finalPaymentDocuments || data.documents),
+        finalPartPrice: data.finalPartPrice,
+        hasFinalPartDocuments: !!data.finalPartDocuments,
+        finalPartDocumentsCount: data.finalPartDocuments?.length || 0,
+        hasDocuments: !!data.documents,
+        documentsCount: data.documents?.length || 0,
+      });
+
+      // For final part submissions, use finalPartDocuments; otherwise fall back to documents
+      let documentsToReturn = data.finalPartDocuments || data.documents || [];
+      
+      // If no documents found on project, try to fetch from the final part submission
+      // This handles cases where finalPartDocuments wasn't stored during approval (older approvals)
+      if (documentsToReturn.length === 0) {
+        console.log('📁 No documents on project, searching for final part submission...');
+        try {
+          // Query projectSubmissions for the final part of this project
+          const { collection: firestoreCollection, query: firestoreQuery, where, getDocs, orderBy, limit } = await import('firebase/firestore');
+          const submissionsQuery = firestoreQuery(
+            firestoreCollection(db, 'projectSubmissions'),
+            where('projectId', '==', projectId),
+            where('isFinal', '==', true),
+            where('status', '==', 'approved'),
+            orderBy('submittedAt', 'desc'),
+            limit(1)
+          );
+          const submissionsSnapshot = await getDocs(submissionsQuery);
+          
+          if (!submissionsSnapshot.empty) {
+            const finalPartData = submissionsSnapshot.docs[0].data();
+            if (finalPartData.documents && finalPartData.documents.length > 0) {
+              documentsToReturn = finalPartData.documents;
+              console.log('✅ Found documents from final part submission:', documentsToReturn.length);
+              
+              // Also update the project with these documents for future use
+              await updateDoc(projectRef, {
+                finalPartDocuments: finalPartData.documents
+              });
+              console.log('✅ Updated project with finalPartDocuments');
+            }
+          } else {
+            console.log('⚠️ No approved final part submission found');
+          }
+        } catch (err) {
+          console.error('Error fetching final part submission documents:', err);
+        }
+      }
+      
+      console.log('📁 Documents to return:', {
+        hasFinalPartDocuments: !!data.finalPartDocuments,
+        hasDocuments: !!data.documents,
+        finalPartDocumentsCount: data.finalPartDocuments?.length,
+        documentsCount: data.documents?.length,
+        usingDocuments: documentsToReturn,
+        documentsToReturnCount: documentsToReturn.length,
       });
 
       const returnObject = {
         projectId,
         projectTitle: data.title,
         description: data.description,
-        totalAmount: adminPrice,
-        initialPayment: adminPrice * 0.1,
-        finalPayment: adminPrice * 0.9,
+        totalAmount: finalPaymentAmount,
+        finalPayment: finalPaymentAmount, // Final payment is the finalPartPrice (no percentage split)
         initialPaymentStatus: data.initialPaymentStatus,
         finalPaymentStatus: data.finalPaymentStatus,
         finalPaymentId: data.finalPaymentId,
-        documents: data.documents || [],
+        documents: documentsToReturn,
         downloadUrl: data.downloadUrl,
         buyerEmail: data.buyerEmail || data.createdBy,
         createdBy: projectOwnerId, // Use calculated owner ID (buyerId || createdBy)
         buyerId: projectOwnerId, // CRITICAL FIX: Return the same calculated owner ID, not raw data
         adminReviewStatus: data.adminReviewStatus,
         status: data.status,
+        customerRating: data.customerRating,
+        customerReview: data.customerReview,
+        customerReviewedAt: data.customerReviewedAt,
       };
 
       console.log('📤 RETURNING FROM SERVICE:', {

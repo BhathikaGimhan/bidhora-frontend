@@ -214,6 +214,13 @@ export default function FinalPaymentPage() {
           return;
         }
 
+        console.log('📦 Setting payment details:', {
+          hasDocuments: !!details.documents,
+          documentsCount: details.documents?.length,
+          documentsContent: details.documents,
+          finalPaymentStatus: details.finalPaymentStatus,
+        });
+
         setPaymentDetails(details);
         setPaymentCompleted(details.finalPaymentStatus === 'paid');
       } catch (error) {
@@ -584,7 +591,7 @@ export default function FinalPaymentPage() {
             <Alert className="bg-emerald-50 border-emerald-200">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               <AlertDescription className="text-emerald-800">
-                Congratulations! Your project is now complete. You can now download all your project files.
+                Congratulations! Your payment is complete. You can now download the final part of your project.
               </AlertDescription>
             </Alert>
 
@@ -610,6 +617,7 @@ export default function FinalPaymentPage() {
                 <div>
                   <p className="font-medium">Project</p>
                   <p className="text-sm text-muted-foreground">{paymentDetails.projectTitle}</p>
+                  <p className="text-xs text-muted-foreground font-mono mt-1">ID: {projectId}</p>
                 </div>
               </div>
 
@@ -624,31 +632,16 @@ export default function FinalPaymentPage() {
                   </p>
                 </div>
               </div>
-
-              {paymentDetails.finalPaymentId && (
-                <>
-                  <Separator />
-                  <div className="flex items-start space-x-3">
-                    <CreditCard className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="font-medium">Transaction ID</p>
-                      <p className="text-sm text-muted-foreground font-mono">
-                        {paymentDetails.finalPaymentId}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
 
             {/* Download Section */}
-            {paymentDetails.documents && paymentDetails.documents.length > 0 && (
+            {paymentDetails.documents && paymentDetails.documents.length > 0 ? (
               <>
                 <Separator />
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Download className="h-5 w-5 text-emerald-600" />
-                    <h3 className="font-semibold">Download Your Files</h3>
+                    <h3 className="font-semibold">Download Final Part Files</h3>
                   </div>
                   <div className="grid gap-2">
                     {paymentDetails.documents.map((doc: any, index: number) => (
@@ -678,6 +671,19 @@ export default function FinalPaymentPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <h3 className="font-semibold text-amber-700">No Files Available</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    The project files are not available for download. Please contact support if you believe this is an error.
+                  </p>
                 </div>
               </>
             )}
@@ -834,7 +840,7 @@ export default function FinalPaymentPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Final Project Payment</CardTitle>
           <CardDescription>
-            Complete your final payment (90%) to download project files
+            Complete your final payment to download project files
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -845,32 +851,10 @@ export default function FinalPaymentPage() {
               <div className="flex-1">
                 <p className="font-medium">Project</p>
                 <p className="text-sm text-muted-foreground">{paymentDetails.projectTitle}</p>
+                <p className="text-xs text-muted-foreground font-mono mt-1">ID: {projectId}</p>
               </div>
             </div>
 
-            <Separator />
-
-            <div className="flex items-start space-x-3">
-              <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium">Total Project Price</p>
-                <p className="text-lg font-semibold">
-                  LKR {paymentDetails.totalAmount?.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="flex items-start space-x-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium">Initial Deposit Paid</p>
-                <p className="text-sm text-emerald-600 font-semibold">
-                  LKR {paymentDetails.initialPayment?.toFixed(2)} ✓
-                </p>
-              </div>
-            </div>
           </div>
 
           {/* Final Payment Amount */}
@@ -883,7 +867,7 @@ export default function FinalPaymentPage() {
                 LKR {paymentDetails.finalPayment?.toFixed(2)}
               </p>
               <p className="text-sm text-emerald-600">
-                Complete this payment to download all project files
+                Complete this payment to download the final part of your project
               </p>
             </div>
           </div>
@@ -922,8 +906,8 @@ export default function FinalPaymentPage() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              After payment, you'll immediately be able to download all completed project
-              files and documents. The files will be yours to keep forever!
+              After payment, you'll immediately be able to download the final part of your project.
+              The files will be yours to keep forever!
             </AlertDescription>
           </Alert>
 

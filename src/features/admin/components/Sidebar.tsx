@@ -3,7 +3,6 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
-  FolderOpen,
   MessageSquare,
   CreditCard,
   Bell,
@@ -28,7 +27,6 @@ const sidebarItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Work Submissions", url: "/admin/work-submissions", icon: Package },
-  { title: "Part Submissions", url: "/admin/part-submissions", icon: FolderOpen },
   { title: "Urgent Projects", url: "/admin/projects", icon: AlertCircle },
   { title: "Project Review", url: "/admin/project-review", icon: DollarSign },
   { title: "Marketing", url: "/admin/marketing", icon: Megaphone },

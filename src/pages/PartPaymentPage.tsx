@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { auth } from '@/firebaseConfig';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
   FileText,
   Download,
   Package,
+  Receipt,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import geniePaymentService from '@/Services/geniePaymentService';
@@ -32,6 +33,7 @@ import {
   processPartPayment,
 } from '@/Services/partSubmissionService';
 import type { PartPaymentDetails } from '@/types/partSubmission';
+import { InvoiceService } from '@/Services/invoiceService';
 
 export default function PartPaymentPage() {
   const { submissionId } = useParams<{ submissionId: string }>();
@@ -43,6 +45,7 @@ export default function PartPaymentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const invoiceDownloaded = useRef(false);
 
   // Check for payment callback
   const paymentStatus = searchParams.get('status');
@@ -86,6 +89,55 @@ export default function PartPaymentPage() {
       setLoading(false);
     }
   };
+
+  // Auto-download invoice when payment is successful
+  useEffect(() => {
+    if (
+      partDetails?.paymentStatus === 'paid' &&
+      auth.currentUser &&
+      !invoiceDownloaded.current
+    ) {
+      invoiceDownloaded.current = true;
+
+      const downloadInvoice = async () => {
+        try {
+          const invoiceNumber = InvoiceService.generateInvoiceNumber('part', partDetails.projectId);
+
+          const invoiceData = {
+            invoiceNumber,
+            invoiceDate: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            paymentType: 'part' as const,
+            projectId: partDetails.projectId,
+            projectTitle: partDetails.projectTitle,
+            projectDescription: partDetails.description,
+            buyerName: auth.currentUser!.displayName || auth.currentUser!.email || 'Customer',
+            buyerEmail: auth.currentUser!.email!,
+            amount: partDetails.adminPrice,
+            currency: 'LKR',
+            transactionId: submissionId || `PART-${Date.now()}`,
+            paymentMethod: 'Genie Payment Gateway',
+            partTag: partDetails.partTag,
+            submissionId: submissionId,
+          };
+
+          await InvoiceService.downloadInvoice(invoiceData);
+
+          toast({
+            title: 'Invoice Downloaded',
+            description: 'Your part payment invoice has been downloaded automatically.',
+          });
+        } catch (error) {
+          console.error('Error auto-downloading invoice:', error);
+        }
+      };
+
+      downloadInvoice();
+    }
+  }, [partDetails, submissionId, toast]);
 
   const handlePayNow = async () => {
     if (!partDetails || !auth.currentUser) return;
@@ -260,6 +312,64 @@ export default function PartPaymentPage() {
                   </Button>
                 </div>
               ))}
+            </div>
+
+            <Separator />
+
+            {/* Invoice Download */}
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-emerald-600" />
+                  <div>
+                    <p className="font-medium">Invoice</p>
+                    <p className="text-sm text-muted-foreground">Download your payment invoice</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const invoiceNumber = InvoiceService.generateInvoiceNumber('part', partDetails.projectId);
+                      const invoiceData = {
+                        invoiceNumber,
+                        invoiceDate: new Date().toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        }),
+                        paymentType: 'part' as const,
+                        projectId: partDetails.projectId,
+                        projectTitle: partDetails.projectTitle,
+                        projectDescription: partDetails.description,
+                        buyerName: auth.currentUser?.displayName || auth.currentUser?.email || 'Customer',
+                        buyerEmail: auth.currentUser?.email!,
+                        amount: partDetails.adminPrice,
+                        currency: 'LKR',
+                        transactionId: submissionId || `PART-${Date.now()}`,
+                        paymentMethod: 'Genie Payment Gateway',
+                        partTag: partDetails.partTag,
+                        submissionId: submissionId,
+                      };
+                      await InvoiceService.downloadInvoice(invoiceData);
+                      toast({
+                        title: 'Invoice Downloaded',
+                        description: 'Your invoice has been downloaded.',
+                      });
+                    } catch (error) {
+                      console.error('Error downloading invoice:', error);
+                      toast({
+                        title: 'Download Failed',
+                        description: 'Failed to download invoice. Please try again.',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Invoice
+                </Button>
+              </div>
             </div>
 
             <div className="pt-4">
