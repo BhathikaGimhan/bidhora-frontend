@@ -865,7 +865,7 @@ export default function FinalPaymentPage() {
             <div className="flex items-start space-x-3">
               <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5" />
               <div className="flex-1">
-                <p className="font-medium">Initial Deposit Paid (10%)</p>
+                <p className="font-medium">Initial Deposit Paid</p>
                 <p className="text-sm text-emerald-600 font-semibold">
                   LKR {paymentDetails.initialPayment?.toFixed(2)} ✓
                 </p>
@@ -877,7 +877,7 @@ export default function FinalPaymentPage() {
           <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-300 rounded-lg p-6">
             <div className="text-center space-y-2">
               <p className="text-sm font-medium text-emerald-700 uppercase tracking-wide">
-                Final Payment (90%)
+                Final Payment Due
               </p>
               <p className="text-4xl font-bold text-emerald-900">
                 LKR {paymentDetails.finalPayment?.toFixed(2)}

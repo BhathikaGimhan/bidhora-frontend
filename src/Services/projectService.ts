@@ -77,7 +77,7 @@ export interface Project {
   pricedAt?: Date; // When admin set the price
   customerDecision?: "approved" | "rejected"; // Customer's decision on price
   customerDecisionAt?: Date; // When customer made decision
-  initialPaymentAmount?: number; // 10% of admin price
+  initialPaymentAmount?: number; // Fixed deposit amount (1500 LKR)
   initialPaymentStatus?: "pending" | "paid" | "failed";
   initialPaymentId?: string; // PayHere payment ID
   initialPaymentAt?: Date;
@@ -927,9 +927,10 @@ export const rejectProposal = async (
 // ===== ADMIN PROJECT MANAGEMENT FUNCTIONS =====
 
 // Admin reviews and sets price for a project
+// Admin reviews and sets price for a project
 export const adminReviewProject = async (
   projectId: string,
-  adminPrice: number,
+  adminPrice?: number,
   adminDuration?: number,
   adminDurationUnit?: "days" | "weeks",
   adminNotes?: string
@@ -974,8 +975,8 @@ export const adminReviewProject = async (
       : null;
     const clientEmail = userDetails?.email || projectData.buyerEmail;
 
-    // Calculate 10% deposit amount
-    const depositAmount = parseFloat((adminPrice * 0.1).toFixed(2));
+    // Calculate deposit amount - FIXED 1500 RS for new flow
+    const depositAmount = 1500;
 
     // Generate payment link - use production domain
     const baseUrl = 'https://bidhora.com';
@@ -984,7 +985,7 @@ export const adminReviewProject = async (
     // Update project with admin review
     const updateData: {
       status: string;
-      adminPrice: number;
+      adminPrice?: number;
       adminNotes: string;
       pricedAt: Timestamp;
       updatedAt: Timestamp;
@@ -995,7 +996,6 @@ export const adminReviewProject = async (
       adminDurationUnit?: "days" | "weeks";
     } = {
       status: "priced",
-      adminPrice,
       adminNotes: adminNotes || "",
       pricedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
@@ -1003,6 +1003,10 @@ export const adminReviewProject = async (
       initialPaymentStatus: "pending",
       paymentLink: paymentLink,
     };
+
+    if (adminPrice) {
+      updateData.adminPrice = adminPrice;
+    }
 
     if (adminDuration) {
       updateData.adminDuration = adminDuration;
@@ -1021,7 +1025,7 @@ export const adminReviewProject = async (
           to_email: clientEmail,
           to_name: userDetails?.displayName || projectData.buyerName,
           project_title: projectData.title,
-          project_price: adminPrice,
+          project_price: adminPrice || 0, // Fallback to 0 if not set
           project_duration:
             adminDuration && adminDurationUnit
               ? `${adminDuration} ${adminDurationUnit}`
@@ -1446,7 +1450,7 @@ export const updateUserProfileForProject = async (
 // ===== ADMIN EMPLOYEE ASSIGNMENT FUNCTIONS =====
 
 /**
- * Assign an employee to a project that has received 10% deposit payment
+ * Assign an employee to a project that has received fixed deposit payment
  */
 export const assignEmployeeToProject = async (
   projectId: string,
@@ -1519,6 +1523,33 @@ export const assignEmployeeToProject = async (
         totalProjects: currentProjects + 1,
         updatedAt: Timestamp.now(),
       });
+    }
+
+    // Send email notification to employee
+    try {
+      // Get admin price for the email (fallback to 0 if not set yet)
+      const projectPrice = projectData.adminPrice || 0;
+      
+      const emailResult = await emailService.sendEmployeeAssignmentNotification({
+        employeeEmail: employeeEmail,
+        employeeName: employeeName,
+        projectTitle: projectData.title,
+        projectDescription: projectData.description,
+        projectPrice: projectPrice,
+        projectId: projectId,
+        buyerEmail: projectData.buyerEmail, // Ensure this field exists in projectData
+        isUrgent: projectData.isUrgent || false,
+        projectLink: `https://bidhora.com/employee/projects/${projectId}` // Adjust link as needed
+      });
+
+      if (emailResult.success) {
+        console.log(`📧 Assignment email sent successfully to ${employeeEmail}`);
+      } else {
+        console.warn(`⚠️ Failed to send assignment email: ${emailResult.message}`);
+      }
+    } catch (emailError) {
+      console.error("Error sending assignment email:", emailError);
+      // Don't throw error here to avoid rolling back the assignment
     }
 
     console.log(`✅ Employee ${employeeName} assigned to project ${projectId}`);

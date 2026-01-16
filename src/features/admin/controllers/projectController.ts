@@ -20,6 +20,7 @@ const mockProjects: Project[] = [
     budget: { min: 1500, max: 3000 },
     deadline: "2024-10-15",
     createdDate: "2024-09-01",
+    createdAt: "2024-09-01",
     category: "Web Development",
     skillsRequired: ["React", "Node.js", "MongoDB"],
     featured: true,
@@ -34,6 +35,7 @@ const mockProjects: Project[] = [
     budget: { min: 800, max: 1500 },
     deadline: "2024-10-30",
     createdDate: "2024-09-15",
+    createdAt: "2024-09-15",
     category: "Design",
     skillsRequired: ["Figma", "UI/UX", "Mobile Design"],
     featured: false,
@@ -48,6 +50,7 @@ const mockProjects: Project[] = [
     budget: { min: 500, max: 800 },
     deadline: "2024-09-30",
     createdDate: "2024-08-15",
+    createdAt: "2024-08-15",
     category: "Writing",
     skillsRequired: ["Content Writing", "SEO", "Research"],
     featured: false,
@@ -86,6 +89,7 @@ class ProjectController {
         adminDurationUnit: project.adminDurationUnit,
         deadline: project.deadline.toISOString().split("T")[0], // Convert to YYYY-MM-DD format
         createdDate: project.createdAt.toISOString().split("T")[0],
+        createdAt: project.createdAt.toISOString(),
         category: project.category || "General",
         skillsRequired: project.skills || [],
         featured: false, // Default to false since not in Firestore data
@@ -239,6 +243,7 @@ class ProjectController {
         adminDurationUnit: project.adminDurationUnit,
         deadline: project.deadline.toISOString().split("T")[0],
         createdDate: project.createdAt.toISOString().split("T")[0],
+        createdAt: project.createdAt.toISOString(),
         category: project.category || "General",
         skillsRequired: project.skills || [],
         featured: false,
@@ -275,6 +280,7 @@ class ProjectController {
         adminDurationUnit: project.adminDurationUnit,
         deadline: project.deadline.toISOString().split("T")[0],
         createdDate: project.createdAt.toISOString().split("T")[0],
+        createdAt: project.createdAt.toISOString(),
         category: project.category || "General",
         skillsRequired: project.skills || [],
         featured: false,
@@ -288,7 +294,7 @@ class ProjectController {
   // Admin reviews and sets price for a project
   async adminReviewProject(
     projectId: string,
-    adminPrice: number,
+    adminPrice?: number,
     adminDuration?: number,
     adminDurationUnit?: "days" | "weeks",
     adminNotes?: string

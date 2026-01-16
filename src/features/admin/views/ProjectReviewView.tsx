@@ -58,11 +58,9 @@ export function ProjectReviewView() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [adminPrice, setAdminPrice] = useState<string>("");
-  const [adminDuration, setAdminDuration] = useState<string>("");
-  const [adminDurationUnit, setAdminDurationUnit] = useState<"days" | "weeks">(
-    "days"
-  );
+  // adminPrice removed as part of simplified flow, but duration is still needed
+  const [adminDuration, setAdminDuration] = useState<number>(0);
+  const [adminDurationUnit, setAdminDurationUnit] = useState<string>("days");
   const [adminNotes, setAdminNotes] = useState<string>("");
   const [employees, setEmployees] = useState<Array<{
     uid: string;
@@ -172,9 +170,6 @@ export function ProjectReviewView() {
 
   const handleOpenPricingModal = (project: Project) => {
     setSelectedProject(project);
-    setAdminPrice("");
-    setAdminDuration("");
-    setAdminDurationUnit("days");
     setAdminNotes("");
     setIsPricingModalOpen(true);
   };
@@ -182,42 +177,25 @@ export function ProjectReviewView() {
   const handleClosePricingModal = () => {
     setIsPricingModalOpen(false);
     setSelectedProject(null);
-    setAdminPrice("");
-    setAdminDuration("");
-    setAdminDurationUnit("days");
     setAdminNotes("");
+    setAdminDuration(0);
+    setAdminDurationUnit("days");
   };
 
   const handleSubmitPricing = async () => {
     if (!selectedProject) return;
 
-    const price = parseFloat(adminPrice);
-    if (isNaN(price) || price <= 0) {
-      toast({
-        title: "Invalid Price",
-        description: "Please enter a valid price greater than 0",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const duration = adminDuration ? parseInt(adminDuration) : undefined;
-    if (adminDuration && (isNaN(duration!) || duration! <= 0)) {
-      toast({
-        title: "Invalid Duration",
-        description: "Please enter a valid duration greater than 0",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Note: Price and duration are no longer required for initial approval
+    // The simplified flow uses a fixed 1500 RS deposit
+    // Parts will be priced individually later
 
     try {
       setSubmittingPrice(true);
       const result = await projectController.adminReviewProject(
         selectedProject.id,
-        price,
-        duration,
-        adminDurationUnit,
+        undefined, // adminPrice is now optional
+        adminDuration > 0 ? adminDuration : undefined, // duration is optional but encouraged
+        adminDuration > 0 ? adminDurationUnit : undefined,
         adminNotes.trim() || undefined
       );
 
@@ -227,7 +205,7 @@ export function ProjectReviewView() {
           'Reviewed Project',
           selectedProject.id,
           selectedProject.title,
-          `Set price to LKR ${price.toFixed(2)}${duration ? `, duration: ${duration} ${adminDurationUnit}` : ''}`
+          `Approved project. Fixed deposit 1500 RS applies.`
         );
         
         toast({
@@ -674,50 +652,39 @@ export function ProjectReviewView() {
           <DialogHeader>
             <DialogTitle>Set Project Price</DialogTitle>
             <DialogDescription>
-              Review the project details and set an appropriate price for{" "}
-              {selectedProject?.title}.
+              Review the project details and approve for deposit payment.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">
-                Price (LKR)
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={adminPrice}
-                onChange={(e) => setAdminPrice(e.target.value)}
-                className="col-span-3"
-                placeholder="Enter price"
-              />
+              <div className="col-span-4 text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                <p><strong>Note:</strong> Approving this project will automatically set a fixed deposit of <strong>1,500 LKR</strong>.</p>
+                <p className="mt-1">The buyer will be notified to make this payment to start the project.</p>
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="duration" className="text-right">
-                Duration
+                Duration *
               </Label>
               <div className="col-span-3 flex gap-2">
                 <Input
                   id="duration"
                   type="number"
                   min="1"
-                  value={adminDuration}
-                  onChange={(e) => setAdminDuration(e.target.value)}
-                  placeholder="Enter duration"
+                  value={adminDuration || ""}
+                  onChange={(e) => setAdminDuration(Number(e.target.value))}
                   className="flex-1"
+                  placeholder="e.g. 7"
                 />
-                <select
-                  value={adminDurationUnit}
-                  onChange={(e) =>
-                    setAdminDurationUnit(e.target.value as "days" | "weeks")
-                  }
-                  className="px-3 py-2 border border-input bg-background rounded-md text-sm"
-                >
-                  <option value="days">Days</option>
-                  <option value="weeks">Weeks</option>
-                </select>
+                <Select value={adminDurationUnit} onValueChange={setAdminDurationUnit}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="days">Days</SelectItem>
+                    <SelectItem value="weeks">Weeks</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
@@ -740,15 +707,15 @@ export function ProjectReviewView() {
             </Button>
             <Button 
               onClick={handleSubmitPricing} 
-              disabled={submittingPrice || !adminPrice.trim()}
+              disabled={submittingPrice}
             >
               {submittingPrice ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Setting Price...
+                  Approving...
                 </>
               ) : (
-                "Set Price"
+                "Approve Project"
               )}
             </Button>
           </DialogFooter>
@@ -782,7 +749,7 @@ export function ProjectReviewView() {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Payment Status:</span>
                     <Badge variant="default" className="bg-green-600">
-                      ✅ 10% Deposit Paid
+                      ✅ Fixed Deposit Paid
                     </Badge>
                   </div>
                 </div>

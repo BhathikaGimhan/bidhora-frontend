@@ -237,7 +237,7 @@ export default function AssignEmployeePage() {
         <div>
           <h1 className="text-3xl font-bold">Assign Employees to Projects</h1>
           <p className="text-muted-foreground mt-2">
-            Assign employees to projects with confirmed 10% deposit payments
+            Assign employees to projects with confirmed fixed deposit payments
           </p>
         </div>
         <Button variant="outline" onClick={() => navigate("/admin")}>
@@ -547,7 +547,7 @@ export default function AssignEmployeePage() {
                 No Paid Projects Yet
               </h3>
               <p className="text-muted-foreground">
-                Projects will appear here once buyers complete their 10% deposit
+                Projects will appear here once buyers complete their fixed deposit
                 payment
               </p>
             </div>

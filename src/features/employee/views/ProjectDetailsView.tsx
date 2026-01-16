@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Upload, 
@@ -41,6 +42,8 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { submitPart, getProjectSubmissions } from '@/Services/partSubmissionService';
+import { PartSubmission } from '@/types/partSubmission';
 
 interface ClientInfo {
   displayName: string;
@@ -58,8 +61,11 @@ export function ProjectDetailsView() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [notes, setNotes] = useState('');
+  const [partTag, setPartTag] = useState(''); // Added part tag state
+  const [isFinalSubmission, setIsFinalSubmission] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showSubmitSection, setShowSubmitSection] = useState(false);
+  const [submissions, setSubmissions] = useState<PartSubmission[]>([]); // To show history
 
   useEffect(() => {
     const loadProjectDetails = async () => {
@@ -144,6 +150,10 @@ export function ProjectDetailsView() {
     };
 
     loadProjectDetails();
+    // Load submissions history
+    if (projectId) {
+      getProjectSubmissions(projectId).then(setSubmissions).catch(console.error);
+    }
   }, [projectId, navigate, toast]);
 
   const calculateProgress = () => {
@@ -232,51 +242,48 @@ export function ProjectDetailsView() {
     }
 
     if (!project) return;
+    
+    // Validate tag
+    if (!partTag.trim()) {
+      toast({
+        title: 'Missing Part Tag',
+        description: 'Please enter a tag for this submission (e.g., Part 1, Final)',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const storage = getStorage();
-      const db = getFirestore();
-      const uploadedDocuments = [];
-
-      // Upload all files
-      for (const file of uploadedFiles) {
-        const storageRef = ref(
-          storage,
-          `project-submissions/${project.id}/${Date.now()}_${file.name}`
-        );
-        
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
-        
-        uploadedDocuments.push({
-          url: downloadURL,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          uploadedAt: new Date().toISOString(),
-        });
-      }
-
-      // Update project status
-      const projectRef = doc(db, 'projects', project.id);
-      await updateDoc(projectRef, {
-        status: 'completed_by_employee',
-        submittedToAdminAt: serverTimestamp(),
-        adminReviewStatus: 'pending',
-        documents: uploadedDocuments,
-        employeeNotes: notes,
+      console.log("🚀 Submitting part work from ProjectDetailsView...");
+      
+      const result = await submitPart({
+        projectId: project.id,
+        partTag: partTag.trim(),
+        description: notes.trim(),
+        files: uploadedFiles,
+        isFinal: isFinalSubmission,
       });
+
+      console.log("✅ Submission result:", result);
 
       toast({
         title: 'Success',
-        description: 'Work submitted successfully!',
+        description: 'Work submitted successfully for admin review!',
       });
 
-      navigate('/employee/projects');
+      // Reset form
+      setShowSubmitSection(false);
+      setUploadedFiles([]);
+      setShowSubmitSection(false);
+      setUploadedFiles([]);
+      setNotes('');
+      setPartTag('');
+      setIsFinalSubmission(false);
+      
+      // Refresh submissions
+      const updatedSubmissions = await getProjectSubmissions(project.id);
+      setSubmissions(updatedSubmissions);
       
     } catch (error) {
       console.error('Error submitting work:', error);
@@ -647,6 +654,24 @@ export function ProjectDetailsView() {
           </CardHeader>
           {showSubmitSection && (
             <CardContent className="space-y-6">
+              
+              <div className="space-y-2">
+                <Label htmlFor="partTag">
+                  Part Tag / Milestone Name <span className="text-red-500">*</span>
+                </Label>
+                <input
+                  id="partTag"
+                  type="text"
+                  placeholder="e.g. Part 1, Initial Draft, Final Delivery"
+                  value={partTag}
+                  onChange={(e) => setPartTag(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Give a name to this submission so admin can track parts.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label>Upload Files</Label>
                 <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
@@ -714,6 +739,22 @@ export function ProjectDetailsView() {
                 />
               </div>
 
+              <div className="flex items-center space-x-2 pb-4">
+                <Checkbox 
+                  id="final-submission" 
+                  checked={isFinalSubmission}
+                  onCheckedChange={(checked) => setIsFinalSubmission(checked as boolean)}
+                />
+                <label 
+                  htmlFor="final-submission" 
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Project Completed (This is the final submission)
+                </label>
+              </div>
+
+
+
               <div className="flex gap-4">
                 <Button
                   variant="outline"
@@ -721,6 +762,7 @@ export function ProjectDetailsView() {
                     setShowSubmitSection(false);
                     setUploadedFiles([]);
                     setNotes('');
+                    setPartTag('');
                   }}
                   className="flex-1"
                 >
@@ -736,6 +778,48 @@ export function ProjectDetailsView() {
               </div>
             </CardContent>
           )}
+        </Card>
+      )}
+
+      {/* Submission History Section */}
+      {submissions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Submission History</CardTitle>
+            <CardDescription>
+              Track status of your submitted parts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {submissions.map((sub) => (
+                <div key={sub.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-semibold">{sub.partTag}</h4>
+                      <p className="text-sm text-muted-foreground">{new Date(sub.submittedAt).toLocaleDateString()}</p>
+                    </div>
+                    <Badge variant={
+                      sub.status === 'approved' ? 'default' :
+                      sub.status === 'rejected' ? 'destructive' : 'secondary'
+                    }>
+                      {sub.status === 'approved' ? 'Approved' :
+                       sub.status === 'rejected' ? 'Rejected' : 'Pending Review'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm">{sub.description}</p>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    {sub.documents.length} files attached
+                  </div>
+                  {sub.adminNotes && (
+                    <div className="mt-2 p-2 bg-yellow-50 text-sm text-yellow-800 rounded">
+                      <strong>Admin Note:</strong> {sub.adminNotes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
         </Card>
       )}
 

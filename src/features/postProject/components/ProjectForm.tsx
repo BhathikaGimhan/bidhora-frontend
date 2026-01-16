@@ -76,7 +76,7 @@ const ProjectForm: React.FC<Props> = ({ formData, setFormData, onSubmit, isSubmi
           <span className="text-xl">🎟️</span> Have a Promo Code? (optional)
         </Label>
         <div className="relative">
-          <Input
+          <Input 
             id="promoCode"
             placeholder="Enter code here"
             value={formData.promoCode || ""}

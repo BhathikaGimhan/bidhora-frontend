@@ -45,7 +45,13 @@ export interface WorkSubmission {
   reviewedAt?: Date;
   reviewedBy?: string;
   reviewNotes?: string;
+  submissionType?: "part" | "final" | "provider";
+  partTag?: string; // For part submissions
+  adminPrice?: number; // For part submissions approval
+  paymentStatus?: "pending" | "paid"; // For part submissions
+  paidAt?: Date; // For part submissions
   isUrgent?: boolean;
+  isFinal?: boolean;
 }
 
 export interface PaymentInfo {
@@ -249,8 +255,8 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
 
     // Process regular work submissions and fetch isUrgent from projects
     const regularSubmissions = await Promise.all(
-      workSubmissionsSnapshot.docs.map(async (doc) => {
-        const data = doc.data();
+      workSubmissionsSnapshot.docs.map(async (d) => {
+        const data = d.data();
         
         // Fetch isUrgent flag from project
         let isUrgent = false;
@@ -258,7 +264,8 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
           try {
             const projectDoc = await getDoc(doc(db, "projects", data.projectId));
             if (projectDoc.exists()) {
-              isUrgent = projectDoc.data()?.isUrgent || false;
+              const pData = projectDoc.data() as any;
+              isUrgent = pData?.isUrgent || false;
             }
           } catch (error) {
             console.error(`Error fetching project ${data.projectId}:`, error);
@@ -266,7 +273,7 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
         }
 
         return {
-          id: doc.id,
+          id: d.id,
           proposalId: data.proposalId,
           projectId: data.projectId,
           submitterId: data.submitterId || data.sellerId,
@@ -291,6 +298,9 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
     const employeeSubmissions = projectsSnapshot.docs
       .filter((doc) => {
         const data = doc.data();
+        // Exclude if it uses part submissions (to avoid duplicates with partSubmissions list)
+        // Unless it's a legacy project not in projectSubmissions
+        if (data.hasPartSubmissions) return false;
         return data.assignedEmployeeId && data.documents && data.documents.length > 0;
       })
       .map((doc) => {
@@ -325,8 +335,69 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
         };
       });
 
+    // Get part submissions from projectSubmissions
+    const partSubmissionsSnapshot = await getDocs(
+      query(collection(db, "projectSubmissions"), orderBy("submittedAt", "desc"))
+    );
+
+    const partSubmissions = await Promise.all(
+      partSubmissionsSnapshot.docs.map(async (docSnapshot) => {
+        const data = docSnapshot.data();
+        
+        let projectTitle = "Unknown Project";
+        let buyerName = "Unknown Buyer";
+        let buyerPhotoURL = null;
+        let isUrgent = false;
+
+        if (data.projectId) {
+          try {
+            const projectDoc = await getDoc(doc(db, "projects", data.projectId));
+            if (projectDoc.exists()) {
+              const pData = projectDoc.data() as any;
+              projectTitle = pData.title || "Unknown Project";
+              buyerName = pData.buyerName || "Unknown Buyer";
+              buyerPhotoURL = pData.buyerPhotoURL || null;
+              isUrgent = pData.isUrgent || false;
+            }
+          } catch (error) {
+            console.error(`Error fetching project ${data.projectId} for part submission:`, error);
+          }
+        }
+
+        return {
+          id: `part_${docSnapshot.id}`,
+          submissionType: "part" as const,
+          proposalId: "", // No proposal for parts
+          projectId: data.projectId,
+          submitterId: data.employeeId,
+          projectTitle: projectTitle,
+          submitterName: data.employeeName || "Unknown Employee",
+          submitterPhotoURL: data.employeePhotoURL || null,
+          buyerName: buyerName,
+          buyerPhotoURL: buyerPhotoURL,
+          description: data.description,
+          files: data.documents || [],
+          status: data.status,
+          submittedAt: data.submittedAt?.toDate() || new Date(),
+          reviewedAt: data.reviewedAt?.toDate(),
+          reviewedBy: data.reviewedBy,
+          reviewNotes: data.adminNotes,
+          partTag: data.partTag,
+          adminPrice: data.adminPrice,
+          paymentStatus: data.paymentStatus,
+          paidAt: data.paidAt?.toDate(),
+          isUrgent: isUrgent,
+          isFinal: data.isFinal || false,
+        };
+      })
+    );
+
     // Combine and sort by submission date (urgent first)
-    const allSubmissions = [...regularSubmissions, ...employeeSubmissions].sort(
+    const allSubmissions = [
+      ...regularSubmissions, 
+      ...employeeSubmissions,
+      ...partSubmissions
+    ].sort(
       (a, b) => {
         // Urgent submissions come first
         if (a.isUrgent && !b.isUrgent) return -1;
@@ -348,10 +419,12 @@ export const getAllWorkSubmissions = async (): Promise<WorkSubmission[]> => {
 };
 
 // Update work submission status
+// Update work submission status
 export const updateWorkSubmissionStatus = async (
   submissionId: string,
   status: "approved" | "rejected",
-  reviewNotes?: string
+  reviewNotes?: string,
+  adminPrice?: number // Added for part submissions
 ): Promise<void> => {
   try {
     const user = auth.currentUser;
@@ -394,6 +467,90 @@ export const updateWorkSubmissionStatus = async (
           // Don't fail the approval if email fails
         }
       }
+    } else if (submissionId.startsWith("part_")) {
+      // HANDLE PART SUBMISSION UPDATE
+      const partSubmissionId = submissionId.replace("part_", "");
+      
+      const updateData: any = {
+        status: status,
+        reviewedAt: Timestamp.now(),
+        reviewedBy: user.uid,
+        reviewerName: userDoc.data()?.displayName || user.email,
+        adminNotes: reviewNotes || null,
+      };
+
+      if (status === "approved" && adminPrice) {
+        updateData.adminPrice = adminPrice;
+      }
+
+      await updateDoc(doc(db, "projectSubmissions", partSubmissionId), updateData);
+      
+      // Update project counters and send payment email if approved
+      if (status === "approved") {
+        const submissionDoc = await getDoc(doc(db, "projectSubmissions", partSubmissionId));
+        if (submissionDoc.exists()) {
+            const data = submissionDoc.data();
+            const projectRef = doc(db, "projects", data.projectId);
+            const projectDoc = await getDoc(projectRef);
+            if (projectDoc.exists()) {
+                const pData = projectDoc.data();
+                await updateDoc(projectRef, {
+                    approvedParts: (pData.approvedParts || 0) + 1,
+                    updatedAt: Timestamp.now()
+                });
+
+                // Send payment notification email to buyer
+                try {
+                  // Get buyer details
+                  const buyerUid = pData.createdBy || pData.buyerId;
+                  let buyerEmail = pData.buyerEmail;
+                  let buyerName = pData.buyerName || 'Valued Customer';
+
+                  // If no buyerEmail, try to fetch from user document
+                  if (!buyerEmail && buyerUid) {
+                    try {
+                      const userRef = doc(db, 'users', buyerUid);
+                      const buyerDoc = await getDoc(userRef);
+                      if (buyerDoc.exists()) {
+                        const buyerData = buyerDoc.data();
+                        buyerEmail = buyerData.email;
+                        buyerName = buyerData.displayName || buyerData.firstName || buyerName;
+                      }
+                    } catch (error) {
+                      console.error('Error fetching buyer details:', error);
+                    }
+                  }
+
+                  if (buyerEmail && adminPrice) {
+                    // Generate payment link
+                    const paymentLink = `https://bidhora.com/payment/part/${partSubmissionId}`;
+                    
+                    // Import emailService dynamically to avoid circular dependencies
+                    const { emailService } = await import('./emailService');
+                    
+                    // Send part payment email notification
+                    await emailService.sendPartPaymentNotification({
+                      to_email: buyerEmail,
+                      to_name: buyerName,
+                      project_title: pData.title,
+                      part_tag: data.partTag,
+                      submission_id: partSubmissionId,
+                      amount: adminPrice,
+                      payment_link: paymentLink,
+                    });
+                    
+                    console.log('✅ Part payment notification sent to buyer:', buyerEmail);
+                  } else {
+                    console.warn('⚠️ Could not send payment email - missing buyer email or price');
+                  }
+                } catch (emailError) {
+                  console.error('❌ Error sending part payment email:', emailError);
+                  // Don't fail the approval if email fails
+                }
+            }
+        }
+      }
+
     } else {
       // Regular work submission
       await updateDoc(doc(db, "workSubmissions", submissionId), {

@@ -17,7 +17,7 @@ export interface ProjectPriceNotificationData {
   admin_notes?: string;
   project_id: string;
   payment_link: string; // Add payment link
-  deposit_amount: number; // 10% deposit amount
+  deposit_amount: number; // Fixed deposit amount (1500 LKR)
 }
 
 export interface EmployeeAssignmentNotificationData {
@@ -49,6 +49,16 @@ export interface MarketerWelcomeData {
   promoCode: string;
   commissionRate: number;
   profileId: string;
+}
+
+export interface PartPaymentNotificationData {
+  to_email: string;
+  to_name: string;
+  project_title: string;
+  part_tag: string;
+  submission_id: string;
+  amount: number;
+  payment_link: string;
 }
 
 export interface EmailResponse {
@@ -246,6 +256,48 @@ class EmailService {
         error instanceof Error
           ? error.message
           : "Failed to send final payment notification. Please try again later.";
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+  }
+
+  async sendPartPaymentNotification(
+    notificationData: PartPaymentNotificationData
+  ): Promise<EmailResponse> {
+    try {
+      const response = await axios.post(
+        `${this.apiBaseUrl}/sendPartPaymentNotification`,
+        {
+          to_email: notificationData.to_email,
+          to_name: notificationData.to_name,
+          project_title: notificationData.project_title,
+          part_tag: notificationData.part_tag,
+          submission_id: notificationData.submission_id,
+          amount: notificationData.amount,
+          payment_link: notificationData.payment_link,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return {
+        success: true,
+        message:
+          response.data.message ||
+          "Part payment notification sent successfully!",
+      };
+    } catch (error) {
+      console.error("Part payment notification error:", error);
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to send part payment notification. Please try again later.";
       return {
         success: false,
         message: errorMessage,

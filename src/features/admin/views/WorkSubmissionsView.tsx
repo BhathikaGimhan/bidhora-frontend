@@ -49,6 +49,8 @@ export default function WorkSubmissionsView() {
   const [actionLoading, setActionLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected">("pending");
+  const [adminPrice, setAdminPrice] = useState<number>(0);
+  const [reviewNotes, setReviewNotes] = useState(""); // Add notes state for dialog
 
   useEffect(() => {
     // Wait for auth state to be ready
@@ -108,12 +110,17 @@ export default function WorkSubmissionsView() {
   const handleUpdateStatus = async (
     submissionId: string,
     newStatus: "approved" | "rejected",
-    notes?: string
   ) => {
     try {
       setActionLoading(true);
 
-      await updateWorkSubmissionStatus(submissionId, newStatus, notes);
+      // Pass adminPrice if it's a part submission and being approved
+      await updateWorkSubmissionStatus(
+        submissionId, 
+        newStatus, 
+        reviewNotes,
+        (selectedSubmission?.submissionType === "part" && newStatus === "approved") ? adminPrice : undefined
+      );
 
       toast({
         title: "Success",
@@ -125,6 +132,8 @@ export default function WorkSubmissionsView() {
       // Refresh the list
       await fetchWorkSubmissions();
       setIsDialogOpen(false);
+      setAdminPrice(0);
+      setReviewNotes("");
     } catch (error) {
       console.error("Error updating submission status:", error);
       toast({
@@ -185,6 +194,16 @@ export default function WorkSubmissionsView() {
           className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300"
         >
           Employee
+        </Badge>
+      );
+    }
+    if (submissionId.startsWith("part_")) {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300"
+        >
+          Part
         </Badge>
       );
     }
@@ -280,6 +299,16 @@ export default function WorkSubmissionsView() {
             <Badge className="bg-red-600 hover:bg-red-700 text-white text-xs animate-pulse">
               🚨 URGENT
             </Badge>
+          )}
+          {submission.partTag && (
+             <Badge variant="secondary" className="text-xs">
+                {submission.partTag}
+             </Badge>
+          )}
+          {submission.isFinal && (
+             <Badge className="bg-green-600 hover:bg-green-700 text-white text-xs">
+                FINAL
+             </Badge>
           )}
         </div>
       ),
@@ -430,6 +459,11 @@ export default function WorkSubmissionsView() {
                       <div className="flex flex-col gap-1 items-end">
                         {getStatusBadge(submission.status)}
                         {getSubmissionTypeBadge(submission.id)}
+                        {submission.partTag && (
+                           <Badge variant="secondary" className="text-[10px]">
+                              {submission.partTag}
+                           </Badge>
+                        )}
                       </div>
                     </div>
 
@@ -865,6 +899,37 @@ export default function WorkSubmissionsView() {
                   )}
                 </TabsContent>
               </Tabs>
+
+              {/* Review Inputs */}
+              {selectedSubmission.status === "pending_review" && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Review Notes (Optional)</label>
+                    <textarea
+                      className="w-full min-h-[80px] p-3 rounded-md border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Add any improved notes or feedback..."
+                      value={reviewNotes}
+                      onChange={(e) => setReviewNotes(e.target.value)}
+                    />
+                  </div>
+
+                  {selectedSubmission.submissionType === 'part' && (
+                    <div className="space-y-2">
+                       <label className="text-sm font-medium">Approved Amount (LKR) *Required for Parts</label>
+                       <input
+                          type="number"
+                          className="w-full p-2 rounded-md border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder="e.g. 5000"
+                          value={adminPrice === 0 ? '' : adminPrice}
+                          onChange={(e) => setAdminPrice(Number(e.target.value))}
+                       />
+                       <p className="text-xs text-muted-foreground">
+                          Enter the amount to be paid for this part.
+                       </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Action Buttons */}
               {selectedSubmission.status === "pending_review" && (

@@ -29,6 +29,8 @@ import EmployeePanel from "./features/employee/EmployeeDashboard";
 import PaymentPage from "./pages/PaymentPage";
 import ProjectDepositPaymentPage from "./pages/ProjectDepositPaymentPage";
 import FinalPaymentPage from "./pages/FinalPaymentPage";
+import PartPaymentPage from "./pages/PartPaymentPage";
+import EmployeeSubmitWorkPage from "./pages/EmployeeSubmitWorkPage";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import { ProtectedEmployeeRoute } from "@/components/ProtectedEmployeeRoute";
 
@@ -112,6 +114,18 @@ export const router = createBrowserRouter([
       {
         path: "payment/final/:projectId",
         element: <FinalPaymentPage />,
+      },
+      {
+        path: "payment/part/:submissionId",
+        element: <PartPaymentPage />,
+      },
+      {
+        path: "employee/submit-work/:projectId",
+        element: (
+          <ProtectedEmployeeRoute>
+            <EmployeeSubmitWorkPage />
+          </ProtectedEmployeeRoute>
+        ),
       },
     ],
   },

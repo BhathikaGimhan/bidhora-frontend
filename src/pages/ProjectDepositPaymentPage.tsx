@@ -44,6 +44,9 @@ import { useToast } from "@/hooks/use-toast";
 // Firebase Functions API base URL
 const API_BASE_URL = "https://api-e7fpchtlna-uc.a.run.app";
 
+// FIXED DEPOSIT AMOUNT - No longer percentage-based
+const DEPOSIT_AMOUNT = 1500; // Fixed amount in LKR
+
 export default function ProjectDepositPaymentPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -270,7 +273,7 @@ export default function ProjectDepositPaymentPage() {
             projectDescription: project.description,
             buyerName: auth.currentUser.displayName || auth.currentUser.email || 'Customer',
             buyerEmail: auth.currentUser.email!,
-            amount: project.initialPaymentAmount || (project.adminPrice! * 0.1),
+            amount: DEPOSIT_AMOUNT, // Fixed 1500 RS deposit
             currency: 'LKR',
             transactionId: project.initialPaymentId,
             paymentMethod: 'Genie Payment Gateway',
@@ -365,7 +368,7 @@ export default function ProjectDepositPaymentPage() {
         merchantId: import.meta.env.VITE_GENIE_MERCHANT_ID || '',
         apiKey: import.meta.env.VITE_GENIE_API_KEY || '',
         orderId: order_id,
-        amount: project.initialPaymentAmount.toFixed(2),
+        amount: DEPOSIT_AMOUNT.toFixed(2), // Fixed 1500 RS
         currency: "LKR", // Genie uses LKR
         description: `Project Deposit - ${project.title}`,
         customerEmail: user.email || "",
@@ -542,7 +545,7 @@ export default function ProjectDepositPaymentPage() {
                 <div>
                   <p className="font-medium">Deposit Paid</p>
                   <p className="text-lg font-semibold text-emerald-600">
-                    LKR {project.initialPaymentAmount?.toFixed(2)}
+                    LKR {DEPOSIT_AMOUNT.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -580,7 +583,7 @@ export default function ProjectDepositPaymentPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Project Deposit Payment</CardTitle>
           <CardDescription>
-            Complete your 10% deposit to proceed with the project
+            Complete your fixed 1500 RS deposit to proceed with the project
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -596,19 +599,8 @@ export default function ProjectDepositPaymentPage() {
 
             <Separator />
 
-            <div className="flex items-start space-x-3">
-              <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium">Total Project Price</p>
-                <p className="text-lg font-semibold">
-                  LKR {project.adminPrice?.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
             {project.adminDuration && project.adminDurationUnit && (
               <>
-                <Separator />
                 <div className="flex items-start space-x-3">
                   <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
@@ -640,13 +632,13 @@ export default function ProjectDepositPaymentPage() {
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg p-6">
             <div className="text-center space-y-2">
               <p className="text-sm font-medium text-blue-700 uppercase tracking-wide">
-                Initial Deposit (10%)
+                Project Deposit
               </p>
               <p className="text-4xl font-bold text-blue-900">
-                LKR {project.initialPaymentAmount?.toFixed(2)}
+                LKR {DEPOSIT_AMOUNT.toFixed(2)}
               </p>
               <p className="text-sm text-blue-600">
-                This secures your project slot and enables employee assignment
+                Fixed deposit to secure your project slot and enable employee assignment
               </p>
             </div>
           </div>
@@ -676,7 +668,7 @@ export default function ProjectDepositPaymentPage() {
             ) : (
               <>
                 <Lock className="mr-2 h-5 w-5" />
-                Pay LKR {project.initialPaymentAmount?.toFixed(2)} Now
+                Pay LKR {DEPOSIT_AMOUNT.toFixed(2)} Now
               </>
             )}
           </Button>

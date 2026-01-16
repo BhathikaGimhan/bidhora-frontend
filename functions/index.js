@@ -316,11 +316,12 @@ exports.sendProjectPriceNotification = onRequest(
       } = req.body;
 
       // Validate required fields
-      if (!to_email || !project_title || !project_price || !project_id) {
+      // Note: project_price is now optional/can be 0 for initial deposit flow
+      if (!to_email || !project_title || !project_id) {
         res.status(400).json({
           success: false,
           message:
-            "Required fields: to_email, project_title, project_price, project_id",
+            "Required fields: to_email, project_title, project_id",
         });
         return;
       }
@@ -376,11 +377,17 @@ exports.sendProjectPriceNotification = onRequest(
               <div class="greeting">Hello ${to_name || "Valued Customer"}!</div>
               <div class="message">Great news! Our admin team has reviewed your project and set a competitive price for you.</div>
 
+              ${project_price > 0 ? `
               <div class="price-box">
                 <div class="price-label">Total Project Price</div>
                 <div class="price-amount">LKR ${project_price}</div>
                 <div class="project-title">${project_title}</div>
-              </div>
+              </div>` : `
+              <div class="price-box">
+                <div class="price-label">Project Approved</div>
+                <div class="price-amount">Deposit Required</div>
+                <div class="project-title">${project_title}</div>
+              </div>`}
 
               <div class="details-section">
                 <div class="detail-row">
@@ -397,10 +404,6 @@ exports.sendProjectPriceNotification = onRequest(
                 `
                     : ""
                 }
-                <div class="detail-row">
-                  <span class="detail-label">Total Price:</span>
-                  <span class="detail-value">LKR ${project_price}</span>
-                </div>
               </div>
 
               ${
@@ -422,10 +425,10 @@ exports.sendProjectPriceNotification = onRequest(
                   ? `
               <div class="payment-section">
                 <div style="font-size: 32px; margin-bottom: 15px;">💳</div>
-                <div class="deposit-label">Initial Deposit Required</div>
+                <div class="deposit-label">Project Deposit Required</div>
                 <div class="deposit-amount">LKR ${deposit_amount}</div>
                 <div class="deposit-note">
-                  To proceed with your project, we require a <span class="highlight">10% deposit</span> of the total project price.<br>
+                  To proceed with your project, we require a <span class="highlight">fixed deposit of LKR 1,500</span>.<br>
                   This secures your project slot and allows us to assign an employee to start working on it.
                 </div>
                 <a href="${payment_link}" class="payment-btn">💳 Pay Deposit Now</a>
@@ -442,7 +445,7 @@ exports.sendProjectPriceNotification = onRequest(
                 <div style="opacity: 0.9; margin-bottom: 15px;">
                   ${
                     payment_link
-                      ? "After paying the 10% deposit, our admin will assign an employee to your project and work will begin!"
+                      ? "After paying the fixed deposit (LKR 1,500), our admin will assign an employee to your project and work will begin!"
                       : "You can now approve or reject this price from your dashboard."
                   }
                 </div>
@@ -556,8 +559,8 @@ exports.sendEmployeeAssignmentNotification = onRequest(
         !employee_email ||
         !employee_name ||
         !project_title ||
-        !project_price ||
         !project_id
+        // project_price is optional or can be 0
       ) {
         res.status(400).json({
           success: false,
@@ -611,7 +614,7 @@ exports.sendEmployeeAssignmentNotification = onRequest(
               <div class="content">
                 <div class="greeting">Hello ${employee_name}!</div>
                 <div class="message">
-                  Great news! You've been assigned to a new project. The buyer has already paid the 10% deposit, and you can start working on this project immediately.
+                  Great news! You've been assigned to a new project. The buyer has already paid the fixed deposit, and you can start working on this project immediately.
                 </div>
 
                 <div class="project-card">
@@ -638,7 +641,7 @@ exports.sendEmployeeAssignmentNotification = onRequest(
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">💳 Payment Status:</span>
-                      <span class="detail-value" style="color: #059669; font-weight: 600;">✅ 10% Deposit Paid</span>
+                      <span class="detail-value" style="color: #059669; font-weight: 600;">✅ Fixed Deposit Paid</span>
                     </div>
                   </div>
 
@@ -852,11 +855,11 @@ exports.sendFinalPaymentNotification = onRequest(
                     <span class="detail-value">LKR ${total_price.toLocaleString()}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">✅ Initial Payment (10%):</span>
+                    <span class="detail-label">✅ Initial Deposit Paid:</span>
                     <span class="detail-value" style="color: #059669;">LKR ${initial_payment.toLocaleString()} ✓</span>
                   </div>
                   <div class="total-row detail-row">
-                    <span class="total-label">💰 Final Payment (90%):</span>
+                    <span class="total-label">💰 Final Payment Due:</span>
                     <span class="total-value">LKR ${final_payment.toLocaleString()}</span>
                   </div>
                 </div>
@@ -944,6 +947,169 @@ exports.sendFinalPaymentNotification = onRequest(
         success: false,
         message:
           "Failed to send final payment notification. Please try again later.",
+      });
+    }
+  }
+);
+/**
+ * Cloud Function to send Part Payment Notification Email
+ */
+exports.sendPartPaymentNotification = onRequest(
+  { cors: true },
+  async (req, res) => {
+    // Handle CORS preflight request
+    if (req.method === "OPTIONS") {
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.set("Access-Control-Allow-Headers", "Content-Type");
+      res.status(204).send("");
+      return;
+    }
+
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    try {
+      const {
+        to_email,
+        to_name,
+        project_title,
+        part_tag,
+        submission_id,
+        amount,
+        payment_link,
+      } = req.body;
+
+      // Validate required fields
+      if (
+        !to_email ||
+        !to_name ||
+        !project_title ||
+        !part_tag ||
+        !submission_id ||
+        !amount ||
+        !payment_link
+      ) {
+        res.status(400).json({
+          success: false,
+          message: "All fields are required",
+        });
+        return;
+      }
+
+      // Email HTML for part payment notification
+      const paymentEmailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Part Payment Required - Bidhora</title>
+          <style>
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); margin: 0; padding: 20px; }
+            .container { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+            .header { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%); color: white; padding: 50px 30px; text-align: center; position: relative; }
+            .logo { font-size: 36px; font-weight: 800; margin-bottom: 15px; letter-spacing: -0.5px; }
+            .tagline { font-size: 19px; opacity: 0.95; font-weight: 400; letter-spacing: 0.3px; }
+            .content { padding: 45px 35px; }
+            .greeting { font-size: 26px; font-weight: 700; color: #f59e0b; margin-bottom: 22px; text-align: center; }
+            .message { font-size: 17px; line-height: 1.8; color: #4b5563; margin-bottom: 32px; text-align: center; }
+            .highlight-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 3px solid #f59e0b; border-radius: 14px; padding: 28px; margin: 32px 0; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15); }
+            .project-title { font-size: 22px; font-weight: 700; color: #78350f; margin-bottom: 22px; text-align: center; }
+            .part-badge { background: #059669; color: white; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: 600; font-size: 14px; margin-bottom: 20px; }
+            .payment-details { background: white; border-radius: 10px; padding: 22px; }
+            .detail-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 2px solid #e5e7eb; align-items: center; }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-label { font-weight: 600; color: #374151; font-size: 15px; }
+            .detail-value { color: #1f2937; font-weight: 600; font-size: 15px; }
+            .total-row { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); padding: 22px; border-radius: 10px; margin-top: 18px; border: 2px solid #059669; }
+            .total-label { font-size: 19px; font-weight: 700; color: white; }
+            .total-value { font-size: 28px; font-weight: 800; color: white; }
+            .cta-container { text-align: center; margin: 35px 0; }
+            .cta-text { font-size: 19px; font-weight: 700; color: #374151; margin-bottom: 18px; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: white; padding: 18px 48px; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 19px; box-shadow: 0 8px 16px rgba(245, 158, 11, 0.35); transition: all 0.3s ease; }
+            .cta-button:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(245, 158, 11, 0.45); }
+            .info-box { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 22px; margin: 25px 0; }
+            .info-text { color: #4b5563; font-size: 15px; line-height: 1.7; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">Bidhora</div>
+              <div class="tagline">Part Submission Approved!</div>
+            </div>
+            
+            <div class="content">
+              <div class="greeting">🎉 Excellent Progress, ${to_name}!</div>
+              
+              <div class="message">
+                Good news! A part of your project has been completed and approved.
+              </div>
+              
+              <div class="highlight-box">
+                <div class="project-title">📋 ${project_title}</div>
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <span class="part-badge">${part_tag}</span>
+                </div>
+                
+                <div class="payment-details">
+                  <div class="detail-row">
+                    <span class="detail-label">Part Submission ID</span>
+                    <span class="detail-value">#${submission_id.substring(0, 8)}</span>
+                  </div>
+                </div>
+                
+                <div class="total-row">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="total-label">💰 Payment Amount</span>
+                    <span class="total-value">LKR ${amount.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="cta-container">
+                <div class="cta-text">✨ Click below to complete the payment</div>
+                <a href="${payment_link}" class="cta-button">Pay Now →</a>
+              </div>
+              
+              <div class="info-box">
+                <div class="info-text">
+                  ℹ️ This is a milestone payment for the approved part submission. Once payment is complete, you'll receive access to the delivered work for this part.
+                </div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+      `;
+
+      const mailOptions = {
+        from: '"Bidhora - Project Platform" <contact@bidhora.com>',
+        to: to_email,
+        subject: `Part Payment Required: ${part_tag} - ${project_title}`,
+        html: paymentEmailHtml,
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      logger.info("Part payment notification email sent successfully", {
+        to_email,
+        part_tag,
+        submission_id,
+      });
+
+      res.json({
+        success: true,
+        message: "Part payment notification sent successfully",
+      });
+    } catch (error) {
+      logger.error("Error sending part payment notification email", error);
+      res.status(500).json({
+        success: false,
+        message:
+          error.message || "Failed to send part payment notification email",
       });
     }
   }
@@ -1182,26 +1348,27 @@ exports.genieWebhook = onRequest(
         return;
       }
 
-      // Determine if this is a deposit or final payment based on order ID
+      // Determine payment type based on order ID prefix
       const isDepositPayment = orderId.startsWith('DEPOSIT_');
       const isFinalPayment = orderId.startsWith('FINAL_');
+      const isPartPayment = orderId.startsWith('PART_'); // NEW: Part-based payment
 
-      if (!isDepositPayment && !isFinalPayment) {
+      if (!isDepositPayment && !isFinalPayment && !isPartPayment) {
         logger.error("Unknown payment type", { orderId });
         res.status(400).json({ error: "Unknown payment type" });
         return;
       }
 
-      // Extract project ID from order ID
-      const projectId = orderId.split('_')[1];
+      // Extract project ID or submission ID based on payment type
+      const resourceId = orderId.split('_')[1]; // Either projectId or submissionId
 
       logger.info("Processing webhook", {
-        projectId,
+        resourceId,
         orderId,
         transactionId,
         status,
         state,
-        paymentType: isDepositPayment ? 'deposit' : 'final'
+        paymentType: isDepositPayment ? 'deposit' : (isFinalPayment ? 'final' : 'part')
       });
 
       // Check if payment is successful
@@ -1214,6 +1381,55 @@ exports.genieWebhook = onRequest(
 
       if (isSuccess) {
         const db = admin.firestore();
+        
+        // Handle part payment separately
+        if (isPartPayment) {
+          const submissionId = resourceId;
+          const submissionRef = db.collection('projectSubmissions').doc(submissionId);
+          
+          const submissionDoc = await submissionRef.get();
+          if (!submissionDoc.exists) {
+            logger.error("Part submission not found", { submissionId });
+            res.status(404).json({ error: "Submission not found" });
+            return;
+          }
+
+          const submissionData = submissionDoc.data();
+
+          // Check if payment already processed
+          if (submissionData.paymentStatus === 'paid') {
+            logger.info("Part payment already processed - idempotent check", { submissionId, transactionId });
+            res.status(200).json({ success: true, message: "Payment already processed" });
+            return;
+          }
+
+          // Update part submission payment status
+          await submissionRef.update({
+            paymentStatus: 'paid',
+            paidAt: admin.firestore.FieldValue.serverTimestamp(),
+            paymentId: transactionId || orderId,
+          });
+
+          // Update project stats
+          const projectRef = db.collection('projects').doc(submissionData.projectId);
+          const projectDoc = await projectRef.get();
+          
+          if (projectDoc.exists) {
+            const projectData = projectDoc.data();
+            await projectRef.update({
+              paidParts: (projectData.paidParts || 0) + 1,
+              totalPaidAmount: (projectData.totalPaidAmount || 0) + (submissionData.adminPrice || 0),
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+
+          logger.info("Part payment processed successfully", { submissionId, transactionId });
+          res.status(200).json({ success: true, message: "Part payment processed" });
+          return;
+        }
+        
+        // Handle deposit and final payments (existing code)
+        const projectId = resourceId;
         const projectRef = db.collection('projects').doc(projectId);
 
         // Check if payment already processed (idempotency)
@@ -1302,7 +1518,7 @@ exports.genieWebhook = onRequest(
               
               // Use adminPrice (not budget) and fallback to initialPaymentAmount
               const totalAmount = projectData.adminPrice || projectData.budget || 0;
-              const depositAmount = projectData.initialPaymentAmount || (totalAmount * 0.1);
+              const depositAmount = 1500; // FIXED DEPOSIT AMOUNT - No longer percentage-based
               
               const invoiceData = {
                 invoiceNumber,
