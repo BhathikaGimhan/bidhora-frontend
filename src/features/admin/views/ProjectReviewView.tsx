@@ -49,6 +49,7 @@ import { getAllUsers } from "@/Services/authService";
 import { assignEmployeeToProject } from "@/Services/projectService";
 import { emailService } from "@/Services/emailService";
 import { adminActivityService } from "@/Services/adminActivityService";
+import { getApprovedPartsTotalsForProjects, ApprovedPartsInfo } from "@/Services/partSubmissionService";
 
 export function ProjectReviewView() {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -58,6 +59,8 @@ export function ProjectReviewView() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  // Store approved parts totals for each project (total amount and count of parts)
+  const [approvedPartsTotals, setApprovedPartsTotals] = useState<Map<string, ApprovedPartsInfo>>(new Map());
   // adminPrice removed as part of simplified flow, but duration is still needed
   const [adminDuration, setAdminDuration] = useState<number>(0);
   const [adminDurationUnit, setAdminDurationUnit] = useState<string>("days");
@@ -90,6 +93,13 @@ export function ProjectReviewView() {
       })));
       
       setAllProjects(projects);
+      
+      // Fetch approved parts totals for all projects
+      const projectIds = projects.map(p => p.id);
+      if (projectIds.length > 0) {
+        const totals = await getApprovedPartsTotalsForProjects(projectIds);
+        setApprovedPartsTotals(totals);
+      }
     } catch (error: unknown) {
       console.error("Projects fetch error:", error);
       const errorMessage =
@@ -111,6 +121,14 @@ export function ProjectReviewView() {
       projectController['isLoaded'] = false;
       const projects = await projectController.getAllProjects();
       setAllProjects(projects);
+      
+      // Also refresh approved parts totals
+      const projectIds = projects.map(p => p.id);
+      if (projectIds.length > 0) {
+        const totals = await getApprovedPartsTotalsForProjects(projectIds);
+        setApprovedPartsTotals(totals);
+      }
+      
       toast({
         title: "Refreshed",
         description: "Projects list updated successfully",
@@ -394,9 +412,46 @@ export function ProjectReviewView() {
     },
     {
       key: "adminPrice",
-      title: "Admin Price (LKR)",
+      title: "Price (LKR)",
       sortable: true,
-      render: (value: number) => (value ? `LKR ${value.toLocaleString()}` : "-"),
+      render: (value: number, project: Project) => {
+        const partsInfo = approvedPartsTotals.get(project.id);
+        const hasLegacyPrice = value && value > 0;
+        const hasPartsTotal = partsInfo && partsInfo.total > 0;
+        
+        if (hasPartsTotal && hasLegacyPrice) {
+          // Show both legacy admin price and parts total
+          return (
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
+                <span className="font-semibold text-green-600">LKR {partsInfo.total.toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">{partsInfo.count} approved part{partsInfo.count > 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex flex-col border-t pt-1">
+                <span className="text-sm text-blue-600">LKR {value.toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">Legacy price</span>
+              </div>
+            </div>
+          );
+        } else if (hasPartsTotal) {
+          // Only parts total
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold text-green-600">LKR {partsInfo.total.toLocaleString()}</span>
+              <span className="text-xs text-muted-foreground">{partsInfo.count} approved part{partsInfo.count > 1 ? 's' : ''}</span>
+            </div>
+          );
+        } else if (hasLegacyPrice) {
+          // Only legacy admin price
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold text-blue-600">LKR {value.toLocaleString()}</span>
+              <span className="text-xs text-muted-foreground">Admin price</span>
+            </div>
+          );
+        }
+        return <span className="text-muted-foreground">-</span>;
+      },
     },
     {
       key: "adminDuration",

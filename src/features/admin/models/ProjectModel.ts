@@ -10,6 +10,7 @@ export interface Project {
     | "customer_approved"
     | "approved"
     | "assigned"
+    | "in_progress"
     | "completed_by_employee"
     | "awaiting_final_payment"
     | "completed"

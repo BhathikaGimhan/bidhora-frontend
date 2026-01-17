@@ -578,6 +578,7 @@ export const updateWorkSubmissionStatus = async (
                         project_id: data.projectId,
                         amount: adminPrice,
                         payment_link: finalPaymentLink,
+                        is_urgent: pData.isUrgent || false,
                       });
                       
                       console.log('✅ Final payment notification sent to buyer:', buyerEmail);
@@ -593,6 +594,7 @@ export const updateWorkSubmissionStatus = async (
                         submission_id: partSubmissionId,
                         amount: adminPrice,
                         payment_link: paymentLink,
+                        is_urgent: pData.isUrgent || false,
                       });
                       
                       console.log('✅ Part payment notification sent to buyer:', buyerEmail);

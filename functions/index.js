@@ -767,6 +767,7 @@ exports.sendFinalPaymentNotification = onRequest(
         project_id,
         amount,
         payment_link,
+        is_urgent,
       } = req.body;
 
       // Validate required fields
@@ -827,6 +828,7 @@ exports.sendFinalPaymentNotification = onRequest(
             .security-badge { background: #f0fdf4; border: 2px solid #059669; border-radius: 10px; padding: 18px; margin-top: 25px; text-align: center; }
             .security-text { font-weight: 700; color: #047857; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
             .footer { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center; }
+            .urgent-banner { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 14px 24px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
           </style>
         </head>
         <body>
@@ -838,6 +840,11 @@ exports.sendFinalPaymentNotification = onRequest(
             </div>
             
             <div class="content">
+              ${is_urgent ? `
+              <div class="urgent-banner">
+                🚨 URGENT PROJECT - COMPLETED WITH PRIORITY
+              </div>
+              ` : ''}
               <div class="greeting">🎉 Congratulations, ${to_name}!</div>
               
               <div class="message">
@@ -854,17 +861,17 @@ exports.sendFinalPaymentNotification = onRequest(
                 <div class="payment-details">
                   <div class="detail-row">
                     <span class="detail-label">Project ID</span>
-                    <span class="detail-value">#${project_id.substring(0, 8).toUpperCase()}</span>
+                    <span class="detail-value">#${project_id}</span>
                   </div>
-                  <div class="detail-row">
+                  <div class="detail-row" style="padding: 18px 0;">
                     <span class="detail-label">Status</span>
-                    <span class="detail-value" style="color: #059669;">✅ Completed & Approved</span>
+                    <span class="detail-value" style="color: #059669;">✅ &nbsp;Completed & Approved</span>
                   </div>
                 </div>
                 
-                <div class="total-row">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span class="total-label">💰 Final Payment</span>
+                <div class="total-row" style="padding: 26px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                    <span class="total-label">💰 &nbsp;Final Payment</span>
                     <span class="total-value">LKR ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
@@ -880,8 +887,7 @@ exports.sendFinalPaymentNotification = onRequest(
                 <div class="info-text">
                   <strong>✓</strong> Final part of your project files<br/>
                   <strong>✓</strong> Instant download access after payment<br/>
-                  <strong>✓</strong> Invoice automatically generated<br/>
-                  <strong>✓</strong> Lifetime access to your files
+                  <strong>✓</strong> Invoice automatically generated
                 </div>
               </div>
 
@@ -896,9 +902,9 @@ exports.sendFinalPaymentNotification = onRequest(
               <div class="security-badge">
                 <div class="security-text">
                   <span>🔒 Secure Payment</span>
-                  <span>•</span>
+                  <span style="margin: 0 12px; opacity: 0.5;">•</span>
                   <span>📥 Instant Download</span>
-                  <span>•</span>
+                  <span style="margin: 0 12px; opacity: 0.5;">•</span>
                   <span>⭐ Leave a Review</span>
                 </div>
               </div>
@@ -932,7 +938,9 @@ exports.sendFinalPaymentNotification = onRequest(
       await transporter.sendMail({
         from: '"Bidhora Team" <contact@bidhora.com>',
         to: to_email,
-        subject: `🎊 Project Complete! Final Payment Required - ${project_title}`,
+        subject: is_urgent 
+          ? `🚨 URGENT - Project Complete! Final Payment Required - ${project_title}`
+          : `🎊 Project Complete! Final Payment Required - ${project_title}`,
         html: paymentEmailHtml,
       });
 
@@ -987,6 +995,7 @@ exports.sendPartPaymentNotification = onRequest(
         submission_id,
         amount,
         payment_link,
+        is_urgent,
       } = req.body;
 
       // Validate required fields
@@ -1041,6 +1050,7 @@ exports.sendPartPaymentNotification = onRequest(
             .info-box { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 22px; margin: 25px 0; }
             .info-text { color: #4b5563; font-size: 15px; line-height: 1.7; }
             .footer { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 40px 30px; border-top: 3px solid #10b981; text-align: center; }
+            .urgent-banner { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 14px 24px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
           </style>
         </head>
         <body>
@@ -1052,6 +1062,11 @@ exports.sendPartPaymentNotification = onRequest(
             </div>
             
             <div class="content">
+              ${is_urgent ? `
+              <div class="urgent-banner">
+                🚨 URGENT PROJECT - PRIORITY DELIVERY
+              </div>
+              ` : ''}
               <div class="greeting">🎉 Excellent Progress, ${to_name}!</div>
               
               <div class="message">
@@ -1067,17 +1082,17 @@ exports.sendPartPaymentNotification = onRequest(
                 <div class="payment-details">
                   <div class="detail-row">
                     <span class="detail-label">Submission ID</span>
-                    <span class="detail-value">#${submission_id.substring(0, 8).toUpperCase()}</span>
+                    <span class="detail-value">#${submission_id}</span>
                   </div>
-                  <div class="detail-row">
+                  <div class="detail-row" style="padding: 18px 0;">
                     <span class="detail-label">Status</span>
-                    <span class="detail-value" style="color: #059669;">✅ Approved</span>
+                    <span class="detail-value" style="color: #059669;">✅ &nbsp;Approved</span>
                   </div>
                 </div>
                 
-                <div class="total-row">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span class="total-label">💰 Payment Amount</span>
+                <div class="total-row" style="padding: 26px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                    <span class="total-label">💰 &nbsp;Payment Amount</span>
                     <span class="total-value">LKR ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
@@ -1122,7 +1137,9 @@ exports.sendPartPaymentNotification = onRequest(
       const mailOptions = {
         from: '"Bidhora - Project Platform" <contact@bidhora.com>',
         to: to_email,
-        subject: `Part Payment Required: ${part_tag} - ${project_title}`,
+        subject: is_urgent 
+          ? `🚨 URGENT - Part Payment Required: ${part_tag} - ${project_title}`
+          : `Part Payment Required: ${part_tag} - ${project_title}`,
         html: paymentEmailHtml,
       };
 
@@ -1670,6 +1687,38 @@ exports.genieWebhook = onRequest(
           });
 
           logger.info("Final payment updated successfully", { projectId, transactionId, invoiceNumber });
+
+          // Also update the final part submission (if any) to mark as paid
+          try {
+            const finalPartQuery = await db.collection('projectSubmissions')
+              .where('projectId', '==', projectId)
+              .where('isFinal', '==', true)
+              .get();
+            
+            if (!finalPartQuery.empty) {
+              const batch = db.batch();
+              finalPartQuery.docs.forEach((docSnap) => {
+                batch.update(docSnap.ref, {
+                  paymentStatus: 'paid',
+                  paidAt: admin.firestore.FieldValue.serverTimestamp(),
+                  paymentId: transactionId || orderId,
+                });
+              });
+              await batch.commit();
+              logger.info("Final part submission(s) marked as paid", { 
+                projectId, 
+                count: finalPartQuery.size 
+              });
+            } else {
+              logger.info("No final part submission found for project", { projectId });
+            }
+          } catch (partUpdateError) {
+            logger.error("Failed to update final part submission payment status", { 
+              projectId, 
+              error: partUpdateError.message 
+            });
+            // Don't fail the whole process if this update fails
+          }
           
           // Send invoice email for final payment ONLY ONCE
           try {
@@ -1961,6 +2010,35 @@ exports.manualPaymentFix = onRequest(
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
+        // Also update the final part submission (if any) to mark as paid
+        try {
+          const finalPartQuery = await db.collection('projectSubmissions')
+            .where('projectId', '==', projectId)
+            .where('isFinal', '==', true)
+            .get();
+          
+          if (!finalPartQuery.empty) {
+            const batch = db.batch();
+            finalPartQuery.docs.forEach((docSnap) => {
+              batch.update(docSnap.ref, {
+                paymentStatus: 'paid',
+                paidAt: admin.firestore.FieldValue.serverTimestamp(),
+                paymentId: txId,
+              });
+            });
+            await batch.commit();
+            logger.info("Final part submission(s) marked as paid (manual fix)", { 
+              projectId, 
+              count: finalPartQuery.size 
+            });
+          }
+        } catch (partUpdateError) {
+          logger.error("Failed to update final part submission payment status (manual fix)", { 
+            projectId, 
+            error: partUpdateError.message 
+          });
+        }
+
         logger.info("Final payment manually fixed", { projectId, txId });
         res.status(200).json({
           success: true,
@@ -1979,6 +2057,121 @@ exports.manualPaymentFix = onRequest(
       logger.error("Manual payment fix error", error);
       res.status(500).json({
         error: "Failed to fix payment",
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * Fix Final Part Payment Status
+ * Utility endpoint to fix projects where final payment was made but part submission wasn't updated
+ */
+exports.fixFinalPartPaymentStatus = onRequest(
+  { cors: true, maxInstances: 1 },
+  async (req, res) => {
+    try {
+      const { projectId } = req.body || req.query;
+
+      const db = admin.firestore();
+
+      if (projectId) {
+        // Fix single project
+        const projectDoc = await db.collection('projects').doc(projectId).get();
+        
+        if (!projectDoc.exists) {
+          res.status(404).json({ error: "Project not found" });
+          return;
+        }
+
+        const projectData = projectDoc.data();
+        
+        if (projectData.finalPaymentStatus !== 'paid') {
+          res.status(400).json({ 
+            error: "Final payment not yet made for this project",
+            currentStatus: projectData.finalPaymentStatus
+          });
+          return;
+        }
+
+        // Find and update final part submission
+        const finalPartQuery = await db.collection('projectSubmissions')
+          .where('projectId', '==', projectId)
+          .where('isFinal', '==', true)
+          .where('paymentStatus', '==', 'pending')
+          .get();
+
+        if (finalPartQuery.empty) {
+          res.status(200).json({ 
+            success: true, 
+            message: "No unpaid final part submissions found for this project",
+            projectId
+          });
+          return;
+        }
+
+        const batch = db.batch();
+        finalPartQuery.docs.forEach((docSnap) => {
+          batch.update(docSnap.ref, {
+            paymentStatus: 'paid',
+            paidAt: projectData.finalPaymentAt || admin.firestore.FieldValue.serverTimestamp(),
+            paymentId: projectData.finalPaymentId || 'RETROACTIVE_FIX',
+          });
+        });
+        await batch.commit();
+
+        logger.info("Fixed final part payment status", { projectId, count: finalPartQuery.size });
+        res.status(200).json({
+          success: true,
+          message: `Fixed ${finalPartQuery.size} final part submission(s)`,
+          projectId
+        });
+      } else {
+        // Fix all completed projects with unpaid final parts
+        const completedProjects = await db.collection('projects')
+          .where('status', '==', 'completed')
+          .where('finalPaymentStatus', '==', 'paid')
+          .get();
+
+        let fixedCount = 0;
+        const batch = db.batch();
+
+        for (const projectDoc of completedProjects.docs) {
+          const pId = projectDoc.id;
+          const pData = projectDoc.data();
+
+          const finalPartQuery = await db.collection('projectSubmissions')
+            .where('projectId', '==', pId)
+            .where('isFinal', '==', true)
+            .where('paymentStatus', '==', 'pending')
+            .get();
+
+          for (const partDoc of finalPartQuery.docs) {
+            batch.update(partDoc.ref, {
+              paymentStatus: 'paid',
+              paidAt: pData.finalPaymentAt || admin.firestore.FieldValue.serverTimestamp(),
+              paymentId: pData.finalPaymentId || 'RETROACTIVE_FIX',
+            });
+            fixedCount++;
+          }
+        }
+
+        if (fixedCount > 0) {
+          await batch.commit();
+        }
+
+        logger.info("Fixed all final part payment statuses", { fixedCount });
+        res.status(200).json({
+          success: true,
+          message: `Fixed ${fixedCount} final part submission(s) across all completed projects`,
+          projectsChecked: completedProjects.size,
+          partsFixed: fixedCount
+        });
+      }
+    } catch (error) {
+      logger.error("Fix final part payment status error", error);
+      res.status(500).json({
+        error: "Failed to fix final part payment status",
         message: error.message,
       });
     }
@@ -2316,7 +2509,7 @@ async function sendInvoiceEmail(invoiceData) {
             </div>
 
             <div style="text-align: center;">
-              <a href="https://bidhora.com/profile" class="button">View Project Details</a>
+              <a href="https://bidhora.com/project/${invoiceData.projectId}" class="button">View Project Details</a>
             </div>
           </div>
           <div class="footer">

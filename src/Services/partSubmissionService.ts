@@ -406,3 +406,211 @@ export const processPartPayment = async (
     throw error instanceof Error ? error : new Error('Failed to process payment');
   }
 };
+
+/**
+ * Get all paid part submissions for a project (for buyer to view/download)
+ * Returns parts that have been paid and are available for download
+ */
+export const getPaidProjectParts = async (projectId: string): Promise<PartSubmission[]> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Verify user is project owner
+    const projectDoc = await getDoc(doc(db, 'projects', projectId));
+    if (!projectDoc.exists()) {
+      throw new Error('Project not found');
+    }
+
+    const projectData = projectDoc.data();
+    const ownerId = projectData.buyerId || projectData.createdBy;
+    
+    if (ownerId !== user.uid) {
+      throw new Error('Access denied: You are not the project owner');
+    }
+
+    // Query paid part submissions for this project
+    const submissionsQuery = query(
+      collection(db, 'projectSubmissions'),
+      where('projectId', '==', projectId),
+      where('paymentStatus', '==', 'paid'),
+      orderBy('submittedAt', 'asc')
+    );
+
+    const snapshot = await getDocs(submissionsQuery);
+    
+    return snapshot.docs.map((docSnapshot) => {
+      const data = docSnapshot.data();
+      return {
+        id: docSnapshot.id,
+        projectId: data.projectId,
+        employeeId: data.employeeId,
+        employeeName: data.employeeName,
+        employeePhotoURL: data.employeePhotoURL,
+        partTag: data.partTag,
+        description: data.description,
+        documents: data.documents || [],
+        submittedAt: data.submittedAt?.toDate() || new Date(),
+        status: data.status,
+        reviewedAt: data.reviewedAt?.toDate() || null,
+        reviewedBy: data.reviewedBy,
+        reviewerName: data.reviewerName,
+        adminPrice: data.adminPrice,
+        adminNotes: data.adminNotes,
+        paymentStatus: data.paymentStatus,
+        paidAt: data.paidAt?.toDate() || null,
+        paymentId: data.paymentId,
+        isFinal: data.isFinal || false,
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching paid project parts:', error);
+    throw error instanceof Error ? error : new Error('Failed to fetch paid parts');
+  }
+};
+
+/**
+ * Get all approved (pending payment) part submissions for a project (for buyer to pay)
+ */
+export const getApprovedUnpaidParts = async (projectId: string): Promise<PartSubmission[]> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Verify user is project owner
+    const projectDoc = await getDoc(doc(db, 'projects', projectId));
+    if (!projectDoc.exists()) {
+      throw new Error('Project not found');
+    }
+
+    const projectData = projectDoc.data();
+    const ownerId = projectData.buyerId || projectData.createdBy;
+    
+    if (ownerId !== user.uid) {
+      throw new Error('Access denied: You are not the project owner');
+    }
+
+    // Query approved but unpaid part submissions for this project
+    const submissionsQuery = query(
+      collection(db, 'projectSubmissions'),
+      where('projectId', '==', projectId),
+      where('status', '==', 'approved'),
+      where('paymentStatus', '==', 'pending'),
+      orderBy('submittedAt', 'asc')
+    );
+
+    const snapshot = await getDocs(submissionsQuery);
+    
+    return snapshot.docs.map((docSnapshot) => {
+      const data = docSnapshot.data();
+      return {
+        id: docSnapshot.id,
+        projectId: data.projectId,
+        employeeId: data.employeeId,
+        employeeName: data.employeeName,
+        employeePhotoURL: data.employeePhotoURL,
+        partTag: data.partTag,
+        description: data.description,
+        documents: data.documents || [],
+        submittedAt: data.submittedAt?.toDate() || new Date(),
+        status: data.status,
+        reviewedAt: data.reviewedAt?.toDate() || null,
+        reviewedBy: data.reviewedBy,
+        reviewerName: data.reviewerName,
+        adminPrice: data.adminPrice,
+        adminNotes: data.adminNotes,
+        paymentStatus: data.paymentStatus,
+        paidAt: data.paidAt?.toDate() || null,
+        paymentId: data.paymentId,
+        isFinal: data.isFinal || false,
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching approved unpaid parts:', error);
+    throw error instanceof Error ? error : new Error('Failed to fetch pending payment parts');
+  }
+};
+
+/**
+ * Get total sum of approved part submission prices for a single project (admin use)
+ */
+export const getApprovedPartsTotal = async (projectId: string): Promise<number> => {
+  try {
+    // Query all approved part submissions for this project
+    const submissionsQuery = query(
+      collection(db, 'projectSubmissions'),
+      where('projectId', '==', projectId),
+      where('status', '==', 'approved')
+    );
+
+    const snapshot = await getDocs(submissionsQuery);
+    
+    let total = 0;
+    snapshot.docs.forEach((docSnapshot) => {
+      const data = docSnapshot.data();
+      if (data.adminPrice) {
+        total += data.adminPrice;
+      }
+    });
+    
+    return total;
+  } catch (error) {
+    console.error('Error fetching approved parts total for project:', projectId, error);
+    return 0; // Return 0 on error to not break the UI
+  }
+};
+
+/**
+ * Get total sum of approved part submission prices for multiple projects (admin use - bulk)
+ */
+export interface ApprovedPartsInfo {
+  total: number;
+  count: number;
+}
+
+export const getApprovedPartsTotalsForProjects = async (projectIds: string[]): Promise<Map<string, ApprovedPartsInfo>> => {
+  try {
+    const totalsMap = new Map<string, ApprovedPartsInfo>();
+    
+    if (projectIds.length === 0) {
+      return totalsMap;
+    }
+
+    // Initialize all project IDs with 0
+    projectIds.forEach(id => totalsMap.set(id, { total: 0, count: 0 }));
+
+    // Firestore 'in' query supports max 30 items, so we need to batch
+    const batchSize = 30;
+    for (let i = 0; i < projectIds.length; i += batchSize) {
+      const batch = projectIds.slice(i, i + batchSize);
+      
+      const submissionsQuery = query(
+        collection(db, 'projectSubmissions'),
+        where('projectId', 'in', batch),
+        where('status', '==', 'approved')
+      );
+
+      const snapshot = await getDocs(submissionsQuery);
+      
+      snapshot.docs.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        if (data.projectId) {
+          const currentInfo = totalsMap.get(data.projectId) || { total: 0, count: 0 };
+          totalsMap.set(data.projectId, {
+            total: currentInfo.total + (data.adminPrice || 0),
+            count: currentInfo.count + 1
+          });
+        }
+      });
+    }
+    
+    return totalsMap;
+  } catch (error) {
+    console.error('Error fetching approved parts totals:', error);
+    return new Map<string, ApprovedPartsInfo>(); // Return empty map on error
+  }
+};

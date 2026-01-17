@@ -66,6 +66,7 @@ export interface Project {
     | "customer_approved"
     | "approved"
     | "assigned"
+    | "in_progress"
     | "completed_by_employee"
     | "awaiting_final_payment"
     | "completed"
@@ -160,7 +161,9 @@ export interface BuyerProject {
     | "customer_approved" 
     | "ready_to_assign" 
     | "assigned" 
+    | "in_progress"
     | "completed_by_employee" 
+    | "awaiting_final_payment"
     | "completed" 
     | "cancelled"
     | "ongoing" // Legacy status
@@ -189,6 +192,9 @@ export interface BuyerProject {
   assignedEmployeeId?: string;
   assignedEmployeeName?: string;
   assignedEmployeeEmail?: string;
+  hasPartSubmissions?: boolean; // Whether this project has part-based submissions
+  paidParts?: number; // Count of paid parts
+  approvedParts?: number; // Count of approved parts
 }
 
 export interface BuyerProposal {
@@ -644,6 +650,9 @@ export const getBuyerProjects = async (
           assignedEmployeeId: projectData.assignedEmployeeId,
           assignedEmployeeName: projectData.assignedEmployeeName,
           assignedEmployeeEmail: projectData.assignedEmployeeEmail,
+          hasPartSubmissions: projectData.hasPartSubmissions || false,
+          paidParts: projectData.paidParts || 0,
+          approvedParts: projectData.approvedParts || 0,
         };
       })
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by createdAt desc

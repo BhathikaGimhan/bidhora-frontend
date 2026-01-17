@@ -29,6 +29,9 @@ import {
   ExternalLink,
   RefreshCw,
   AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { auth } from "@/firebaseConfig";
@@ -51,6 +54,7 @@ export default function WorkSubmissionsView() {
   const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected">("pending");
   const [adminPrice, setAdminPrice] = useState<number>(0);
   const [reviewNotes, setReviewNotes] = useState(""); // Add notes state for dialog
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Wait for auth state to be ready
@@ -255,6 +259,63 @@ export default function WorkSubmissionsView() {
       const dateB = b.reviewedAt ? new Date(b.reviewedAt).getTime() : 0;
       return dateB - dateA;
     });
+
+  // Group approved submissions by project ID
+  const groupedApprovedSubmissions = approvedSubmissions.reduce((acc, submission) => {
+    const projectId = submission.projectId || 'unknown';
+    if (!acc[projectId]) {
+      acc[projectId] = {
+        projectId,
+        projectTitle: submission.projectTitle || 'Unknown Project',
+        buyerName: submission.buyerName || 'Unknown Buyer',
+        buyerPhotoURL: submission.buyerPhotoURL,
+        submissions: [],
+        latestReviewDate: submission.reviewedAt,
+      };
+    }
+    acc[projectId].submissions.push(submission);
+    // Update latest review date if this submission is more recent
+    if (submission.reviewedAt && (!acc[projectId].latestReviewDate || 
+        new Date(submission.reviewedAt) > new Date(acc[projectId].latestReviewDate))) {
+      acc[projectId].latestReviewDate = submission.reviewedAt;
+    }
+    return acc;
+  }, {} as Record<string, {
+    projectId: string;
+    projectTitle: string;
+    buyerName: string;
+    buyerPhotoURL?: string | null;
+    submissions: WorkSubmission[];
+    latestReviewDate?: Date;
+  }>);
+
+  // Convert to array and sort by latest review date
+  const groupedApprovedArray = Object.values(groupedApprovedSubmissions)
+    .sort((a, b) => {
+      const dateA = a.latestReviewDate ? new Date(a.latestReviewDate).getTime() : 0;
+      const dateB = b.latestReviewDate ? new Date(b.latestReviewDate).getTime() : 0;
+      return dateB - dateA;
+    });
+
+  const toggleProjectExpand = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
+
+  const expandAllProjects = () => {
+    setExpandedProjects(new Set(groupedApprovedArray.map(g => g.projectId)));
+  };
+
+  const collapseAllProjects = () => {
+    setExpandedProjects(new Set());
+  };
 
   const rejectedSubmissions = submissions
     .filter((s) => s.status === "rejected")
@@ -646,19 +707,169 @@ export default function WorkSubmissionsView() {
         </TabsContent>
 
         <TabsContent value="approved" className="mt-6">
-          <div className="flex justify-end mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualRefresh}
-              disabled={refreshing}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </Button>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="text-sm text-muted-foreground">
+              {groupedApprovedArray.length} project{groupedApprovedArray.length !== 1 ? 's' : ''} with {approvedSubmissions.length} approved submission{approvedSubmissions.length !== 1 ? 's' : ''}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={expandAllProjects}
+                className="text-xs"
+              >
+                Expand All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={collapseAllProjects}
+                className="text-xs"
+              >
+                Collapse All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </div>
           </div>
-          {renderSubmissionList(approvedSubmissions)}
+          
+          {groupedApprovedArray.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No approved submissions found
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {groupedApprovedArray.map((group) => (
+                <Card key={group.projectId} className="overflow-hidden">
+                  {/* Project Header - Clickable to expand/collapse */}
+                  <div
+                    className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/30 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors"
+                    onClick={() => toggleProjectExpand(group.projectId)}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        {expandedProjects.has(group.projectId) ? (
+                          <ChevronDown className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-green-600" />
+                        )}
+                      </div>
+                      <FolderOpen className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-green-900 dark:text-green-100 truncate">
+                          {group.projectTitle}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground font-mono">
+                            ID: {group.projectId.substring(0, 8)}...
+                          </span>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <div className="flex items-center gap-1">
+                            <Avatar className="h-4 w-4">
+                              <AvatarImage src={group.buyerPhotoURL || undefined} />
+                              <AvatarFallback className="text-[8px]">
+                                {(group.buyerName || "U").substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground">
+                              {group.buyerName}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-200">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        {group.submissions.length} submission{group.submissions.length !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {/* Expanded submissions list */}
+                  {expandedProjects.has(group.projectId) && (
+                    <div className="border-t border-green-200 dark:border-green-800">
+                      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {group.submissions.map((submission) => (
+                          <div
+                            key={submission.id}
+                            className="p-4 hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <Avatar className="h-8 w-8 flex-shrink-0">
+                                  <AvatarImage src={submission.submitterPhotoURL || undefined} />
+                                  <AvatarFallback className="text-xs">
+                                    {(submission.submitterName || "U").substring(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium text-sm">
+                                      {submission.submitterName || "Unknown"}
+                                    </span>
+                                    {getSubmissionTypeBadge(submission.id)}
+                                    {submission.partTag && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {submission.partTag}
+                                      </Badge>
+                                    )}
+                                    {submission.isFinal && (
+                                      <Badge className="bg-green-600 hover:bg-green-700 text-white text-xs">
+                                        FINAL
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                    {submission.description || "No description"}
+                                  </p>
+                                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <FileText className="w-3 h-3" />
+                                      {submission.files?.length || 0} file{(submission.files?.length || 0) !== 1 ? 's' : ''}
+                                    </span>
+                                    {submission.reviewedAt && (
+                                      <span>
+                                        Approved: {formatDate(submission.reviewedAt)}
+                                      </span>
+                                    )}
+                                    {submission.adminPrice && (
+                                      <span className="font-medium text-green-600">
+                                        LKR {submission.adminPrice.toLocaleString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewSubmission(submission);
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="rejected" className="mt-6">

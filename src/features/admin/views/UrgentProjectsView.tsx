@@ -41,25 +41,28 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { MoreHorizontal, RefreshCw, AlertCircle, UserCheck, Eye, DollarSign, CheckCircle, FolderOpen, Clock, CheckCircle2, Loader2, ChevronDown } from "lucide-react";
+import { MoreHorizontal, RefreshCw, AlertCircle, UserCheck, Eye, DollarSign, CheckCircle, FolderOpen, Clock, CheckCircle2, Loader2, ChevronDown, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectDetailsModal } from "@/features/admin/components/ProjectDetailsModal";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import { getAllUsers } from "@/Services/authService";
 import { assignEmployeeToProject } from "@/Services/projectService";
 import { emailService } from "@/Services/emailService";
+import { getApprovedPartsTotalsForProjects, ApprovedPartsInfo } from "@/Services/partSubmissionService";
 
 export function UrgentProjectsView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Store approved parts totals for each project (total amount and count of parts)
+  const [approvedPartsTotals, setApprovedPartsTotals] = useState<Map<string, ApprovedPartsInfo>>(new Map());
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [adminPrice, setAdminPrice] = useState("");
-  const [adminDuration, setAdminDuration] = useState("");
-  const [adminDurationUnit, setAdminDurationUnit] = useState<"days" | "weeks">("days");
+  // adminPrice removed as part of simplified flow - parts are priced individually
+  const [adminDuration, setAdminDuration] = useState<number>(0);
+  const [adminDurationUnit, setAdminDurationUnit] = useState<string>("days");
   const [adminNotes, setAdminNotes] = useState("");
   const [employees, setEmployees] = useState<Array<{
     uid: string;
@@ -134,6 +137,13 @@ export function UrgentProjectsView() {
       })));
       
       setProjects(urgentProjects);
+
+      // Fetch approved parts totals for all urgent projects
+      if (urgentProjects.length > 0) {
+        const projectIds = urgentProjects.map(p => p.id);
+        const totals = await getApprovedPartsTotalsForProjects(projectIds);
+        setApprovedPartsTotals(totals);
+      }
     } catch (error) {
       console.error("Error fetching urgent projects:", error);
       toast({
@@ -180,8 +190,7 @@ export function UrgentProjectsView() {
 
   const handleOpenPricingModal = (project: Project) => {
     setSelectedProject(project);
-    setAdminPrice("");
-    setAdminDuration("");
+    setAdminDuration(0);
     setAdminDurationUnit("days");
     setAdminNotes("");
     setIsPricingModalOpen(true);
@@ -190,8 +199,7 @@ export function UrgentProjectsView() {
   const handleClosePricingModal = () => {
     setIsPricingModalOpen(false);
     setSelectedProject(null);
-    setAdminPrice("");
-    setAdminDuration("");
+    setAdminDuration(0);
     setAdminDurationUnit("days");
     setAdminNotes("");
   };
@@ -199,33 +207,17 @@ export function UrgentProjectsView() {
   const handleSubmitPricing = async () => {
     if (!selectedProject) return;
 
-    const price = parseFloat(adminPrice);
-    if (isNaN(price) || price <= 0) {
-      toast({
-        title: "Invalid Price",
-        description: "Please enter a valid price greater than 0",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const duration = adminDuration ? parseInt(adminDuration) : undefined;
-    if (adminDuration && (isNaN(duration!) || duration! <= 0)) {
-      toast({
-        title: "Invalid Duration",
-        description: "Please enter a valid duration greater than 0",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Note: Price is no longer required for initial approval
+    // The simplified flow uses a fixed 1500 RS deposit
+    // Parts will be priced individually later when employee submits work
 
     try {
       setSubmittingPrice(true);
       const result = await projectController.adminReviewProject(
         selectedProject.id,
-        price,
-        duration,
-        adminDurationUnit,
+        undefined, // adminPrice is now optional - parts are priced individually
+        adminDuration > 0 ? adminDuration : undefined, // duration is optional but encouraged
+        adminDuration > 0 ? (adminDurationUnit as "days" | "weeks") : undefined,
         adminNotes.trim() || undefined
       );
 
@@ -359,7 +351,11 @@ export function UrgentProjectsView() {
         return "outline";
       case "assigned":
         return "default";
+      case "in_progress":
+        return "default";
       case "completed_by_employee":
+        return "default";
+      case "awaiting_final_payment":
         return "default";
       case "completed":
         return "default";
@@ -415,9 +411,46 @@ export function UrgentProjectsView() {
     },
     {
       key: "adminPrice",
-      title: "Admin Price (LKR)",
+      title: "Price (LKR)",
       sortable: true,
-      render: (value: number) => (value ? `LKR ${value.toLocaleString()}` : "-"),
+      render: (value: number, project: Project) => {
+        const partsInfo = approvedPartsTotals.get(project.id);
+        const hasLegacyPrice = value && value > 0;
+        const hasPartsTotal = partsInfo && partsInfo.total > 0;
+        
+        if (hasPartsTotal && hasLegacyPrice) {
+          // Show both legacy admin price and parts total
+          return (
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
+                <span className="font-semibold text-green-600">LKR {partsInfo.total.toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">{partsInfo.count} approved part{partsInfo.count > 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex flex-col border-t pt-1">
+                <span className="text-sm text-blue-600">LKR {value.toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">Legacy price</span>
+              </div>
+            </div>
+          );
+        } else if (hasPartsTotal) {
+          // Only parts total
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold text-green-600">LKR {partsInfo.total.toLocaleString()}</span>
+              <span className="text-xs text-muted-foreground">{partsInfo.count} approved part{partsInfo.count > 1 ? 's' : ''}</span>
+            </div>
+          );
+        } else if (hasLegacyPrice) {
+          // Only legacy admin price
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold text-blue-600">LKR {value.toLocaleString()}</span>
+              <span className="text-xs text-muted-foreground">Admin price</span>
+            </div>
+          );
+        }
+        return <span className="text-muted-foreground">-</span>;
+      },
     },
     {
       key: "assignedEmployeeName",
@@ -465,11 +498,13 @@ export function UrgentProjectsView() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => handleViewDetails(project)}>
+          <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
         {(project.status === "pending" || project.status === "admin_review") && (
           <DropdownMenuItem onClick={() => handleOpenPricingModal(project)}>
-            Set Price
+            <CheckCircle className="mr-2 h-4 w-4" />
+            Approve Project
           </DropdownMenuItem>
         )}
         {(project.status === "ready_to_assign" || project.status === "customer_approved") && (
@@ -503,8 +538,13 @@ export function UrgentProjectsView() {
   const assignedProjects = projects.filter(
     (p) => p.status === "assigned"
   );
+  // In progress includes both 'in_progress' (employee working) and 'completed_by_employee' (submitted for review)
   const inProgressProjects = projects.filter(
-    (p) => p.status === "completed_by_employee"
+    (p) => p.status === "in_progress" || p.status === "completed_by_employee"
+  );
+  // Awaiting final payment (admin approved, waiting for buyer to pay)
+  const awaitingPaymentProjects = projects.filter(
+    (p) => p.status === "awaiting_final_payment"
   );
   const completedProjects = projects.filter(
     (p) => p.status === "completed"
@@ -602,6 +642,16 @@ export function UrgentProjectsView() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="awaiting_payment" className="flex items-center gap-2 whitespace-nowrap">
+            <CreditCard className="h-4 w-4" />
+            <span className="hidden sm:inline">Awaiting Payment</span>
+            <span className="sm:hidden">Payment</span>
+            {awaitingPaymentProjects.length > 0 && (
+              <Badge variant="default" className="ml-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md hover:from-amber-600 hover:to-amber-700 transition-all">
+                {awaitingPaymentProjects.length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="completed" className="flex items-center gap-2 whitespace-nowrap">
             <CheckCircle2 className="h-4 w-4" />
             <span>Completed</span>
@@ -661,10 +711,21 @@ export function UrgentProjectsView() {
         {/* In Progress Tab */}
         <TabsContent value="in_progress" className="space-y-4">
           <DataTable
-            title="In Progress - Submitted by Employee"
+            title="In Progress - Employee Working / Submitted for Review"
             data={inProgressProjects}
             columns={columns}
             searchPlaceholder="Search in-progress urgent projects..."
+            actions={actions}
+          />
+        </TabsContent>
+
+        {/* Awaiting Payment Tab */}
+        <TabsContent value="awaiting_payment" className="space-y-4">
+          <DataTable
+            title="Awaiting Final Payment - Approved, Waiting for Buyer Payment"
+            data={awaitingPaymentProjects}
+            columns={columns}
+            searchPlaceholder="Search projects awaiting payment..."
             actions={actions}
           />
         </TabsContent>
@@ -688,32 +749,32 @@ export function UrgentProjectsView() {
         onClose={handleCloseDetailsModal}
       />
 
-      {/* Set Price Modal */}
+      {/* Approve & Set Duration Modal - Simplified flow with fixed 1500 RS deposit */}
       <Dialog open={isPricingModalOpen} onOpenChange={handleClosePricingModal}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Set Project Price</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Approve Urgent Project
+            </DialogTitle>
             <DialogDescription className="text-sm">
-              Review the project details and set an appropriate price for{" "}
-              {selectedProject?.title}.
+              Approve this urgent project for{" "}
+              <span className="font-semibold">{selectedProject?.title}</span>.
+              A fixed deposit of <strong>LKR 1,500</strong> will be charged to the customer.
+              Parts will be priced individually when the employee submits work.
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Info Box about the new flow */}
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <strong>🚨 Priority Flow:</strong> Urgent projects follow the part-based payment system.
+              The customer pays a fixed <strong>LKR 1,500</strong> deposit first.
+              Each part submission will be priced and paid separately when approved.
+            </p>
+          </div>
+          
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-              <Label htmlFor="price" className="sm:text-right">
-                Price ($)
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={adminPrice}
-                onChange={(e) => setAdminPrice(e.target.value)}
-                className="sm:col-span-3"
-                placeholder="Enter price"
-              />
-            </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
               <Label htmlFor="duration" className="sm:text-right">
                 Duration
@@ -723,16 +784,14 @@ export function UrgentProjectsView() {
                   id="duration"
                   type="number"
                   min="1"
-                  value={adminDuration}
-                  onChange={(e) => setAdminDuration(e.target.value)}
-                  placeholder="Enter duration"
+                  value={adminDuration || ""}
+                  onChange={(e) => setAdminDuration(parseInt(e.target.value) || 0)}
+                  placeholder="Enter estimated duration"
                   className="flex-1"
                 />
                 <select
                   value={adminDurationUnit}
-                  onChange={(e) =>
-                    setAdminDurationUnit(e.target.value as "days" | "weeks")
-                  }
+                  onChange={(e) => setAdminDurationUnit(e.target.value)}
                   className="px-2 sm:px-3 py-2 border border-input bg-background rounded-md text-sm"
                 >
                   <option value="days">Days</option>
@@ -760,16 +819,16 @@ export function UrgentProjectsView() {
             </Button>
             <Button 
               onClick={handleSubmitPricing} 
-              disabled={submittingPrice || !adminPrice.trim()}
-              className="w-full sm:w-auto"
+              disabled={submittingPrice}
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
             >
               {submittingPrice ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Setting Price...
+                  Approving...
                 </>
               ) : (
-                "Set Price"
+                "Approve Urgent Project"
               )}
             </Button>
           </DialogFooter>

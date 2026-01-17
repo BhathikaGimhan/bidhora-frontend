@@ -907,7 +907,6 @@ export default function FinalPaymentPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               After payment, you'll immediately be able to download the final part of your project.
-              The files will be yours to keep forever!
             </AlertDescription>
           </Alert>
 

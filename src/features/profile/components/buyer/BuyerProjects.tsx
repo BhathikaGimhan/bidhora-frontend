@@ -47,6 +47,7 @@ const buyerProjectToProject = (buyerProject: BuyerProject): Omit<Project, 'statu
     | "customer_approved" 
     | "ready_to_assign" 
     | "assigned" 
+    | "in_progress"
     | "completed_by_employee" 
     | "awaiting_final_payment"
     | "completed" 
@@ -63,6 +64,9 @@ const buyerProjectToProject = (buyerProject: BuyerProject): Omit<Project, 'statu
   assignedEmployeeId?: string;
   assignedEmployeeName?: string;
   assignedEmployeeEmail?: string;
+  hasPartSubmissions?: boolean;
+  paidParts?: number;
+  approvedParts?: number;
 } => {
   return {
     id: buyerProject.id,
@@ -92,6 +96,9 @@ const buyerProjectToProject = (buyerProject: BuyerProject): Omit<Project, 'statu
     adminDurationUnit: buyerProject.adminDurationUnit as "days" | "weeks" | undefined,
     assignedAt: buyerProject.assignedAt,
     adminNotes: buyerProject.adminNotes,
+    hasPartSubmissions: buyerProject.hasPartSubmissions || false,
+    paidParts: buyerProject.paidParts || 0,
+    approvedParts: buyerProject.approvedParts || 0,
   };
 };
 
@@ -216,15 +223,26 @@ export const BuyerProjects = ({
     const project = projects.find((p) => p.id === projectId);
     setSelectedProject(projectId);
     setSelectedProjectData(project);
-    // Track which tab the project belongs to
+    // Track which tab the project belongs to based on status
+    const projectStatus = project?.status as string;
+    
     if (
-      project?.status === "pending" ||
-      (project?.status as string) === "open"
+      projectStatus === "pending" ||
+      projectStatus === "open" ||
+      projectStatus === "admin_review" ||
+      projectStatus === "priced"
     ) {
       setCurrentTab("open");
-    } else if (project?.status === "ongoing") {
+    } else if (
+      projectStatus === "customer_approved" ||
+      projectStatus === "ready_to_assign" ||
+      projectStatus === "assigned" ||
+      projectStatus === "in_progress" ||
+      projectStatus === "ongoing" ||
+      projectStatus === "completed_by_employee"
+    ) {
       setCurrentTab("ongoing");
-    } else if (project?.status === "completed" || (project?.status as string) === "awaiting_final_payment") {
+    } else if (projectStatus === "completed" || projectStatus === "awaiting_final_payment") {
       setCurrentTab("completed");
     }
     setCurrentView("details");
@@ -303,11 +321,12 @@ export const BuyerProjects = ({
           projectStatus === "open"
         );
       } else if (status === "ongoing") {
-        // "Ongoing" tab: customer_approved, ready_to_assign, assigned, completed_by_employee
+        // "Ongoing" tab: customer_approved, ready_to_assign, assigned, in_progress, completed_by_employee
         return (
           projectStatus === "customer_approved" ||
           projectStatus === "ready_to_assign" ||
           projectStatus === "assigned" ||
+          projectStatus === "in_progress" ||
           projectStatus === "completed_by_employee"
         );
       } else if (status === "completed") {

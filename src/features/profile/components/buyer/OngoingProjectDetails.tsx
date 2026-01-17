@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,10 +17,15 @@ import {
   Tag,
   Star,
   MessageSquare,
+  CreditCard,
+  Package,
+  Loader2,
 } from 'lucide-react';
 import { Project, ProjectDocument } from '@/Services/projectService';
 import { ProjectReviewDialog } from './ProjectReviewDialog';
 import { ReviewService } from '@/Services/reviewService';
+import { getPaidProjectParts, getApprovedUnpaidParts } from '@/Services/partSubmissionService';
+import type { PartSubmission } from '@/types/partSubmission';
 
 interface OngoingProjectDetailsProps {
   project: Project & {
@@ -34,6 +40,9 @@ interface OngoingProjectDetailsProps {
     assignedEmployeeId?: string;
     assignedEmployeeName?: string;
     assignedEmployeeEmail?: string;
+    hasPartSubmissions?: boolean;
+    paidParts?: number;
+    approvedParts?: number;
   };
   onBack: () => void;
 }
@@ -42,9 +51,50 @@ export const OngoingProjectDetails = ({
   project,
   onBack,
 }: OngoingProjectDetailsProps) => {
+  const navigate = useNavigate();
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [hasReviewInCollection, setHasReviewInCollection] = useState(false);
   const [checkingReview, setCheckingReview] = useState(true);
+  
+  // Part submissions state
+  const [paidParts, setPaidParts] = useState<PartSubmission[]>([]);
+  const [pendingPaymentParts, setPendingPaymentParts] = useState<PartSubmission[]>([]);
+  const [loadingParts, setLoadingParts] = useState(false);
+
+  // Fetch part submissions for buyer
+  // Fetch for ongoing projects with parts OR completed projects (to show all downloaded parts)
+  useEffect(() => {
+    const fetchPartSubmissions = async () => {
+      // Fetch parts if project has part submissions OR if project is in a stage where parts may exist
+      // OR if project has paidParts/approvedParts count > 0
+      const shouldFetchParts = project.hasPartSubmissions || 
+        (project.paidParts && project.paidParts > 0) ||
+        (project.approvedParts && project.approvedParts > 0) ||
+        project.status === 'completed' || 
+        project.status === 'awaiting_final_payment' ||
+        project.status === 'in_progress' ||
+        project.status === 'assigned' ||
+        project.status === 'completed_by_employee';
+      
+      if (!shouldFetchParts) return;
+      
+      try {
+        setLoadingParts(true);
+        const [paid, pending] = await Promise.all([
+          getPaidProjectParts(project.id),
+          getApprovedUnpaidParts(project.id),
+        ]);
+        setPaidParts(paid);
+        setPendingPaymentParts(pending);
+      } catch (error) {
+        console.error('Error fetching part submissions:', error);
+      } finally {
+        setLoadingParts(false);
+      }
+    };
+
+    fetchPartSubmissions();
+  }, [project.id, project.hasPartSubmissions, project.status, project.paidParts, project.approvedParts]);
 
   // Check if review exists in reviews collection
   useEffect(() => {
@@ -155,6 +205,7 @@ export const OngoingProjectDetails = ({
       'customer_approved': 'Approved - Awaiting Assignment',
       'ready_to_assign': 'Ready to Assign',
       'assigned': 'Assigned to Employee',
+      'in_progress': 'Work In Progress',
       'completed_by_employee': 'Completed - Awaiting Approval',
       'awaiting_final_payment': 'Awaiting Final Payment',
       'completed': 'Completed',
@@ -170,6 +221,7 @@ export const OngoingProjectDetails = ({
       'customer_approved': 'bg-green-100 text-green-800 border-green-200',
       'ready_to_assign': 'bg-indigo-100 text-indigo-800 border-indigo-200',
       'assigned': 'bg-blue-100 text-blue-800 border-blue-200',
+      'in_progress': 'bg-cyan-100 text-cyan-800 border-cyan-200',
       'completed_by_employee': 'bg-teal-100 text-teal-800 border-teal-200',
       'awaiting_final_payment': 'bg-amber-100 text-amber-800 border-amber-200',
       'completed': 'bg-green-100 text-green-800 border-green-200',
@@ -339,6 +391,203 @@ export const OngoingProjectDetails = ({
             </Card>
           )}
 
+          {/* Part Submissions Section - Show approved parts awaiting payment */}
+          {pendingPaymentParts.length > 0 && (
+            <Card className="border-amber-200 dark:border-amber-800">
+              <CardHeader className="bg-amber-50 dark:bg-amber-950">
+                <CardTitle className="text-lg flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                  <CreditCard className="w-5 h-5" />
+                  Parts Awaiting Payment ({pendingPaymentParts.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  The following project parts have been approved and are ready for payment. 
+                  Pay to unlock and download the files.
+                </p>
+                {pendingPaymentParts.map((part) => (
+                  <div
+                    key={part.id}
+                    className="p-4 border border-amber-200 dark:border-amber-700 rounded-lg bg-white dark:bg-amber-950/50"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                            {part.partTag}
+                          </Badge>
+                          {part.isFinal && (
+                            <Badge variant="default" className="bg-green-600">
+                              Final Part
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {part.description}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <FileText className="w-3 h-3" />
+                            {part.documents.length} file{part.documents.length !== 1 ? 's' : ''}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="w-3 h-3" />
+                            LKR {part.adminPrice?.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (part.isFinal) {
+                            navigate(`/payment/final/${project.id}`);
+                          } else {
+                            navigate(`/payment/part/${part.id}`);
+                          }
+                        }}
+                        className="bg-amber-600 hover:bg-amber-700"
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pay Now
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Paid Parts Section - Show completed and paid parts with downloadable documents */}
+          {paidParts.length > 0 && (
+            <Card className="border-green-200 dark:border-green-800">
+              <CardHeader className="bg-green-50 dark:bg-green-950">
+                <CardTitle className="text-lg flex items-center gap-2 text-green-900 dark:text-green-100">
+                  <Package className="w-5 h-5" />
+                  {project.status === 'completed' 
+                    ? `All Project Parts (${paidParts.length})` 
+                    : `Completed Parts (${paidParts.length})`}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {project.status === 'completed'
+                    ? 'Your project is complete! All files from each part are available for download below.'
+                    : 'Downloaded parts from your project. All files are available for download.'}
+                </p>
+                
+                {/* Download All Files Button */}
+                {paidParts.reduce((total, part) => total + part.documents.length, 0) > 1 && (
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-green-700 border-green-300 hover:bg-green-100"
+                      onClick={() => {
+                        // Download all files from all parts
+                        paidParts.forEach((part) => {
+                          part.documents.forEach((doc, index) => {
+                            setTimeout(() => {
+                              const link = document.createElement('a');
+                              link.href = doc.url;
+                              link.download = doc.name;
+                              link.target = '_blank';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }, index * 500); // Stagger downloads to avoid browser blocking
+                          });
+                        });
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download All Files ({paidParts.reduce((total, part) => total + part.documents.length, 0)})
+                    </Button>
+                  </div>
+                )}
+                
+                {paidParts.map((part) => (
+                  <div
+                    key={part.id}
+                    className="p-4 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-green-950/50"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                        {part.partTag}
+                      </Badge>
+                      {part.isFinal && (
+                        <Badge variant="default" className="bg-green-600">
+                          Final Part
+                        </Badge>
+                      )}
+                      <CheckCircle2 className="w-4 h-4 text-green-600 ml-auto" />
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      {part.description}
+                    </p>
+                    
+                    {/* Part Documents */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Files ({part.documents.length}):
+                      </p>
+                      {part.documents.map((doc, docIndex) => (
+                        <div
+                          key={docIndex}
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{doc.name}</p>
+                              {doc.size && (
+                                <p className="text-xs text-muted-foreground">
+                                  {(doc.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = doc.url;
+                              link.download = doc.name;
+                              link.target = '_blank';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Payment info */}
+                    <div className="mt-3 pt-3 border-t text-xs text-muted-foreground flex items-center justify-between">
+                      <span>Paid: LKR {part.adminPrice?.toLocaleString()}</span>
+                      {part.paidAt && (
+                        <span>{formatDate(part.paidAt)}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Loading Parts */}
+          {loadingParts && (
+            <Card>
+              <CardContent className="p-8 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading project parts...</span>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Awaiting Final Payment Section - Show when admin approved but payment not made */}
           {(project.status as string) === 'awaiting_final_payment' && (
             <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950">
@@ -378,6 +627,14 @@ export const OngoingProjectDetails = ({
                     Your completed project files will be available for download immediately after payment confirmation.
                   </p>
                 </div>
+
+                <Button
+                  onClick={() => navigate(`/payment/final/${project.id}`)}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Make Final Payment
+                </Button>
               </CardContent>
             </Card>
           )}

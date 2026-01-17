@@ -39,6 +39,7 @@ export interface FinalPaymentNotificationData {
   project_id: string;
   amount: number; // Final part payment amount
   payment_link: string;
+  is_urgent?: boolean;
 }
 
 export interface MarketerWelcomeData {
@@ -57,6 +58,7 @@ export interface PartPaymentNotificationData {
   submission_id: string;
   amount: number;
   payment_link: string;
+  is_urgent?: boolean;
 }
 
 export interface EmailResponse {
@@ -231,6 +233,7 @@ class EmailService {
           project_id: notificationData.project_id,
           amount: notificationData.amount,
           payment_link: notificationData.payment_link,
+          is_urgent: notificationData.is_urgent || false,
         },
         {
           headers: {
@@ -273,6 +276,7 @@ class EmailService {
           submission_id: notificationData.submission_id,
           amount: notificationData.amount,
           payment_link: notificationData.payment_link,
+          is_urgent: notificationData.is_urgent || false,
         },
         {
           headers: {

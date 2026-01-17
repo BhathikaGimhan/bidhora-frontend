@@ -83,52 +83,126 @@ export function DashboardView() {
       const now = new Date();
       const monthsData: GrowthData[] = [];
       
+      // Fetch all data once to avoid multiple queries per month
+      const usersRef = collection(db, "users");
+      const usersSnapshot = await getDocs(usersRef);
+      
+      const projectsRef = collection(db, "projects");
+      const projectsSnapshot = await getDocs(projectsRef);
+      
+      const submissionsRef = collection(db, "projectSubmissions");
+      const submissionsSnapshot = await getDocs(submissionsRef);
+      
       // Get last 6 months of data
       for (let i = 5; i >= 0; i--) {
         const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
         const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
         
-        // Fetch users created in this month
-        const usersRef = collection(db, "users");
-        const usersQuery = query(
-          usersRef,
-          where("createdAt", ">=", Timestamp.fromDate(monthDate)),
-          where("createdAt", "<", Timestamp.fromDate(nextMonthDate))
-        );
-        const usersSnapshot = await getDocs(usersQuery);
+        // Count users created in this month
+        let usersCount = 0;
+        usersSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.createdAt) {
+            const createdDate = data.createdAt.toDate();
+            if (createdDate >= monthDate && createdDate < nextMonthDate) {
+              usersCount++;
+            }
+          }
+        });
         
-        // Fetch projects created in this month
-        const projectsRef = collection(db, "projects");
-        const projectsQuery = query(
-          projectsRef,
-          where("createdAt", ">=", Timestamp.fromDate(monthDate)),
-          where("createdAt", "<", Timestamp.fromDate(nextMonthDate))
-        );
-        const projectsSnapshot = await getDocs(projectsQuery);
+        // Count projects created in this month
+        let projectsCount = 0;
+        projectsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.createdAt) {
+            const createdDate = data.createdAt.toDate();
+            if (createdDate >= monthDate && createdDate < nextMonthDate) {
+              projectsCount++;
+            }
+          }
+        });
         
-        // Calculate revenue for this month
+        // Calculate revenue for this month (from ALL projects that had payments in this month)
         let monthRevenue = 0;
         projectsSnapshot.docs.forEach(doc => {
           const data = doc.data();
-          if (data.initialPaymentStatus === "paid" && data.initialPaymentDate) {
-            const paymentDate = data.initialPaymentDate.toDate();
-            if (paymentDate >= monthDate && paymentDate < nextMonthDate) {
+          // Check deposit/initial payments made in this month
+          if (data.initialPaymentStatus === "paid") {
+            if (data.initialPaymentDate) {
+              try {
+                const paymentDate = data.initialPaymentDate.toDate();
+                if (paymentDate >= monthDate && paymentDate < nextMonthDate) {
+                  monthRevenue += data.initialPaymentAmount || 0;
+                }
+              } catch (e) {
+                // If date conversion fails and this is current month, count it
+                if (i === 0) {
+                  monthRevenue += data.initialPaymentAmount || 0;
+                }
+              }
+            } else if (i === 0) {
+              // No date but paid - count in current month
               monthRevenue += data.initialPaymentAmount || 0;
             }
           }
-          if (data.finalPaymentStatus === "paid" && data.finalPaymentDate) {
-            const paymentDate = data.finalPaymentDate.toDate();
-            if (paymentDate >= monthDate && paymentDate < nextMonthDate) {
+          // Check final payments made in this month
+          if (data.finalPaymentStatus === "paid") {
+            if (data.finalPaymentDate) {
+              try {
+                const paymentDate = data.finalPaymentDate.toDate();
+                if (paymentDate >= monthDate && paymentDate < nextMonthDate) {
+                  monthRevenue += data.finalPaymentAmount || 0;
+                }
+              } catch (e) {
+                // If date conversion fails and this is current month, count it
+                if (i === 0) {
+                  monthRevenue += data.finalPaymentAmount || 0;
+                }
+              }
+            } else if (i === 0) {
+              // No date but paid - count in current month
               monthRevenue += data.finalPaymentAmount || 0;
+            }
+          }
+        });
+        
+        // Include part payments from projectSubmissions collection
+        submissionsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.paymentStatus === "paid" && data.adminPrice > 0) {
+            try {
+              // Try to use paidAt date first, then fall back to submittedAt or approvedAt
+              let paidDate = null;
+              if (data.paidAt) {
+                paidDate = data.paidAt.toDate();
+              } else if (data.approvedAt) {
+                paidDate = data.approvedAt.toDate();
+              } else if (data.submittedAt) {
+                paidDate = data.submittedAt.toDate();
+              }
+              
+              if (paidDate) {
+                if (paidDate >= monthDate && paidDate < nextMonthDate) {
+                  monthRevenue += data.adminPrice;
+                }
+              } else if (i === 0) {
+                // If no date available and this is the current month, count it here
+                monthRevenue += data.adminPrice;
+              }
+            } catch (e) {
+              // If date conversion fails and this is current month, still count it
+              if (i === 0) {
+                monthRevenue += data.adminPrice;
+              }
             }
           }
         });
         
         monthsData.push({
           month: monthName,
-          users: usersSnapshot.size,
-          projects: projectsSnapshot.size,
+          users: usersCount,
+          projects: projectsCount,
           revenue: monthRevenue,
         });
       }
@@ -138,12 +212,12 @@ export function DashboardView() {
       console.error("Error fetching growth data:", error);
       // Return default data for demo
       return [
-        { month: 'Jun', users: 0, projects: 0, revenue: 0 },
-        { month: 'Jul', users: 0, projects: 0, revenue: 0 },
         { month: 'Aug', users: 0, projects: 0, revenue: 0 },
         { month: 'Sep', users: 0, projects: 0, revenue: 0 },
         { month: 'Oct', users: 0, projects: 0, revenue: 0 },
         { month: 'Nov', users: 0, projects: 0, revenue: 0 },
+        { month: 'Dec', users: 0, projects: 0, revenue: 0 },
+        { month: 'Jan', users: 0, projects: 0, revenue: 0 },
       ];
     }
   };
@@ -346,7 +420,7 @@ export function DashboardView() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5" />
-              <span>Platform Growth</span>
+              <span>Platform Growth (Last 6 Months)</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -416,8 +490,11 @@ export function DashboardView() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <CreditCard className="h-5 w-5" />
-              <span>Revenue Trend</span>
+              <span>Revenue Trend (Last 6 Months)</span>
             </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              6-Month Total: LKR {growthData.reduce((sum, d) => sum + d.revenue, 0).toLocaleString()}
+            </p>
           </CardHeader>
           <CardContent>
             <div className="h-48 sm:h-64">
