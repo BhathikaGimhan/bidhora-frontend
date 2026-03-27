@@ -158,6 +158,15 @@ const Header = () => {
 
         {/* Desktop Buttons/Profile */}
         <div className="hidden lg:flex items-center space-x-3">
+          <a
+            href="https://lms.bidhora.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button className="bg-green-500 hover:bg-green-600 text-white text-sm px-4">
+              Student LMS
+            </Button>
+          </a>
           <ThemeToggle />
           {user ? (
             userRole === "admin" ? (
@@ -277,6 +286,18 @@ const Header = () => {
               </Link>
             ))}
             <div className="flex flex-col items-center space-y-3 pt-2">
+              <a
+                href="https://lms.bidhora.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button 
+                  className="w-32 bg-green-500 hover:bg-green-600 text-white text-sm"
+                  onClick={toggleMobileMenu}
+                >
+                  Student LMS
+                </Button>
+              </a>
               {user ? (
                 userRole === "admin" ? (
                   <>
